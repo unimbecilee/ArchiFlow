@@ -46,11 +46,11 @@ import {
 } from "react-icons/fi";
 import { ElementType } from "react";
 import ActionMenu from "./ActionMenu";
-import DocumentPreview from "./Document/DocumentPreview";
-import DocumentOCR from "./Document/DocumentOCR";
+import DocumentPreview from "./DocumentPreview";
+import DocumentOCR from "./DocumentOCR";
 import DocumentList from "./DocumentList";
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
-import config from '../config';
+import { advancedSearch as apiAdvancedSearch, saveSearch as apiSaveSearch, AdvancedSearchParams } from '../services/searchService';
 
 interface AdvancedSearchFilters {
   query: string;
@@ -136,40 +136,23 @@ const AdvancedSearchPage: React.FC = () => {
     try {
       const result = await executeOperation(
         async () => {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            throw new Error('Token non trouvé');
-          }
-
-          const searchParams = new URLSearchParams();
-          searchParams.append('documentTypes', filters.documentTypes.join(','));
-          searchParams.append('owners', filters.owners.join(','));
-          searchParams.append('tags', filters.tags.join(','));
-          searchParams.append('status', filters.status.join(','));
-          searchParams.append('startDate', filters.dateRange.start);
-          searchParams.append('endDate', filters.dateRange.end);
-          searchParams.append('minSize', filters.sizeRange.min.toString());
-          searchParams.append('maxSize', filters.sizeRange.max.toString());
-          searchParams.append('hasAttachments', filters.hasAttachments.toString());
-          searchParams.append('isShared', filters.isShared.toString());
-          searchParams.append('isFavorite', filters.isFavorite.toString());
-          searchParams.append('searchTerm', filters.query);
-          searchParams.append('contentSearch', filters.contentSearch);
-
-          const response = await fetch(`${config.API_URL}/api/documents/search/advanced?${searchParams}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-          });
-
-          if (!response.ok) {
-            throw new Error('Erreur lors de la recherche avancée');
-          }
-
-          const data = await response.json();
-          return data.results || [];
+          const params: AdvancedSearchParams = {
+            documentTypes: filters.documentTypes.join(','),
+            owners: filters.owners.join(','),
+            tags: filters.tags.join(','),
+            status: filters.status.join(','),
+            startDate: filters.dateRange.start,
+            endDate: filters.dateRange.end,
+            minSize: String(filters.sizeRange.min),
+            maxSize: String(filters.sizeRange.max),
+            hasAttachments: filters.hasAttachments,
+            isShared: filters.isShared,
+            isFavorite: filters.isFavorite,
+            searchTerm: filters.query,
+            contentSearch: filters.contentSearch,
+          };
+          const data = await apiAdvancedSearch(params);
+          return data.results || data.documents || [];
         },
         {
           loadingMessage: "Recherche en cours...",
@@ -203,28 +186,7 @@ const AdvancedSearchPage: React.FC = () => {
     try {
       await executeOperation(
         async () => {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            throw new Error('Token non trouvé');
-          }
-
-          const response = await fetch(`${config.API_URL}/api/search/saved`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-              name: searchName,
-              filters: filters
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error('Erreur lors de la sauvegarde');
-          }
-
+          await apiSaveSearch({ name: searchName, filters });
           return true;
         },
         {

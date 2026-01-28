@@ -49,7 +49,7 @@ class WorkflowApprobation:
                        e.nom as etape_nom, e.ordre as etape_ordre
                 FROM workflow_approbation wa
                 JOIN utilisateur u ON wa.approbateur_id = u.id
-                JOIN etapeworkflow e ON wa.etape_id = e.id
+                JOIN etape_workflow e ON wa.etape_id = e.id
                 WHERE wa.instance_id = %s
                 ORDER BY e.ordre, wa.date_decision
             """, (instance_id,))

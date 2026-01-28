@@ -36,4 +36,31 @@ def token_required(f):
 
         return f(current_user_data, *args, **kwargs)
     
-    return decorated 
+    return decorated
+
+def role_required(*roles):
+    """Décorateur pour restreindre l'accès selon le rôle extrait du JWT"""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(current_user, *args, **kwargs):
+            role = (current_user or {}).get('role', '').lower()
+            allowed = {r.lower() for r in roles}
+            if role not in allowed:
+                return jsonify({'message': 'Accès non autorisé'}), 403
+            return f(current_user, *args, **kwargs)
+        return decorated
+    return wrapper
+
+def require_json_fields(required_fields):
+    """Décorateur pour valider la présence de champs JSON requis"""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            data = request.get_json(silent=True) or {}
+            missing = [field for field in required_fields if not data.get(field)]
+            if missing:
+                return jsonify({'message': f"Champs obligatoires manquants: {', '.join(missing)}"}), 400
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper
+ 

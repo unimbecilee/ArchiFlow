@@ -5,6 +5,7 @@ from AppFlask.models.workflow import Workflow
 from AppFlask.models.workflow_instance import WorkflowInstance
 from psycopg2.extras import RealDictCursor
 import json
+from AppFlask.utils.auth_utils import role_required, require_json_fields
 
 bp = Blueprint('api_workflow', __name__)
 
@@ -26,6 +27,8 @@ def get_workflows(current_user):
 
 @bp.route('/workflows', methods=['POST'])
 @token_required
+@role_required('admin', 'editor')
+@require_json_fields(['nom'])
 def create_workflow(current_user):
     """Créer un nouveau workflow"""
     try:
@@ -107,7 +110,7 @@ def get_workflow(current_user, workflow_id):
                        o.nom as organisation_nom
                 FROM workflow_approbateur wa
                 LEFT JOIN utilisateur u ON wa.utilisateur_id = u.id
-                LEFT JOIN role r ON wa.role_id = r.id
+                LEFT JOIN role r ON wa.role_nom = r.nom
                 LEFT JOIN organisation o ON wa.organisation_id = o.id
                 WHERE wa.etape_id = %s
             """, (etape['id'],))
@@ -128,6 +131,7 @@ def get_workflow(current_user, workflow_id):
 
 @bp.route('/workflows/<int:workflow_id>', methods=['PUT'])
 @token_required
+@role_required('admin', 'editor')
 def update_workflow(current_user, workflow_id):
     """Mettre à jour un workflow"""
     try:
@@ -161,6 +165,7 @@ def update_workflow(current_user, workflow_id):
 
 @bp.route('/workflows/<int:workflow_id>', methods=['DELETE'])
 @token_required
+@role_required('admin')
 def delete_workflow(current_user, workflow_id):
     """Supprimer un workflow"""
     try:
@@ -187,6 +192,8 @@ def delete_workflow(current_user, workflow_id):
 
 @bp.route('/documents/<int:document_id>/workflows', methods=['POST'])
 @token_required
+@role_required('admin', 'editor')
+@require_json_fields(['workflow_id'])
 def start_workflow(current_user, document_id):
     """Démarrer un workflow pour un document"""
     try:
@@ -253,7 +260,7 @@ def get_document_workflows(current_user, document_id):
         current_app.logger.error(f"Erreur lors de la récupération des workflows du document: {e}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/api/workflow-instances', methods=['GET'])
+@bp.route('/workflow-instances', methods=['GET'])
 @token_required
 def get_all_workflow_instances(current_user):
     """Récupérer toutes les instances de workflow avec pagination optionnelle"""
@@ -269,7 +276,7 @@ def get_all_workflow_instances(current_user):
         current_app.logger.error(f"Erreur lors de la récupération des instances de workflow: {e}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/api/workflow-instances/pending', methods=['GET'])
+@bp.route('/workflow-instances/pending', methods=['GET'])
 @token_required
 def get_pending_approvals(current_user):
     """Récupérer les approbations en attente pour l'utilisateur"""
@@ -282,8 +289,9 @@ def get_pending_approvals(current_user):
         current_app.logger.error(f"Erreur lors de la récupération des approbations en attente: {e}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/api/workflow-instances/<int:instance_id>/approve', methods=['POST'])
+@bp.route('/workflow-instances/<int:instance_id>/approve', methods=['POST'])
 @token_required
+@role_required('admin', 'editor')
 def approve_workflow_step(current_user, instance_id):
     """Approuver une étape de workflow"""
     try:
@@ -294,7 +302,7 @@ def approve_workflow_step(current_user, instance_id):
         if not instance:
             return jsonify({'error': 'Instance de workflow non trouvée'}), 404
         
-        if instance['statut'] != 'EN_COURS':
+        if str(instance.get('statut','')).lower() != 'en_cours':
             return jsonify({'error': 'Cette instance de workflow n\'est plus active'}), 400
         
         # Approuver l'étape
@@ -322,8 +330,9 @@ def approve_workflow_step(current_user, instance_id):
         current_app.logger.error(f"Erreur lors de l'approbation: {e}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/api/workflow-instances/<int:instance_id>/reject', methods=['POST'])
+@bp.route('/workflow-instances/<int:instance_id>/reject', methods=['POST'])
 @token_required
+@role_required('admin', 'editor')
 def reject_workflow_step(current_user, instance_id):
     """Rejeter une étape de workflow"""
     try:
@@ -362,8 +371,9 @@ def reject_workflow_step(current_user, instance_id):
         current_app.logger.error(f"Erreur lors du rejet: {e}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/api/workflow-instances/<int:instance_id>/cancel', methods=['POST'])
+@bp.route('/workflow-instances/<int:instance_id>/cancel', methods=['POST'])
 @token_required
+@role_required('admin', 'editor')
 def cancel_workflow_instance(current_user, instance_id):
     """Annuler une instance de workflow"""
     try:
@@ -386,7 +396,7 @@ def cancel_workflow_instance(current_user, instance_id):
         current_app.logger.error(f"Erreur lors de l'annulation: {e}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/api/workflow-instances/<int:instance_id>', methods=['GET'])
+@bp.route('/workflow-instances/<int:instance_id>', methods=['GET'])
 @token_required
 def get_workflow_instance(current_user, instance_id):
     """Récupérer une instance de workflow avec son historique"""
@@ -402,7 +412,7 @@ def get_workflow_instance(current_user, instance_id):
         cursor.execute("""
             SELECT wa.*, e.nom as etape_nom, u.nom as approbateur_nom, u.prenom as approbateur_prenom
             FROM workflow_approbation wa
-            JOIN etapeworkflow e ON wa.etape_id = e.id
+            JOIN etape_workflow e ON wa.etape_id = e.id
             JOIN utilisateur u ON wa.approbateur_id = u.id
             WHERE wa.instance_id = %s
             ORDER BY wa.date_decision DESC
@@ -420,6 +430,90 @@ def get_workflow_instance(current_user, instance_id):
     except Exception as e:
         current_app.logger.error(f"Erreur lors de la récupération de l'instance: {e}")
         return jsonify({'error': str(e)}), 500
+
+# === STATISTIQUES WORKFLOW ===
+
+@bp.route('/workflow-stats', methods=['GET'])
+@token_required
+def get_workflow_stats(current_user):
+    """Statistiques consolidées des workflows (role-aware)"""
+    try:
+        conn = db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Total des modèles de workflow
+        cursor.execute("SELECT COUNT(*) AS cnt FROM workflow")
+        total_workflows = cursor.fetchone()["cnt"] if cursor.description[0].name != 'count' else cursor.fetchone()['count']
+
+        is_admin = str(current_user.get('role', '')).lower() == 'admin'
+        user_id = current_user['id']
+
+        if is_admin:
+            # Instances actives (toutes)
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt
+                FROM workflow_instance wi
+                WHERE wi.statut = 'EN_COURS'
+            """)
+            active_instances = cursor.fetchone()['cnt']
+
+            # Approbations en attente pour l'ensemble (compter les affectées à quelqu'un)
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt
+                FROM workflow_instance wi
+                WHERE wi.statut = 'EN_COURS'
+            """)
+            pending_approvals = cursor.fetchone()['cnt']
+
+            # Terminées aujourd'hui
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt
+                FROM workflow_instance wi
+                WHERE wi.statut = 'TERMINE' AND wi.date_fin::date = CURRENT_DATE
+            """)
+            completed_today = cursor.fetchone()['cnt']
+        else:
+            # Instances actives visibles pour l'utilisateur (initiateur ou approbateur courant)
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt
+                FROM workflow_instance wi
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN workflow_approbateur wa ON wa.etape_id = e.id
+                WHERE wi.statut = 'EN_COURS'
+                  AND (wi.initiateur_id = %s OR wa.utilisateur_id = %s)
+            """, (user_id, user_id))
+            active_instances = cursor.fetchone()['cnt']
+
+            # Approbations en attente assignées à l'utilisateur
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt
+                FROM workflow_instance wi
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN workflow_approbateur wa ON wa.etape_id = e.id
+                WHERE wi.statut = 'EN_COURS' AND wa.utilisateur_id = %s
+            """, (user_id,))
+            pending_approvals = cursor.fetchone()['cnt']
+
+            # Terminées aujourd'hui (initiées par l'utilisateur)
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt
+                FROM workflow_instance wi
+                WHERE wi.statut = 'TERMINE' AND wi.date_fin::date = CURRENT_DATE AND wi.initiateur_id = %s
+            """, (user_id,))
+            completed_today = cursor.fetchone()['cnt']
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'totalWorkflows': int(total_workflows) if isinstance(total_workflows, (int,)) else total_workflows,
+            'activeInstances': active_instances,
+            'pendingApprovals': pending_approvals,
+            'completedToday': completed_today
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Erreur lors des statistiques workflow: {e}")
+        return jsonify({'error': 'Erreur lors de la récupération des statistiques'}), 500
 
 # === ROUTES UTILITAIRES ===
 
@@ -514,3 +608,56 @@ def get_archivage_workflow(current_user):
     except Exception as e:
         current_app.logger.error(f"Erreur lors de la récupération du workflow d'archivage: {e}")
         return jsonify({'error': str(e)}), 500 
+
+@bp.route('/workflows/<int:workflow_id>/etapes/<int:etape_id>/approbateurs', methods=['PUT'])
+@token_required
+@role_required('admin', 'editor')
+def replace_approvers(current_user, workflow_id, etape_id):
+    """Remplacer les approbateurs pour une étape de workflow"""
+    try:
+        payload = request.get_json() or {}
+        approbateurs = payload.get('approbateurs', [])
+
+        conn = db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        # Vérifier que l'étape appartient bien au workflow
+        cursor.execute("""
+            SELECT id FROM etape_workflow
+            WHERE id = %s AND workflow_id = %s
+        """, (etape_id, workflow_id))
+        if cursor.fetchone() is None:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': "Étape non trouvée pour ce workflow"}), 404
+
+        # Supprimer les approbateurs actuels
+        cursor.execute("DELETE FROM workflow_approbateur WHERE etape_id = %s", (etape_id,))
+
+        # Ajouter les nouveaux approbateurs (supporte utilisateur/role/organisation)
+        for appro in approbateurs:
+            utilisateur_id = appro.get('utilisateur_id') or (appro.get('type') == 'utilisateur' and appro.get('id')) or None
+            # Le schéma stocke le rôle par son nom (role.nom)
+            role_nom = appro.get('role_nom') or (appro.get('type') == 'role' and appro.get('id')) or appro.get('role_id') or None
+            organisation_id = appro.get('organisation_id') or (appro.get('type') == 'organisation' and appro.get('id')) or None
+
+            if not any([utilisateur_id, role_nom, organisation_id]):
+                continue
+
+            cursor.execute(
+                """
+                INSERT INTO workflow_approbateur (etape_id, utilisateur_id, role_nom, organisation_id)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (etape_id, utilisateur_id, role_nom, organisation_id)
+            )
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({'message': 'Approbateurs remplacés avec succès'}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Erreur lors de la mise à jour des approbateurs: {e}")
+        return jsonify({'error': 'Erreur lors de la mise à jour des approbateurs'}), 500

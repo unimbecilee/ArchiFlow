@@ -231,7 +231,7 @@ def get_document_workflow_status(current_user: Dict[str, Any], document_id: int)
                        d.statut as document_statut
                 FROM workflow_instance wi
                 JOIN document d ON wi.document_id = d.id
-                LEFT JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 WHERE wi.document_id = %s
                 ORDER BY wi.date_debut DESC
                 LIMIT 1

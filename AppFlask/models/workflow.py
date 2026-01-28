@@ -157,7 +157,7 @@ class Workflow:
                 raise Exception("Impossible de supprimer un workflow avec des instances actives")
             
             # Supprimer les étapes
-            cursor.execute("DELETE FROM etapeworkflow WHERE workflow_id = %s", (workflow_id,))
+            cursor.execute("DELETE FROM etape_workflow WHERE workflow_id = %s", (workflow_id,))
             
             # Supprimer le workflow
             cursor.execute("DELETE FROM workflow WHERE id = %s", (workflow_id,))
@@ -186,7 +186,7 @@ class Workflow:
             cursor.execute("""
                 SELECT e.*, 
                        COUNT(wa.id) as approbateurs_count
-                FROM etapeworkflow e
+                FROM etape_workflow e
                 LEFT JOIN workflow_approbateur wa ON e.id = wa.etape_id
                 WHERE e.workflow_id = %s
                 GROUP BY e.id
@@ -204,7 +204,7 @@ class Workflow:
                            o.nom as organisation_nom
                     FROM workflow_approbateur wa
                     LEFT JOIN utilisateur u ON wa.utilisateur_id = u.id
-                    LEFT JOIN role r ON wa.role_id = r.id
+                    LEFT JOIN role r ON wa.role_nom = r.nom
                     LEFT JOIN organisation o ON wa.organisation_id = o.id
                     WHERE wa.etape_id = %s
                 """, (etape['id'],))
@@ -255,13 +255,13 @@ class Workflow:
             # Obtenir le prochain ordre
             cursor.execute("""
                 SELECT COALESCE(MAX(ordre), 0) + 1 as next_ordre 
-                FROM etapeworkflow WHERE workflow_id = %s
+                FROM etape_workflow WHERE workflow_id = %s
             """, (workflow_id,))
             
             next_ordre = cursor.fetchone()['next_ordre']
             
             cursor.execute("""
-                INSERT INTO etapeworkflow (workflow_id, nom, description, ordre, type_approbation, delai_max)
+                INSERT INTO etape_workflow (workflow_id, nom, description, ordre, type_approbation, delai_max)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (workflow_id, nom, description, next_ordre, type_approbation, delai_max))

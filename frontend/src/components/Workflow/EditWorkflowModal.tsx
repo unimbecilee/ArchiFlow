@@ -8,6 +8,9 @@ import { FiUser, FiUsers, FiBriefcase } from 'react-icons/fi';
 import { ChevronDownIcon, DeleteIcon } from '@chakra-ui/icons';
 import { useAsyncOperation } from '../../hooks/useAsyncOperation';
 import { checkAuthToken } from '../../utils/errorHandling';
+import { useWorkflow, useWorkflowEtapes } from '../../hooks/useWorkflow';
+import { useUsersForApproval, useOrganizations, useSharingRoles } from '../../hooks/useDirectory';
+import { replaceApprovers } from '../../services/workflowService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://web-production-ae27.up.railway.app';
 
@@ -78,93 +81,28 @@ const EditWorkflowModal: React.FC<EditWorkflowModalProps> = ({
   const { executeOperation } = useAsyncOperation();
   const toast = useToast();
 
+  // Hooks data
+  const { data: workflowData, isLoading: workflowLoading } = useWorkflow(workflowId || 0);
+  const { data: etapesData, isLoading: etapesLoading } = useWorkflowEtapes(workflowId || 0);
+  const { data: usersData } = useUsersForApproval();
+  const { data: orgsData } = useOrganizations();
+  const { data: rolesData } = useSharingRoles();
+
   useEffect(() => {
     if (isOpen && workflowId) {
-      loadWorkflowData();
-      loadUsersAndOrganizations();
+      if (workflowData) {
+        setWorkflow({ ...(workflowData as any), etapes: (etapesData as any) || [] });
+      }
+      if (usersData) setUsers(usersData);
+      if (orgsData) setOrganizations(orgsData);
+      if (rolesData) setRoles(rolesData);
+      setIsLoading(Boolean(workflowLoading || etapesLoading));
     }
-  }, [isOpen, workflowId]);
+  }, [isOpen, workflowId, workflowData, etapesData, usersData, orgsData, rolesData, workflowLoading, etapesLoading]);
 
-  const loadWorkflowData = async () => {
-    if (!workflowId) return;
-    
-    setIsLoading(true);
-    await executeOperation(
-      async () => {
-        const token = checkAuthToken();
-        
-        // Charger les détails du workflow
-        const workflowResponse = await fetch(`${API_URL}/api/workflows/${workflowId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!workflowResponse.ok) {
-          throw new Error('Impossible de charger le workflow');
-        }
-        
-        const workflowData = await workflowResponse.json();
-        
-        // Charger les étapes avec leurs approbateurs
-        const etapesResponse = await fetch(`${API_URL}/api/workflows/${workflowId}/etapes`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!etapesResponse.ok) {
-          throw new Error('Impossible de charger les étapes');
-        }
-        
-        const etapesData = await etapesResponse.json();
-        
-        setWorkflow({
-          ...workflowData,
-          etapes: etapesData
-        });
-      },
-      {
-        loadingMessage: "Chargement du workflow...",
-        errorMessage: "Impossible de charger le workflow"
-      }
-    );
-    setIsLoading(false);
-  };
+  // remove manual loaders; hooks above handle data
 
-  const loadUsersAndOrganizations = async () => {
-    await executeOperation(
-      async () => {
-        const token = checkAuthToken();
-        
-        // Charger les utilisateurs
-        const usersResponse = await fetch(`${API_URL}/api/users/for-approval`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (usersResponse.ok) {
-          setUsers(await usersResponse.json());
-        }
-
-        // Charger les organisations
-        const orgsResponse = await fetch(`${API_URL}/api/organizations`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (orgsResponse.ok) {
-          setOrganizations(await orgsResponse.json());
-        }
-
-        // Charger les rôles
-        const rolesResponse = await fetch(`${API_URL}/api/sharing/roles`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (rolesResponse.ok) {
-          setRoles(await rolesResponse.json());
-        }
-      },
-      {
-        errorMessage: "Impossible de charger les données"
-      }
-    );
-  };
+  // removed manual users/orgs/roles loader; hooks above hydrate state
 
   const updateEtapeApprobateurs = (etapeId: number, approbateurs: Approbateur[]) => {
     if (!workflow || !workflow.etapes) return;
@@ -214,8 +152,18 @@ const EditWorkflowModal: React.FC<EditWorkflowModalProps> = ({
     setIsLoading(true);
     await executeOperation(
       async () => {
-        const token = checkAuthToken();
-        
+        // Appeler l'endpoint pour chaque étape avec ses approbateurs
+        const etapes = workflow.etapes || [];
+        for (const etape of etapes) {
+          const payload = (etape.approbateurs || []).map((a) => {
+            if (a.type === 'utilisateur') return { type: 'utilisateur', id: a.id, utilisateur_id: a.id };
+            if (a.type === 'role') return { type: 'role', id: a.id, role_id: a.id };
+            if (a.type === 'organisation') return { type: 'organisation', id: a.id, organisation_id: a.id };
+            return {} as any;
+          });
+          await replaceApprovers(workflow.id, etape.id, payload as any);
+        }
+
         toast({
           title: 'Succès',
           description: 'Les approbateurs ont été mis à jour avec succès',
@@ -223,7 +171,7 @@ const EditWorkflowModal: React.FC<EditWorkflowModalProps> = ({
           duration: 5000,
           isClosable: true
         });
-        
+
         onWorkflowUpdated();
         handleClose();
       },

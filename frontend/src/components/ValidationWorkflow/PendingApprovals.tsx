@@ -120,15 +120,7 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
       {
         loadingMessage: "Chargement des validations en attente...",
         errorMessage: "Impossible de charger les validations",
-        onError: (error) => {
-          toast({
-            title: "Erreur de chargement",
-            description: error.message,
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-          });
-        }
+        showError: true
       }
     );
     
@@ -345,7 +337,7 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
         <Heading size="md">Validations en attente ({approvals.length})</Heading>
         <Spacer />
         <Button
-          leftIcon={<Icon as={FiRefreshCw} />}
+          leftIcon={<Icon as={asElementType(FiRefreshCw)} />}
           onClick={loadPendingApprovals}
           colorScheme="blue"
           variant="outline"
@@ -365,12 +357,12 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
               <VStack align="stretch" spacing={3}>
                 <Flex align="center" justify="space-between">
                   <HStack>
-                    <Icon as={FiFileText} color="blue.500" boxSize={5} />
+                    <Icon as={asElementType(FiFileText)} color="blue.500" boxSize={5} />
                     <Text fontWeight="bold">{approval.document_titre}</Text>
                     <Tooltip label={typeInfo.description}>
                       <Badge colorScheme={typeInfo.color} variant="subtle">
                         <HStack spacing={1}>
-                          <Icon as={typeInfo.icon} />
+                          <Icon as={asElementType(typeInfo.icon)} />
                           <Text>{typeInfo.label}</Text>
                         </HStack>
                       </Badge>
@@ -379,7 +371,7 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
                   {isLate && (
                     <Badge colorScheme="red">
                       <HStack spacing={1}>
-                        <Icon as={FiClock} />
+                        <Icon as={asElementType(FiClock)} />
                         <Text>En retard</Text>
                       </HStack>
                     </Badge>
@@ -391,11 +383,11 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
                 <HStack spacing={4}>
                   <VStack align="start" flex={1}>
                     <Text fontSize="sm" color="gray.600">
-                      <Icon as={FiUser} mr={2} />
+                      <Icon as={asElementType(FiUser)} mr={2} />
                       Initiateur: {approval.initiateur_nom} {approval.initiateur_prenom}
                     </Text>
                     <Text fontSize="sm" color="gray.600">
-                      <Icon as={FiCalendar} mr={2} />
+                      <Icon as={asElementType(FiCalendar)} mr={2} />
                       Date début: {formatDate(approval.date_debut)}
                     </Text>
                   </VStack>
@@ -410,7 +402,7 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
 
                 <ButtonGroup spacing={2} alignSelf="flex-end">
                   <Button
-                    leftIcon={<Icon as={FiXCircle} />}
+                    leftIcon={<Icon as={asElementType(FiXCircle)} />}
                     colorScheme="red"
                     variant="outline"
                     size="sm"
@@ -422,7 +414,7 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({
                     Rejeter
                   </Button>
                   <Button
-                    leftIcon={<Icon as={FiCheckCircle} />}
+                    leftIcon={<Icon as={asElementType(FiCheckCircle)} />}
                     colorScheme="green"
                     onClick={() => {
                       setDecision('APPROUVE');

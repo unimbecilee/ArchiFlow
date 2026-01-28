@@ -49,6 +49,8 @@ import { FiUsers, FiUser, FiBriefcase } from 'react-icons/fi';
 import { useAsyncOperation } from '../../hooks/useAsyncOperation';
 import { checkAuthToken } from '../../utils/errorHandling';
 import { API_URL } from '../../config';
+import { useCreateWorkflow } from '../../hooks/useWorkflow';
+import { useUsersForApproval, useOrganizations } from '../../hooks/useDirectory';
 
 // Helper component pour les icônes
 const IconWrapper: React.FC<{ icon: any; color?: string }> = ({ icon: IconComponent, color }) => (
@@ -103,6 +105,7 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
 }) => {
   const { executeOperation } = useAsyncOperation();
   const toast = useToast();
+  const createWorkflowMutation = useCreateWorkflow();
 
   // États du formulaire
   const [workflowName, setWorkflowName] = useState('');
@@ -113,6 +116,8 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const { data: usersData } = useUsersForApproval();
+  const { data: orgsData } = useOrganizations();
   
   // États pour les modals de sélection
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -122,42 +127,13 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
   // États de validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Charger les données nécessaires
+  // Charger les données nécessaires via hooks
   useEffect(() => {
     if (isOpen) {
-      loadInitialData();
+      if (usersData) setUsers(usersData);
+      if (orgsData) setOrganizations(orgsData);
     }
-  }, [isOpen]);
-
-  const loadInitialData = async () => {
-    await executeOperation(
-      async () => {
-        const token = checkAuthToken();
-        
-        // Charger les utilisateurs
-        const usersResponse = await fetch(`${API_URL}/api/users/for-approval`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (usersResponse.ok) {
-          setUsers(await usersResponse.json());
-        }
-
-        // Charger les organisations
-        const orgsResponse = await fetch(`${API_URL}/api/organizations`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (orgsResponse.ok) {
-          setOrganizations(await orgsResponse.json());
-        }
-      },
-      {
-        loadingMessage: "Chargement des données...",
-        errorMessage: "Impossible de charger les données"
-      }
-    );
-  };
+  }, [isOpen, usersData, orgsData]);
 
   const addStep = () => {
     const newStep: WorkflowStep = {
@@ -270,8 +246,6 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
 
     await executeOperation(
       async () => {
-        const token = checkAuthToken();
-        
         const workflowData = {
           nom: workflowName,
           description: workflowDescription,
@@ -288,19 +262,7 @@ const CreateWorkflowModal: React.FC<CreateWorkflowModalProps> = ({
           }))
         };
 
-        const response = await fetch(`${API_URL}/api/workflows`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(workflowData)
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Erreur lors de la création');
-        }
+        await createWorkflowMutation.mutateAsync(workflowData as any);
 
         toast({
           title: 'Succès',

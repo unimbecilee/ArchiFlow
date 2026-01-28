@@ -74,10 +74,19 @@ import { useAuth } from '../../contexts/AuthContext';
 import { checkAuthToken } from '../../utils/errorHandling';
 import { asElementType } from '../../utils/iconUtils';
 import { API_URL } from '../../config';
+import api from '../../services/api';
 import CreateWorkflowModal from './CreateWorkflowModal';
 import WorkflowDetailsModal from './WorkflowDetailsModal';
 import EditWorkflowModal from './EditWorkflowModal';
 import PendingApprovals from '../ValidationWorkflow/PendingApprovals';
+import {
+  useWorkflows,
+  useWorkflowInstances,
+  usePendingApprovals,
+  useApproveInstance,
+  useRejectInstance,
+  useDeleteWorkflow,
+} from '../../hooks/useWorkflow';
 
 // Helper component pour les icônes
 const IconWrapper: React.FC<{ icon: any; color?: string }> = ({ icon: IconComponent, color }) => (
@@ -129,6 +138,14 @@ const WorkflowManagement: React.FC = () => {
   const { isOpen: isDetailsModalOpen, onOpen: onDetailsModalOpen, onClose: onDetailsModalClose } = useDisclosure();
   const { isOpen: isEditModalOpen, onOpen: onEditModalOpen, onClose: onEditModalClose } = useDisclosure();
   
+  // React Query hooks
+  const { data: workflowsData, isLoading: workflowsLoading } = useWorkflows();
+  const { data: pendingData, isLoading: pendingLoading } = usePendingApprovals();
+  const { data: instancesData, isLoading: instancesLoading } = useWorkflowInstances();
+  const approveMutation = useApproveInstance();
+  const rejectMutation = useRejectInstance();
+  const deleteWorkflowMutation = useDeleteWorkflow();
+  
   // Gestion des paramètres d'URL pour les onglets
   const [searchParams, setSearchParams] = useSearchParams();
   const [tabIndex, setTabIndex] = useState(0);
@@ -163,73 +180,36 @@ const WorkflowManagement: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Hydrate local state from React Query data (temp migration)
   useEffect(() => {
-    loadData();
-  }, []);
+    if (workflowsData) setWorkflowTemplates(workflowsData as any);
+  }, [workflowsData]);
+  useEffect(() => {
+    if (pendingData) setPendingApprovals(pendingData as any);
+  }, [pendingData]);
+  useEffect(() => {
+    if (instancesData) setWorkflowInstances(instancesData as any);
+  }, [instancesData]);
 
   const loadData = async () => {
+    // Charger les stats via /api/workflow-stats
     setIsLoading(true);
-    
     await executeOperation(
       async () => {
-        const token = checkAuthToken();
-
-        // Charger les statistiques des workflows
-        const statsResponse = await fetch(`${API_URL}/api/workflow-stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const response = await api.get('/workflow-stats');
+        const statsData = response.data || {};
+        setStats({
+          totalWorkflows: statsData.totalWorkflows || 0,
+          activeInstances: statsData.activeInstances || 0,
+          pendingApprovals: statsData.pendingApprovals || 0,
+          completedToday: statsData.completedToday || 0,
         });
-        
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats({
-            totalWorkflows: statsData.totalWorkflows || 0,
-            activeInstances: statsData.activeInstances || 0,
-            pendingApprovals: statsData.pendingApprovals || 0,
-            completedToday: statsData.completedToday || 0
-          });
-          
-          // Mettre à jour les instances récentes si disponibles
-          if (statsData.recentInstances) {
-            setWorkflowInstances(statsData.recentInstances);
-          }
-        }
-
-        // Charger les modèles de workflow
-        const templatesResponse = await fetch(`${API_URL}/api/workflows`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (templatesResponse.ok) {
-          const templates = await templatesResponse.json();
-          setWorkflowTemplates(templates);
-        }
-
-        // Charger les approbations en attente
-        const approvalsResponse = await fetch(`${API_URL}/api/pending-approvals`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (approvalsResponse.ok) {
-          const approvals = await approvalsResponse.json();
-          setPendingApprovals(approvals);
-        }
-
-        // Charger toutes les instances de workflow
-        const instancesResponse = await fetch(`${API_URL}/api/workflow-instances`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (instancesResponse.ok) {
-          const instances = await instancesResponse.json();
-          setWorkflowInstances(instances);
-        }
       },
       {
-        loadingMessage: "Chargement des workflows...",
-        errorMessage: "Impossible de charger les workflows"
+        loadingMessage: 'Chargement des workflows...',
+        errorMessage: "Impossible de charger les workflows",
       }
     );
-    
     setIsLoading(false);
   };
 
@@ -246,21 +226,7 @@ const WorkflowManagement: React.FC = () => {
   const handleDeleteWorkflow = async (workflowId: number) => {
     await executeOperation(
       async () => {
-        const token = checkAuthToken();
-        
-        const response = await fetch(`${API_URL}/api/workflows/${workflowId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Erreur lors de la suppression');
-        }
-
-        // Mettre à jour la liste des workflows
-        setWorkflowTemplates(workflowTemplates.filter(w => w.id !== workflowId));
-        
+        await deleteWorkflowMutation.mutateAsync(workflowId);
         toast({
           title: 'Succès',
           description: 'Workflow supprimé avec succès',
@@ -292,25 +258,7 @@ const WorkflowManagement: React.FC = () => {
 
     await executeOperation(
       async () => {
-        const token = checkAuthToken();
-        
-        const response = await fetch(`${API_URL}/api/workflow-instances/${instanceId}/approve`, {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            etape_id: approval.etape_id,
-            commentaire: ''
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Erreur lors de l\'approbation');
-        }
-
+        await approveMutation.mutateAsync({ instanceId, commentaire: '' });
         toast({
           title: 'Succès',
           description: 'Étape approuvée avec succès',
@@ -318,8 +266,6 @@ const WorkflowManagement: React.FC = () => {
           duration: 5000,
           isClosable: true
         });
-
-        loadData();
       },
       {
         loadingMessage: "Approbation en cours...",
@@ -344,25 +290,7 @@ const WorkflowManagement: React.FC = () => {
 
     await executeOperation(
       async () => {
-        const token = checkAuthToken();
-        
-        const response = await fetch(`${API_URL}/api/workflow-instances/${instanceId}/reject`, {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            etape_id: approval.etape_id,
-            commentaire: ''
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Erreur lors du rejet');
-        }
-
+        await rejectMutation.mutateAsync({ instanceId, commentaire: '' });
         toast({
           title: 'Workflow rejeté',
           description: 'L\'étape a été rejetée',
@@ -370,8 +298,6 @@ const WorkflowManagement: React.FC = () => {
           duration: 5000,
           isClosable: true
         });
-
-        loadData();
       },
       {
         loadingMessage: "Rejet en cours...",
@@ -532,7 +458,7 @@ const WorkflowManagement: React.FC = () => {
 
                 {/* Table des workflows */}
                 <Box bg="#20243a" borderRadius="lg" overflow="hidden">
-                  {isLoading ? (
+                  {isLoading || workflowsLoading ? (
                     <VStack p={6} spacing={4}>
                       {[...Array(5)].map((_, i) => (
                         <Skeleton key={i} height="60px" width="100%" />

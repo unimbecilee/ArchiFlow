@@ -31,7 +31,7 @@ class WorkflowInstance:
             
             # Obtenir la première étape du workflow
             cursor.execute("""
-                SELECT id FROM etapeworkflow 
+                SELECT id FROM etape_workflow 
                 WHERE workflow_id = %s 
                 ORDER BY ordre 
                 LIMIT 1
@@ -89,7 +89,7 @@ class WorkflowInstance:
                 LEFT JOIN workflow w ON wi.workflow_id = w.id
                 LEFT JOIN document d ON wi.document_id = d.id
                 LEFT JOIN utilisateur u ON wi.initiateur_id = u.id
-                LEFT JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 WHERE wi.id = %s
             """, (instance_id,))
             
@@ -116,7 +116,7 @@ class WorkflowInstance:
                 FROM workflow_instance wi
                 LEFT JOIN workflow w ON wi.workflow_id = w.id
                 LEFT JOIN utilisateur u ON wi.initiateur_id = u.id
-                LEFT JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 WHERE wi.document_id = %s
                 ORDER BY wi.date_debut DESC
             """, (document_id,))
@@ -154,15 +154,15 @@ class WorkflowInstance:
                 JOIN workflow w ON wi.workflow_id = w.id
                 JOIN document d ON wi.document_id = d.id
                 JOIN utilisateur u ON wi.initiateur_id = u.id
-                JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 JOIN workflow_approbateur wa ON e.id = wa.etape_id
                 WHERE wi.statut = 'EN_COURS'
                 AND (
                     wa.utilisateur_id = %s 
-                    OR (wa.role_id IS NOT NULL AND EXISTS (
+                    OR (wa.role_nom IS NOT NULL AND EXISTS (
                         SELECT 1 FROM role r 
                         JOIN utilisateur u2 ON u2.role = r.nom 
-                        WHERE r.id = wa.role_id AND u2.id = %s
+                        WHERE r.nom = wa.role_nom AND u2.id = %s
                     ))
                     OR wa.organisation_id IN (SELECT organisation_id FROM membre WHERE utilisateur_id = %s)
                 )
@@ -281,7 +281,7 @@ class WorkflowInstance:
         
         # Obtenir le type d'approbation de l'étape
         cursor.execute("""
-            SELECT type_approbation FROM etapeworkflow WHERE id = %s
+            SELECT type_approbation FROM etape_workflow WHERE id = %s
         """, (etape_id,))
         
         etape = cursor.fetchone()
@@ -338,9 +338,9 @@ class WorkflowInstance:
         
         # Trouver l'étape suivante
         cursor.execute("""
-            SELECT id FROM etapeworkflow 
+            SELECT id FROM etape_workflow 
             WHERE workflow_id = %s AND ordre > (
-                SELECT ordre FROM etapeworkflow WHERE id = %s
+                SELECT ordre FROM etape_workflow WHERE id = %s
             )
             ORDER BY ordre 
             LIMIT 1
@@ -435,7 +435,7 @@ class WorkflowInstance:
         # Récupérer les informations sur l'étape et le document
         cursor.execute("""
             SELECT e.nom as etape_nom, d.titre as document_titre
-            FROM etapeworkflow e
+            FROM etape_workflow e
             JOIN document d ON d.id = %s
             WHERE e.id = %s
         """, (document_id, etape_id))
@@ -461,9 +461,9 @@ class WorkflowInstance:
         cursor.execute("""
             SELECT u.id, u.nom, u.prenom, u.email
             FROM workflow_approbateur wa
-            JOIN role r ON wa.role_id = r.id
+            JOIN role r ON wa.role_nom = r.nom
             JOIN utilisateur u ON u.role = r.nom
-            WHERE wa.etape_id = %s AND wa.role_id IS NOT NULL
+            WHERE wa.etape_id = %s AND wa.role_nom IS NOT NULL
         """, (etape_id,))
         
         role_approvers = cursor.fetchall()
@@ -551,7 +551,7 @@ class WorkflowInstance:
         cursor.execute("""
             SELECT wi.initiateur_id, e.nom as etape_nom, d.titre as document_titre, w.nom as workflow_nom
             FROM workflow_instance wi
-            JOIN etapeworkflow e ON e.id = %s
+            JOIN etape_workflow e ON e.id = %s
             JOIN document d ON d.id = wi.document_id
             JOIN workflow w ON w.id = wi.workflow_id
             WHERE wi.id = %s
@@ -675,7 +675,7 @@ class WorkflowInstance:
                 LEFT JOIN workflow w ON wi.workflow_id = w.id
                 LEFT JOIN document d ON wi.document_id = d.id
                 LEFT JOIN utilisateur u ON wi.initiateur_id = u.id
-                LEFT JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 ORDER BY wi.date_debut DESC
             """
             

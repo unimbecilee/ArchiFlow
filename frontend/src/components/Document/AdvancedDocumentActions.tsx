@@ -5,7 +5,7 @@ import DocumentCheckout from './DocumentCheckout';
 import DocumentComments from './DocumentComments';
 import DocumentSubscription from './DocumentSubscription';
 import DocumentTags from './DocumentTags';
-import DocumentPreview from './DocumentPreview';
+import DocumentPreview from '../DocumentPreview';
 
 interface AdvancedDocumentActionsProps {
   documentId: number;

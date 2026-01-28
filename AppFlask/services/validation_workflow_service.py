@@ -73,7 +73,7 @@ class ValidationWorkflowService:
             # Créer les étapes
             # Étape 1 : Chef de service
             cursor.execute("""
-                INSERT INTO etapeworkflow (workflow_id, nom, description, ordre, type_approbation, delai_max)
+                INSERT INTO etape_workflow (workflow_id, nom, description, ordre, type_approbation, delai_max)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
@@ -89,7 +89,7 @@ class ValidationWorkflowService:
             
             # Étape 2 : Directeur
             cursor.execute("""
-                INSERT INTO etapeworkflow (workflow_id, nom, description, ordre, type_approbation, delai_max)
+                INSERT INTO etape_workflow (workflow_id, nom, description, ordre, type_approbation, delai_max)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
@@ -163,7 +163,7 @@ class ValidationWorkflowService:
             
             # Récupérer la première étape
             cursor.execute("""
-                SELECT id FROM etapeworkflow 
+                SELECT id FROM etape_workflow 
                 WHERE workflow_id = %s 
                 ORDER BY ordre 
                 LIMIT 1
@@ -257,7 +257,7 @@ class ValidationWorkflowService:
                        e.nom as etape_nom, e.ordre as etape_ordre
                 FROM workflow_instance wi
                 JOIN document d ON wi.document_id = d.id
-                JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 WHERE wi.id = %s AND wi.statut = %s
             """, (instance_id, self.STATUS_EN_COURS))
             
@@ -384,8 +384,8 @@ class ValidationWorkflowService:
                 # Chercher l'étape suivante
                 cursor.execute("""
                     SELECT ew.id, ew.nom 
-                    FROM etapeworkflow ew
-                    JOIN etapeworkflow current_ew ON current_ew.workflow_id = ew.workflow_id
+                    FROM etape_workflow ew
+                    JOIN etape_workflow current_ew ON current_ew.workflow_id = ew.workflow_id
                     WHERE current_ew.id = %s AND ew.ordre > current_ew.ordre
                     ORDER BY ew.ordre 
                     LIMIT 1
@@ -428,9 +428,9 @@ class ValidationWorkflowService:
                         cursor.execute("""
                             SELECT DISTINCT u.id, u.email, u.nom, u.prenom
                             FROM workflow_approbateur wa
-                            LEFT JOIN role r ON wa.role_id = r.id
+                            LEFT JOIN role r ON wa.role_nom = r.nom
                             JOIN utilisateur u ON (
-                                (wa.role_id IS NOT NULL AND u.role = r.nom) OR
+                                (wa.role_nom IS NOT NULL AND u.role = r.nom) OR
                                 (wa.utilisateur_id IS NOT NULL AND u.id = wa.utilisateur_id)
                             )
                             WHERE wa.etape_id = %s
@@ -554,7 +554,7 @@ class ValidationWorkflowService:
             # Vérifier si l'utilisateur peut approuver cette étape (par rôle ou directement)
             cursor.execute("""
                 SELECT 1 FROM workflow_approbateur wa
-                LEFT JOIN role r ON wa.role_id = r.id
+                LEFT JOIN role r ON wa.role_nom = r.nom
                 WHERE wa.etape_id = %s 
                 AND (r.nom = %s OR wa.utilisateur_id = %s)
             """, (etape_id, user_role, user_id))
@@ -587,10 +587,10 @@ class ValidationWorkflowService:
             cursor.execute("""
                 SELECT DISTINCT u.id, u.email, u.nom, u.prenom, u.role
                 FROM workflow_approbateur wa
-                LEFT JOIN role r ON wa.role_id = r.id
+                LEFT JOIN role r ON wa.role_nom = r.nom
                 JOIN utilisateur u ON (
                     (wa.utilisateur_id IS NOT NULL AND u.id = wa.utilisateur_id) OR
-                    (wa.role_id IS NOT NULL AND u.role = r.nom)
+                    (wa.role_nom IS NOT NULL AND u.role = r.nom)
                 )
                 WHERE wa.etape_id = %s
             """, (etape_id,))
@@ -672,13 +672,13 @@ class ValidationWorkflowService:
                             WHERE wa3.etape_id = e.id
                         ) as approbateurs_requis
                     FROM workflow_instance wi
-                    JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                    JOIN etape_workflow e ON wi.etape_courante_id = e.id
                     JOIN workflow_approbateur wa ON e.id = wa.etape_id
-                    LEFT JOIN role r ON wa.role_id = r.id
+                    LEFT JOIN role r ON wa.role_nom = r.nom
                     WHERE wi.statut = %s
                     AND (
                         wa.utilisateur_id = %s
-                        OR (wa.role_id IS NOT NULL AND LOWER(r.nom) = %s)
+                        OR (wa.role_nom IS NOT NULL AND LOWER(r.nom) = %s)
                         OR (%s = 'admin')
                     )
                     AND (
@@ -723,9 +723,9 @@ class ValidationWorkflowService:
                 FROM workflow_steps ws
                 JOIN workflow_instance wi ON ws.instance_id = wi.id
                 JOIN document d ON wi.document_id = d.id
-                JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 JOIN workflow_approbateur wa ON e.id = wa.etape_id
-                LEFT JOIN role r ON wa.role_id = r.id
+                LEFT JOIN role r ON wa.role_nom = r.nom
                 JOIN utilisateur u ON wi.initiateur_id = u.id
                 WHERE (
                     -- Pour type SIMPLE : pas encore d'approbation
@@ -810,7 +810,7 @@ class ValidationWorkflowService:
                 FROM workflow_instance wi
                 JOIN document d ON wi.document_id = d.id
                 JOIN utilisateur u ON wi.initiateur_id = u.id
-                LEFT JOIN etapeworkflow e ON wi.etape_courante_id = e.id
+                LEFT JOIN etape_workflow e ON wi.etape_courante_id = e.id
                 WHERE wi.id = %s
             """, (instance_id,))
             
@@ -825,7 +825,7 @@ class ValidationWorkflowService:
                 SELECT wa.*, e.nom as etape_nom, e.ordre,
                        u.nom as approbateur_nom, u.prenom as approbateur_prenom
                 FROM workflow_approbation wa
-                JOIN etapeworkflow e ON wa.etape_id = e.id
+                JOIN etape_workflow e ON wa.etape_id = e.id
                 JOIN utilisateur u ON wa.approbateur_id = u.id
                 WHERE wa.instance_id = %s
                 ORDER BY e.ordre, wa.date_decision
@@ -839,7 +839,7 @@ class ValidationWorkflowService:
                        wa.decision as statut_etape,
                        wa.date_decision, wa.commentaire as commentaire_approbation,
                        u.nom as approbateur_nom, u.prenom as approbateur_prenom
-                FROM etapeworkflow e
+                FROM etape_workflow e
                 LEFT JOIN workflow_approbation wa ON e.id = wa.etape_id AND wa.instance_id = %s
                 LEFT JOIN utilisateur u ON wa.approbateur_id = u.id
                 WHERE e.workflow_id = %s

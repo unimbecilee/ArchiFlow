@@ -36,12 +36,14 @@ import {
   AlertDescription,
   TableContainer,
   ButtonGroup,
+  Checkbox,
 } from "@chakra-ui/react";
 import { SearchIcon, DeleteIcon, RepeatIcon } from "@chakra-ui/icons";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import config from "../config";
 import RequireRole from './RequireRole';
+import { listTrash, restoreTrashItem as apiRestoreTrashItem, deleteTrashItem as apiDeleteTrashItem, bulkRestore, bulkDelete } from "../services/trashService";
 
 interface TrashItem {
   id: number;
@@ -72,6 +74,11 @@ const Trash: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [perPage, setPerPage] = useState<number>(20);
+  const [hasNext, setHasNext] = useState<boolean>(false);
+  const [hasPrev, setHasPrev] = useState<boolean>(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const toast = useToast();
   const bgColor = useColorModeValue("white", "#1a202c");
@@ -82,42 +89,57 @@ const Trash: React.FC = () => {
 
   const getAuthToken = () => localStorage.getItem("token");
 
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(filteredItems.map(i => i.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const toggleSelectOne = (id: number, checked: boolean) => {
+    setSelectedIds(prev => checked ? Array.from(new Set([...prev, id])) : prev.filter(x => x !== id));
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await bulkRestore(selectedIds);
+      toast({ title: 'Succès', description: `${selectedIds.length} éléments restaurés`, status: 'success', duration: 3000, isClosable: true });
+      setSelectedIds([]);
+      fetchTrashItems();
+      fetchStats();
+    } catch (e) {
+      toast({ title: 'Erreur', description: `Impossible de restaurer la sélection`, status: 'error', duration: 5000, isClosable: true });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await bulkDelete(selectedIds);
+      toast({ title: 'Succès', description: `${selectedIds.length} éléments supprimés définitivement`, status: 'success', duration: 3000, isClosable: true });
+      setSelectedIds([]);
+      fetchTrashItems();
+      fetchStats();
+    } catch (e) {
+      toast({ title: 'Erreur', description: `Impossible de supprimer la sélection`, status: 'error', duration: 5000, isClosable: true });
+    }
+  };
+
   const fetchTrashItems = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const token = getAuthToken();
-      console.log("🔍 [DEBUG] Token récupéré:", token ? "Présent" : "Manquant");
-      
-      if (!token) {
-        throw new Error("Token d'authentification manquant");
-      }
+      const params: any = {
+        page,
+        per_page: perPage,
+      };
+      if (filterType && filterType !== 'all') params.type = filterType;
+      if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
 
-      console.log("🔍 [DEBUG] Appel API trash avec token:", token.substring(0, 20) + "...");
-
-      const response = await fetch(`${config.API_URL}/api/trash`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
-      });
-
-      console.log("🔍 [DEBUG] Réponse API:", {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("🔍 [DEBUG] Erreur API:", errorText);
-        throw new Error(`Erreur ${response.status}: ${response.statusText} - ${errorText}`);
-      }
-
-      const data = await response.json();
+      const data = await listTrash(params);
       console.log("🔍 [DEBUG] Données reçues:", data);
 
       // Gérer différents formats de réponse
@@ -129,6 +151,10 @@ const Trash: React.FC = () => {
         console.log("🔍 [DEBUG] Format: objet avec tableau items");
         setItems(data.items);
         console.log("🔍 [DEBUG] Items définis (object):", data.items.length);
+        if (typeof data.has_next !== 'undefined') setHasNext(!!data.has_next);
+        if (typeof data.has_prev !== 'undefined') setHasPrev(!!data.has_prev);
+        if (typeof data.page === 'number') setPage(data.page);
+        if (typeof data.per_page === 'number') setPerPage(data.per_page);
       } else {
         console.log("🔍 [DEBUG] Format: inconnu", data);
         setItems([]);
@@ -176,21 +202,7 @@ const Trash: React.FC = () => {
 
   const restoreItem = async (itemId: number) => {
     try {
-      const token = getAuthToken();
-      if (!token) throw new Error("Token manquant");
-
-      const response = await fetch(`${config.API_URL}/api/trash/${itemId}/restore`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la restauration");
-      }
+      await apiRestoreTrashItem(itemId);
 
       toast({
         title: "Succès",
@@ -216,21 +228,7 @@ const Trash: React.FC = () => {
 
   const deleteItem = async (itemId: number) => {
     try {
-      const token = getAuthToken();
-      if (!token) throw new Error("Token manquant");
-
-      const response = await fetch(`${config.API_URL}/api/trash/${itemId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        mode: "cors",
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la suppression");
-      }
+      await apiDeleteTrashItem(itemId);
 
       toast({
         title: "Succès",
@@ -274,6 +272,17 @@ const Trash: React.FC = () => {
     fetchStats();
   }, []);
 
+  // Recharger lors des changements de page/filtre/recherche
+  useEffect(() => {
+    fetchTrashItems();
+  }, [page, perPage, filterType]);
+
+  // Déclencher recherche après saisie (simple: on Enter ou bouton actualiser). Ici, on relance sur changement.
+  useEffect(() => {
+    const t = setTimeout(() => fetchTrashItems(), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -316,6 +325,24 @@ const Trash: React.FC = () => {
               color="white"
               _hover={{ bg: "gray.700" }}
             />
+            <Button
+              size="sm"
+              colorScheme="green"
+              variant="solid"
+              onClick={handleBulkRestore}
+              isDisabled={selectedIds.length === 0}
+            >
+              Restaurer sélection ({selectedIds.length})
+            </Button>
+            <Button
+              size="sm"
+              colorScheme="red"
+              variant="outline"
+              onClick={handleBulkDelete}
+              isDisabled={selectedIds.length === 0}
+            >
+              Supprimer sélection ({selectedIds.length})
+            </Button>
           </HStack>
         </Flex>
 
@@ -348,6 +375,18 @@ const Trash: React.FC = () => {
                 <option value="all">Tous les types</option>
                 <option value="document">Documents</option>
                 <option value="folder">Dossiers</option>
+              </Select>
+              <Select
+                value={perPage}
+                onChange={(e) => setPerPage(parseInt(e.target.value) || 20)}
+                maxW="150px"
+                bg="gray.800"
+                borderColor="gray.600"
+                color="white"
+              >
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
               </Select>
             </Flex>
           </CardBody>
@@ -392,6 +431,13 @@ const Trash: React.FC = () => {
                 <Table variant="simple">
                   <Thead>
                     <Tr>
+                      <Th color="gray.300" width="40px">
+                        <Checkbox
+                          isChecked={selectedIds.length > 0 && selectedIds.length === filteredItems.length}
+                          isIndeterminate={selectedIds.length > 0 && selectedIds.length < filteredItems.length}
+                          onChange={(e) => toggleSelectAll(e.target.checked)}
+                        />
+                      </Th>
                       <Th color="gray.300">Élément</Th>
                       <Th color="gray.300">Type</Th>
                       <Th color="gray.300">Taille</Th>
@@ -404,6 +450,12 @@ const Trash: React.FC = () => {
                   <Tbody>
                     {filteredItems.map((item) => (
                       <Tr key={item.id} _hover={{ bg: "gray.600" }}>
+                        <Td>
+                          <Checkbox
+                            isChecked={selectedIds.includes(item.id)}
+                            onChange={(e) => toggleSelectOne(item.id, e.target.checked)}
+                          />
+                        </Td>
                         <Td>
                           <VStack align="start" spacing={0}>
                             <Text fontWeight="medium" noOfLines={1} color="white">
@@ -466,6 +518,17 @@ const Trash: React.FC = () => {
                   </Tbody>
                 </Table>
               </TableContainer>
+              <Flex justify="space-between" align="center" p={4}>
+                <HStack>
+                  <Button size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} isDisabled={!hasPrev}>
+                    Précédent
+                  </Button>
+                  <Button size="sm" onClick={() => setPage((p) => p + 1)} isDisabled={!hasNext}>
+                    Suivant
+                  </Button>
+                </HStack>
+                <Text color="gray.300">Page {page}</Text>
+              </Flex>
             </CardBody>
           </Card>
         )}

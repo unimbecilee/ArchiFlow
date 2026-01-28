@@ -1,17 +1,6 @@
 import os
 import logging
 from AppFlask import create_app
-from AppFlask.routes import (
-    auth_routes,
-    document_routes,
-    scan_routes,
-    search_routes,
-    trash_routes,
-    dashboard_routes,
-    workflow_routes,
-    organization_routes,
-    api_routes
-)
 
 # Configuration du logging pour Railway
 logging.basicConfig(level=logging.INFO)

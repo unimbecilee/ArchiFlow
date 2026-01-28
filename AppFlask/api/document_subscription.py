@@ -264,21 +264,4 @@ def mark_all_notifications_as_read(current_user):
             'message': f'Erreur lors de la mise à jour: {str(e)}'
         }), 500
 
-@bp.route('/notifications/unread-count', methods=['GET'])
-@token_required
-def get_unread_notifications_count(current_user):
-    """
-    Récupère le nombre de notifications non lues
-    """
-    try:
-        count = DocumentSubscription.get_unread_notifications_count(current_user['id'])
-        
-        return jsonify({
-            'success': True,
-            'unread_count': count
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Erreur lors du comptage: {str(e)}'
-        }), 500 
+# Route supprimée - utiliser /api/notifications/unread-count à la place (définie dans notifications.py) 

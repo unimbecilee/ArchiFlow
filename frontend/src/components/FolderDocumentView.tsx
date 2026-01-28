@@ -56,7 +56,7 @@ import FileUploadModal from './FileUploadModal';
 import CreateFolderModal from './CreateFolderModal';
 import DocumentMoveModal from './DocumentMoveModal';
 import ShareModal from './ShareModal';
-import DocumentPreview from './Document/DocumentPreview';
+import DocumentPreview from './DocumentPreview';
 
 interface Folder {
   id: number;

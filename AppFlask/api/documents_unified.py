@@ -445,7 +445,7 @@ def get_favorite_documents(current_user):
             FROM favoris f
             JOIN document d ON f.document_id = d.id
             LEFT JOIN utilisateur u ON d.proprietaire_id = u.id
-            WHERE f.utilisateur_id = %s 
+            WHERE f.user_id = %s 
             ORDER BY f.date_ajout DESC
         """
         
@@ -503,9 +503,9 @@ def add_to_favorites(current_user, doc_id):
         
         # Ajouter aux favoris (avec gestion des doublons)
         cursor.execute("""
-            INSERT INTO favoris (document_id, utilisateur_id)
+            INSERT INTO favoris (document_id, user_id)
             VALUES (%s, %s)
-            ON CONFLICT (document_id, utilisateur_id) DO NOTHING
+            ON CONFLICT (document_id, user_id) DO NOTHING
         """, (doc_id, user_id))
         
         affected_rows = cursor.rowcount
@@ -1208,7 +1208,7 @@ def get_document_subscription(current_user, doc_id):
         
         # Vérifier l'abonnement
         cursor.execute("""
-            SELECT * FROM document_subscriptions 
+            SELECT * FROM document_subscription 
             WHERE user_id = %s AND document_id = %s
         """, (user_id, doc_id))
         
@@ -1243,7 +1243,7 @@ def subscribe_to_document(current_user, doc_id):
         
         # Créer ou mettre à jour l'abonnement
         cursor.execute("""
-            INSERT INTO document_subscriptions 
+            INSERT INTO document_subscription 
             (user_id, document_id, notification_types, is_active, created_at)
             VALUES (%s, %s, %s, true, NOW())
             ON CONFLICT (user_id, document_id) 
@@ -1280,7 +1280,7 @@ def update_document_subscription(current_user, doc_id):
         
         # Mettre à jour l'abonnement
         cursor.execute("""
-            UPDATE document_subscriptions 
+            UPDATE document_subscription 
             SET notification_types = %s, updated_at = NOW()
             WHERE user_id = %s AND document_id = %s
         """, (notification_types, user_id, doc_id))
@@ -1315,7 +1315,7 @@ def unsubscribe_from_document(current_user, doc_id):
         
         # Supprimer l'abonnement
         cursor.execute("""
-            DELETE FROM document_subscriptions 
+            DELETE FROM document_subscription 
             WHERE user_id = %s AND document_id = %s
         """, (user_id, doc_id))
         
@@ -1350,7 +1350,7 @@ def get_my_subscriptions(current_user):
         # Récupérer les abonnements avec les informations des documents
         cursor.execute("""
             SELECT ds.*, d.titre as document_title
-            FROM document_subscriptions ds
+            FROM document_subscription ds
             JOIN document d ON ds.document_id = d.id
             WHERE ds.user_id = %s
             ORDER BY ds.created_at DESC

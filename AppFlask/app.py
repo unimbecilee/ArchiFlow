@@ -1,106 +1,115 @@
-from flask import Flask, request, jsonify, send_from_directory, current_app
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from AppFlask.routes.auth_routes import auth_bp
-from AppFlask.api.auth import bp as api_auth_bp
-from AppFlask.routes.organization_routes import organization_bp
-from AppFlask.routes.trash_routes import trash_bp
-from AppFlask.routes.history_routes import history_bp
-from AppFlask.routes.logs_routes import logs_bp
-from AppFlask.routes.settings_routes import settings_bp
-from AppFlask.routes.scan_routes import scan_bp
-from AppFlask.routes.search_routes import search_bp
-from AppFlask.routes.workflow_routes import workflow_bp
-# Import des nouveaux blueprints pour les fonctionnalités avancées de gestion documentaire
-from AppFlask.routes.document_version_routes import version_bp
-from AppFlask.routes.document_comment_routes import comment_bp
-from AppFlask.routes.document_subscription_routes import subscription_bp
-from AppFlask.routes.document_checkout_routes import checkout_bp
-from AppFlask.routes.folder_routes import folder_bp
-# Le système de partage est maintenant intégré dans documents_unified.py
-
 from AppFlask.services.logging_service import logging_service
 from AppFlask.services.maintenance_service import maintenance_service
+from AppFlask.api.auth import bp as auth_bp
+from AppFlask.api.documents_unified import bp as documents_unified_bp
+from AppFlask.api.document_version import bp as document_version_bp
+from AppFlask.api.document_comment import bp as document_comment_bp
+from AppFlask.api.document_subscription import bp as document_subscription_bp
+from AppFlask.api.document_checkout import bp as document_checkout_bp
+from AppFlask.api.document_tags import bp as document_tags_bp
+from AppFlask.api.document_operations import bp as document_operations_bp
+from AppFlask.api.document_processing import bp as document_processing_bp
+from AppFlask.api.document_sharing import document_sharing_bp
+from AppFlask.api.document_ocr import bp as document_ocr_bp
+from AppFlask.api.email import bp as email_bp
+from AppFlask.api.notifications import bp as notifications_bp
+from AppFlask.api.scan import bp as scan_bp
+from AppFlask.api.search import bp as search_bp
+from AppFlask.api.validation_workflow import bp as validation_workflow_bp
+from AppFlask.api.workflow import bp as workflow_bp
+from AppFlask.api.trash_unified import bp as trash_unified_bp
+from AppFlask.api.history import bp as history_bp
+from AppFlask.api.openapi import api_bp as openapi_bp
 import logging
 import traceback
 import atexit
 import os
+from dotenv import load_dotenv
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
-# Liste des origines autorisées
-ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'https://esag-ged.vercel.app'
+# Charger les variables d'environnement depuis un fichier .env si présent
+load_dotenv()
+
+# Liste des origines autorisées (configurable via env CORS_ALLOWED_ORIGINS)
+_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,https://esag-ged.vercel.app')
+ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
+
+API_BLUEPRINTS = [
+    auth_bp,
+    documents_unified_bp,
+    document_version_bp,
+    document_comment_bp,
+    document_subscription_bp,
+    document_checkout_bp,
+    document_tags_bp,
+    document_operations_bp,
+    document_processing_bp,
+    document_sharing_bp,
+    document_ocr_bp,
+    email_bp,
+    notifications_bp,
+    scan_bp,
+    search_bp,
+    validation_workflow_bp,
+    workflow_bp,
+    trash_unified_bp,
+    history_bp,
 ]
+
 
 def create_app():
     app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
-    
+
     # Configuration de l'upload
     app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
     app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback_secret_key')
-    
+
     # Créer le dossier d'upload s'il n'existe pas
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
-    # Middleware pour gérer les erreurs CORS manuellement et les requêtes OPTIONS
-    @app.before_request
-    def handle_preflight():
-        if request.method == "OPTIONS":
-            response = app.make_default_options_response()
-            origin = request.headers.get('Origin')
-            if origin in ALLOWED_ORIGINS:
-                response.headers.add('Access-Control-Allow-Origin', origin)
-                response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-                response.headers.add('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
-                response.headers.add('Access-Control-Allow-Credentials', 'true')
-                response.headers.add('Access-Control-Max-Age', '3600')
-            return response
 
-    # Configuration CORS simplifiée pour éviter les problèmes
-    CORS(app, 
-         origins=ALLOWED_ORIGINS,
-         supports_credentials=True,
-         allow_headers=["Content-Type", "Authorization"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    # Configuration CORS avec Flask-CORS uniquement
+    CORS(
+        app,
+        resources={r"/*": {"origins": ALLOWED_ORIGINS}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        expose_headers=["Content-Type", "Authorization"]
+    )
+
+    # Rate limiting global basique
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=["200 per day", "50 per hour"],
+        storage_uri=os.getenv("RATELIMIT_STORAGE_URI", "memory://"),
     )
 
     # Configuration du logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    # Enregistrement des blueprints
-    app.register_blueprint(auth_bp, url_prefix='/api')
-    app.register_blueprint(api_auth_bp, url_prefix='/api')
-    app.register_blueprint(organization_bp, url_prefix='/api')
-    # app.register_blueprint(trash_bp, url_prefix='/api')  # DÉSACTIVÉ - remplacé par trash_unified_bp
-    app.register_blueprint(history_bp, url_prefix='/api')
-    app.register_blueprint(logs_bp, url_prefix='/api')
-    app.register_blueprint(settings_bp, url_prefix='/api')
-    app.register_blueprint(scan_bp, url_prefix='/api')
-    app.register_blueprint(search_bp, url_prefix='/api')
-    app.register_blueprint(workflow_bp, url_prefix='/api')
+    # Enregistrement centralisé des blueprints API
+    for blueprint in API_BLUEPRINTS:
+        app.register_blueprint(blueprint, url_prefix='/api')
     
-    # Enregistrer les nouveaux blueprints pour les fonctionnalités avancées
-    app.register_blueprint(version_bp, url_prefix='/api')
-    app.register_blueprint(comment_bp, url_prefix='/api')
-    app.register_blueprint(subscription_bp, url_prefix='/api')
-    app.register_blueprint(checkout_bp, url_prefix='/api')
-    app.register_blueprint(folder_bp, url_prefix='/api')
-    
-    # BLUEPRINT DOCUMENTS UNIFIÉ - Inclut maintenant le système de partage complet
-    from .api.documents_unified import bp as documents_unified_bp
-    app.register_blueprint(documents_unified_bp, url_prefix='/api')
-    
+    # Documentation OpenAPI/Swagger
+    app.register_blueprint(openapi_bp, url_prefix='/api')
+
     # Vérifier que les routes de partage sont bien enregistrées
     sharing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'sharing' in rule.rule or 'share' in rule.rule]
     logger.info(f"✅ Système de partage intégré - {len(sharing_routes)} routes disponibles")
 
     # Démarrage du service de maintenance
     maintenance_service.start_cleanup_scheduler()
-    
+
     # Enregistrement de l'arrêt du service à la fermeture de l'application
     atexit.register(maintenance_service.stop_cleanup_scheduler)
-    
+
     # Middleware pour logger toutes les requêtes
     @app.before_request
     def log_request_info():
@@ -114,26 +123,12 @@ def create_app():
                     'method': request.method,
                     'path': request.path,
                     'args': dict(request.args),
-                    'headers': dict(request.headers)
-                }
+                    'headers': dict(request.headers),
+                },
             )
-    
-    # Middleware pour gérer les erreurs CORS
-    @app.after_request
-    def after_request(response):
-        origin = request.headers.get('Origin', '')
-        if origin in ALLOWED_ORIGINS:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-            response.headers.add('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-        
-        # Pour les requêtes OPTIONS (preflight), renvoyer 200 OK
-        if request.method == 'OPTIONS':
-            response.status_code = 200
-        
-        return response
-        
+
+    # CORS middleware removed - Flask-CORS handles this automatically
+
     # Gestion globale des erreurs
     @app.errorhandler(Exception)
     def handle_exception(e):
@@ -167,3 +162,4 @@ def create_app():
             return send_from_directory(app.static_folder, 'index.html')
 
     return app
+

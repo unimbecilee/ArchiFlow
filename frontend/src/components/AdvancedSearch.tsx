@@ -63,8 +63,8 @@ import { asElementType } from '../utils/iconUtils';
 import config from '../config';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
 import ActionMenu from './ActionMenu';
-import DocumentPreview from './Document/DocumentPreview';
-import DocumentOCR from './Document/DocumentOCR';
+import DocumentPreview from './DocumentPreview';
+import DocumentOCR from './DocumentOCR';
 
 interface SearchFilters {
   query: string;

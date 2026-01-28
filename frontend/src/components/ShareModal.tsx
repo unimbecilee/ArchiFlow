@@ -43,6 +43,8 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import config from '../config';
+import { useUsersForApproval, useOrganizations, useSharingRoles } from '../hooks/useDirectory';
+import { useCreateShare, useRevokeShare } from '../hooks/useSharing';
 
 const API_URL = config.API_URL;
 
@@ -192,77 +194,24 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const [filterType, setFilterType] = useState<string>('tous');
   const [searchFilter, setSearchFilter] = useState<string>('');
 
+  // Hooks pour données répertoire et mutations
+  const { data: usersData } = useUsersForApproval();
+  const { data: orgsData } = useOrganizations();
+  const { data: rolesData } = useSharingRoles();
+  const createShareMutation = useCreateShare(documentId);
+  const revokeShareMutation = useRevokeShare();
+
   // Charger les données nécessaires
   useEffect(() => {
     if (open) {
-      loadSharingData();
+      if (usersData) setUsers(usersData);
+      if (orgsData) setOrganizations(orgsData);
+      if (rolesData) setRoles(rolesData);
       loadExistingShares();
     }
-  }, [open, documentId]);
+  }, [open, documentId, usersData, orgsData, rolesData]);
 
-  const loadSharingData = async () => {
-    setLoadingData(true);
-    try {
-      const [usersRes, rolesRes, orgsRes] = await Promise.all([
-        fetch(`${API_URL}/api/sharing/users`, {
-          headers: { 
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch(`${API_URL}/api/sharing/roles`, {
-          headers: { 
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch(`${API_URL}/api/sharing/organizations`, {
-          headers: { 
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        })
-      ]);
-
-      console.log('📡 Réponses API:', {
-        users: usersRes.status,
-        roles: rolesRes.status,
-        organizations: orgsRes.status
-      });
-
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        console.log('👥 Données utilisateurs:', usersData);
-        // Gérer les deux formats de réponse possibles
-        setUsers(usersData.users || usersData || []);
-      } else {
-        console.error('❌ Erreur utilisateurs:', usersRes.status, await usersRes.text());
-      }
-
-      if (rolesRes.ok) {
-        const rolesData = await rolesRes.json();
-        console.log('🎭 Données rôles:', rolesData);
-        // Gérer les deux formats de réponse possibles
-        setRoles(rolesData.roles || rolesData || []);
-      } else {
-        console.error('❌ Erreur rôles:', rolesRes.status, await rolesRes.text());
-      }
-
-      if (orgsRes.ok) {
-        const orgsData = await orgsRes.json();
-        console.log('🏢 Données organisations:', orgsData);
-        // Gérer les deux formats de réponse possibles
-        setOrganizations(orgsData.organizations || orgsData || []);
-      } else {
-        console.error('❌ Erreur organisations:', orgsRes.status, await orgsRes.text());
-      }
-    } catch (err) {
-      console.error('Erreur lors du chargement des données:', err);
-      setError('Erreur lors du chargement des données');
-    } finally {
-      setLoadingData(false);
-    }
-  };
+  // Suppression du chargement manuel: hydratation via hooks
 
   const loadExistingShares = async () => {
     try {
@@ -321,44 +270,26 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
     try {
       const payload = {
-        ...shareData,
-        date_expiration: expirationDate ? expirationDate.toISOString() : null
+        destinataires: shareData.destinataires,
+        permissions: shareData.permissions as any,
+        date_expiration: expirationDate ? expirationDate.toISOString() : undefined,
+        commentaire: shareData.commentaire,
       };
-
-      const response = await fetch(`${API_URL}/api/documents/${documentId}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(payload)
+      await createShareMutation.mutateAsync(payload as any);
+      toast({
+        title: 'Succès',
+        description: 'Document partagé avec succès !',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
       });
-
-      if (response.ok) {
-        toast({
-          title: 'Succès',
-          description: 'Document partagé avec succès !',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        setShareData({
-          destinataires: [],
-          permissions: ['lecture'],
-          commentaire: ''
-        });
-        setExpirationDate(null);
-        loadExistingShares();
-        if (onShareSuccess) {
-          onShareSuccess();
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Erreur lors du partage');
-      }
+      setShareData({ destinataires: [], permissions: ['lecture'], commentaire: '' });
+      setExpirationDate(null);
+      loadExistingShares();
+      onShareSuccess?.();
     } catch (err) {
       console.error('Erreur:', err);
-      setError('Erreur de connexion');
+      setError('Erreur lors du partage');
     } finally {
       setLoading(false);
     }
@@ -366,29 +297,18 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
   const handleRevokeShare = async (shareId: number) => {
     try {
-      const response = await fetch(`${API_URL}/api/shares/${shareId}`, {
-        method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
+      await revokeShareMutation.mutateAsync(shareId);
+      toast({
+        title: 'Succès',
+        description: 'Partage révoqué avec succès',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
       });
-
-      if (response.ok) {
-        toast({
-          title: 'Succès',
-          description: 'Partage révoqué avec succès',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        loadExistingShares();
-      } else {
-        setError('Erreur lors de la révocation du partage');
-      }
+      loadExistingShares();
     } catch (err) {
       console.error('Erreur:', err);
-      setError('Erreur de connexion');
+      setError('Erreur lors de la révocation du partage');
     }
   };
 

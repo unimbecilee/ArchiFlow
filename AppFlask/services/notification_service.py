@@ -501,7 +501,7 @@ class NotificationService:
                 params.append(exclude_user_id)
             
             cursor.execute(f"""
-                SELECT user_id FROM document_subscriptions 
+                SELECT user_id FROM document_subscription 
                 WHERE {where_clause}
             """, params)
             
@@ -720,7 +720,7 @@ class NotificationService:
                 FROM workflow_instance wi
                 JOIN document d ON wi.document_id = d.id
                 JOIN workflow w ON wi.workflow_id = w.id
-                JOIN etapeworkflow e ON e.id = %s
+                JOIN etape_workflow e ON e.id = %s
                 JOIN utilisateur u_initiateur ON wi.initiateur_id = u_initiateur.id
                 JOIN utilisateur u_assigne ON u_assigne.id = %s
                 WHERE wi.id = %s

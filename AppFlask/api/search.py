@@ -709,7 +709,7 @@ def advanced_search(current_user):
                 END as has_ocr
             FROM document d
             LEFT JOIN utilisateur u ON d.proprietaire_id = u.id
-            LEFT JOIN favoris f ON d.id = f.document_id AND f.utilisateur_id = %s
+            LEFT JOIN favoris f ON d.id = f.document_id AND f.user_id = %s
             LEFT JOIN partage p ON d.id = p.document_id
             LEFT JOIN document_metadata dm ON d.id = dm.document_id
         """

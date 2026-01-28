@@ -24,7 +24,7 @@ class EtapeWorkflow:
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                SELECT * FROM etapeworkflow WHERE id = %s
+                SELECT * FROM etape_workflow WHERE id = %s
             """, (etape_id,))
             
             etape = cursor.fetchone()
@@ -44,7 +44,7 @@ class EtapeWorkflow:
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                SELECT * FROM etapeworkflow 
+                SELECT * FROM etape_workflow 
                 WHERE workflow_id = %s 
                 ORDER BY ordre
             """, (workflow_id,))
@@ -66,9 +66,9 @@ class EtapeWorkflow:
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                SELECT * FROM etapeworkflow 
+                SELECT * FROM etape_workflow 
                 WHERE workflow_id = %s AND ordre > (
-                    SELECT ordre FROM etapeworkflow WHERE id = %s
+                    SELECT ordre FROM etape_workflow WHERE id = %s
                 )
                 ORDER BY ordre 
                 LIMIT 1
@@ -105,9 +105,9 @@ class EtapeWorkflow:
             cursor.execute("""
                 SELECT u.id, u.nom, u.prenom, u.email, 'role' as type_approbateur, r.nom as role_nom
                 FROM workflow_approbateur wa
-                JOIN role r ON wa.role_id = r.id
+                JOIN role r ON wa.role_nom = r.nom
                 JOIN utilisateur u ON u.role = r.nom
-                WHERE wa.etape_id = %s AND wa.role_id IS NOT NULL
+                WHERE wa.etape_id = %s AND wa.role_nom IS NOT NULL
             """, (etape_id,))
             
             role_approvers = cursor.fetchall()
@@ -143,7 +143,7 @@ class EtapeWorkflow:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             cursor.execute("""
-                INSERT INTO etapeworkflow 
+                INSERT INTO etape_workflow 
                 (workflow_id, nom, description, ordre, type_approbation, delai_max)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id
@@ -202,7 +202,7 @@ class EtapeWorkflow:
             params.append(etape_id)
             
             query = f"""
-                UPDATE etapeworkflow 
+                UPDATE etape_workflow 
                 SET {", ".join(update_fields)}
                 WHERE id = %s
             """
@@ -235,7 +235,7 @@ class EtapeWorkflow:
             
             # Puis supprimer l'étape
             cursor.execute("""
-                DELETE FROM etapeworkflow WHERE id = %s
+                DELETE FROM etape_workflow WHERE id = %s
             """, (etape_id,))
             
             conn.commit()

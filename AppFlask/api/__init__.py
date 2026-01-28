@@ -4,7 +4,7 @@ from flask_cors import CORS
 # Import existing blueprints
 from .auth import bp as auth_bp
 from .search import bp as search_bp
-from .trash import bp as trash_bp
+from .trash_unified import bp as trash_unified_bp
 from .scan import bp as scan_bp
 
 # Import new blueprints

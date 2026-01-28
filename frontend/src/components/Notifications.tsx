@@ -32,6 +32,7 @@ import {
   Switch,
   FormControl,
   FormLabel,
+  Select,
 } from '@chakra-ui/react';
 import {
   FiBell,
@@ -49,6 +50,7 @@ import config from '../config';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
 import NotificationModal from './NotificationModal';
 import { Notification, Subscription } from '../types/notifications';
+import { listNotifications, getUnreadCount, markAsRead as apiMarkAsRead, markAllAsRead as apiMarkAllAsRead } from '../services/notificationsService';
 
 const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -56,6 +58,11 @@ const Notifications: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const { executeOperation } = useAsyncOperation();
@@ -84,23 +91,10 @@ const Notifications: React.FC = () => {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${config.API_URL}/api/notifications?unread_only=${showUnreadOnly}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications || []);
-      } else {
-        throw new Error('Erreur lors du chargement des notifications');
-      }
+      const data = await listNotifications({ unread_only: showUnreadOnly, page, per_page: perPage, type: typeFilter });
+      setNotifications(data.notifications || data.items || data || []);
+      if (typeof data.has_next !== 'undefined') setHasNext(!!data.has_next);
+      if (typeof data.has_prev !== 'undefined') setHasPrev(!!data.has_prev);
     } catch (error) {
       toast({
         title: 'Erreur',
@@ -135,18 +129,8 @@ const Notifications: React.FC = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${config.API_URL}/api/notifications/unread-count`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.unread_count || 0);
-      }
+      const count = await getUnreadCount();
+      setUnreadCount(count || 0);
     } catch (error) {
       console.error('Erreur unread count:', error);
     }
@@ -154,24 +138,9 @@ const Notifications: React.FC = () => {
 
   const handleMarkAsRead = async (notificationId: number) => {
     await executeOperation(async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${config.API_URL}/api/notifications/${notificationId}/read`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        fetchNotifications();
-        fetchUnreadCount();
-      } else {
-        throw new Error('Erreur lors du marquage');
-      }
+      await apiMarkAsRead(notificationId);
+      fetchNotifications();
+      fetchUnreadCount();
     }, {
       successMessage: 'Notification marquée comme lue',
       errorMessage: 'Erreur lors du marquage'
@@ -180,24 +149,9 @@ const Notifications: React.FC = () => {
 
   const handleMarkAllAsRead = async () => {
     await executeOperation(async () => {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${config.API_URL}/api/notifications/mark-all-read`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        fetchNotifications();
-        fetchUnreadCount();
-      } else {
-        throw new Error('Erreur lors du marquage');
-      }
+      await apiMarkAllAsRead();
+      fetchNotifications();
+      fetchUnreadCount();
     }, {
       loadingMessage: 'Marquage en cours...',
       successMessage: 'Toutes les notifications marquées comme lues',
@@ -253,7 +207,7 @@ const Notifications: React.FC = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, [showUnreadOnly]);
+  }, [showUnreadOnly, page, perPage, typeFilter]);
 
   return (
     <Box p={6} bg="#181c2f" minH="100vh" color="white">
@@ -305,7 +259,7 @@ const Notifications: React.FC = () => {
           {/* Onglet Notifications */}
           <TabPanel>
             <VStack align="stretch" spacing={4}>
-              <Flex justify="space-between" align="center">
+              <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
                 <FormControl display="flex" alignItems="center" w="auto">
                   <FormLabel htmlFor="unread-only" mb="0" fontSize="sm">
                     Afficher seulement les non lues
@@ -317,6 +271,26 @@ const Notifications: React.FC = () => {
                     colorScheme="blue"
                   />
                 </FormControl>
+
+                <HStack>
+                  <Select size="sm" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} maxW="260px" bg="#2a3657" borderColor="#3a445e">
+                    <option value="">Tous les types</option>
+                    <option value="document_uploaded">Document téléversé</option>
+                    <option value="document_updated">Document modifié</option>
+                    <option value="document_shared">Document partagé</option>
+                    <option value="document_commented">Nouveau commentaire</option>
+                    <option value="workflow_assigned">Validation assignée</option>
+                    <option value="workflow_approved">Workflow approuvé</option>
+                    <option value="workflow_rejected">Workflow rejeté</option>
+                    <option value="system_maintenance">Maintenance système</option>
+                  </Select>
+
+                  <Select size="sm" value={perPage} onChange={(e) => { setPerPage(parseInt(e.target.value)||20); setPage(1); }} maxW="140px" bg="#2a3657" borderColor="#3a445e">
+                    <option value={10}>10 / page</option>
+                    <option value={20}>20 / page</option>
+                    <option value={50}>50 / page</option>
+                  </Select>
+                </HStack>
               </Flex>
 
               {loading ? (
@@ -332,6 +306,7 @@ const Notifications: React.FC = () => {
                   }
                 </Alert>
               ) : (
+                <Box>
                 <Table variant="simple">
                   <Thead>
                     <Tr>
@@ -424,6 +399,14 @@ const Notifications: React.FC = () => {
                     ))}
                   </Tbody>
                 </Table>
+                <HStack justify="space-between" mt={4}>
+                  <HStack>
+                    <Button size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} isDisabled={!hasPrev}>Précédent</Button>
+                    <Button size="sm" onClick={() => setPage((p) => p + 1)} isDisabled={!hasNext}>Suivant</Button>
+                  </HStack>
+                  <Text color="gray.300">Page {page}</Text>
+                </HStack>
+                </Box>
               )}
             </VStack>
           </TabPanel>

@@ -83,21 +83,7 @@ class LoggingService:
                 )
             """
 
-            cursor.execute(query, (
-                level,
-                event_type,
-                user_id,
-                request_info.get('ip_address'),
-                request_info.get('user_agent'),
-                request_info.get('path'),
-                request_info.get('method'),
-                response_status,
-                execution_time,
-                message,
-                Json(formatted_data)
-            ))
-
-            self.logger.info(f"Attempting to execute log query: {query} with params: {(level, event_type, user_id, request_info.get('ip_address'), request_info.get('user_agent'), request_info.get('path'), request_info.get('method'), response_status, execution_time, message, Json(formatted_data))}")
+            self.logger.info(f"Attempting to execute log query: {query}")
             cursor.execute(query, (
                 level,
                 event_type,

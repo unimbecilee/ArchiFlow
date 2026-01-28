@@ -38,6 +38,7 @@ import {
 } from 'react-icons/fi';
 import { asElementType } from '../utils/iconUtils';
 import config from '../config';
+import { markAsRead as apiMarkAsRead, clickNotification } from '../services/notificationsService';
 import { Notification } from '../types/notifications';
 
 interface NotificationModalProps {
@@ -159,31 +160,16 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${config.API_URL}/api/notifications/${notification.id}/read`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        setHasMarkedAsRead(true);
-        onNotificationUpdated?.();
-        
-        // Notification discrète de marquage
-        toast({
-          title: 'Notification marquée comme lue',
-          status: 'success',
-          duration: 2000,
-          isClosable: true,
-          position: 'bottom-right'
-        });
-      }
+      await apiMarkAsRead(notification.id);
+      setHasMarkedAsRead(true);
+      onNotificationUpdated?.();
+      toast({
+        title: 'Notification marquée comme lue',
+        status: 'success',
+        duration: 2000,
+        isClosable: true,
+        position: 'bottom-right'
+      });
     } catch (error) {
       console.error('Erreur lors du marquage automatique:', error);
     }
@@ -195,60 +181,35 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
     setIsLoading(true);
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${config.API_URL}/api/notifications/${notification.id}/click`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      const result = await clickNotification(notification.id);
+      // Fermer le modal
+      onClose();
+      // Mettre à jour les notifications
+      onNotificationUpdated?.();
+      // Redirection
+      let redirectUrl = result?.redirect_url;
+      if (!redirectUrl) {
+        if (notification.type.includes('workflow') && notification.workflow_id) {
+          redirectUrl = `/workflow?tab=1`;
+        } else if (notification.document_id) {
+          redirectUrl = `/documents`;
+        } else {
+          redirectUrl = '/dashboard';
         }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Fermer le modal
-        onClose();
-        
-        // Mettre à jour les notifications
-        onNotificationUpdated?.();
-        
-        // Rediriger vers l'URL appropriée
-        let redirectUrl = result.redirect_url;
-        
-        // Si pas d'URL de redirection, construire une URL par défaut
-        if (!redirectUrl) {
-          if (notification.type.includes('workflow') && notification.workflow_id) {
-            redirectUrl = `/workflow?tab=1`;
-          } else if (notification.document_id) {
-            redirectUrl = `/documents`;
-          } else {
-            redirectUrl = '/dashboard';
-          }
-        }
-        
-        if (redirectUrl) {
-          // Navigation interne
-          if (redirectUrl.startsWith('http')) {
-            window.open(redirectUrl, '_blank');
-          } else {
-            window.location.href = redirectUrl;
-          }
-        }
-        
-        toast({
-          title: 'Redirection en cours...',
-          status: 'info',
-          duration: 2000,
-          isClosable: true
-        });
-        
-      } else {
-        throw new Error('Erreur lors de l\'action');
       }
+      if (redirectUrl) {
+        if (redirectUrl.startsWith('http')) {
+          window.open(redirectUrl, '_blank');
+        } else {
+          window.location.href = redirectUrl;
+        }
+      }
+      toast({
+        title: 'Redirection en cours...',
+        status: 'info',
+        duration: 2000,
+        isClosable: true
+      });
     } catch (error) {
       toast({
         title: 'Erreur',

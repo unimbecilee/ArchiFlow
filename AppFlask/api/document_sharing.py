@@ -11,6 +11,7 @@ import logging
 
 from ..db import db_connection
 from ..auth import token_required
+from ..utils.auth_utils import require_json_fields, role_required
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +30,8 @@ PERMISSIONS_DISPONIBLES = [
 
 @document_sharing_bp.route('/documents/<int:document_id>/share', methods=['POST'])
 @token_required
+@role_required('admin', 'editor')
+@require_json_fields(['destinataires'])
 def create_share(current_user, document_id: int):
     """
     Créer un nouveau partage de document
@@ -253,6 +256,7 @@ def get_document_shares(current_user, document_id: int):
 
 @document_sharing_bp.route('/shares/<int:share_id>', methods=['DELETE'])
 @token_required
+@role_required('admin', 'editor')
 def revoke_share(current_user, share_id: int):
     """Révoquer un partage"""
     try:
@@ -302,6 +306,8 @@ def revoke_share(current_user, share_id: int):
 
 @document_sharing_bp.route('/shares/<int:share_id>', methods=['PUT'])
 @token_required
+@role_required('admin', 'editor')
+@require_json_fields([])
 def update_share(current_user, share_id: int):
     """Modifier un partage existant"""
     try:

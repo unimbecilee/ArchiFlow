@@ -7,9 +7,9 @@ import { SidebarContent } from "./components/Sidebar";
 import Login from "./components/Login";
 import { LoadingProvider } from "./contexts/LoadingContext";
 import Trash from "./components/Trash";
-import TestAPI from "./components/TestAPI";
 import LoadingFallback from "./components/LoadingFallback";
 import { AuthProvider } from "./contexts/AuthContext";
+import { QueryClient, QueryClientProvider } from "react-query";
 
 // Chargement paresseux des composants
 const Dashboard = lazy(() => import("./components/Dashboard"));
@@ -55,27 +55,30 @@ const LoginWithNavigation: React.FC = () => {
   return <Login onAuthSuccess={handleAuthSuccess} />;
 };
 
+const queryClient = new QueryClient();
+
 function App() {
   return (
     <ChakraProvider theme={theme}>
-      <AuthProvider>
-        <LoadingProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/test-api" element={<TestAPI />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Router>
-        </LoadingProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <LoadingProvider>
+            <Router>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Router>
+          </LoadingProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </ChakraProvider>
   );
 }

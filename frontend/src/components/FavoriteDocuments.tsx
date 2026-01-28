@@ -25,8 +25,8 @@ import {
 import { FiFileText, FiSearch, FiHeart, FiRefreshCw } from "react-icons/fi";
 import { ElementType } from "react";
 import ActionMenu from "./ActionMenu";
-import DocumentPreview from "./Document/DocumentPreview";
-import DocumentOCR from "./Document/DocumentOCR";
+import DocumentPreview from "./DocumentPreview";
+import DocumentOCR from "./DocumentOCR";
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
 import config from '../config';
 

@@ -11,6 +11,7 @@ import random
 import logging
 import bcrypt
 import traceback
+from AppFlask.utils.auth_utils import role_required
 
 def log_user_action(user_id, action_type, description, request_obj=None):
     """Enregistrer une action utilisateur dans l'historique"""
@@ -146,14 +147,7 @@ def handle_auth_me_options():
 def handle_auth_login_options():
     return '', 200
 
-@bp.route('/folders', methods=['OPTIONS'])
-def handle_folders_options():
-    """Gère les requêtes OPTIONS pour les routes de dossiers"""
-    response = jsonify({'message': 'OK'})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    return response, 200
+# OPTIONS handler removed - Flask-CORS handles this automatically
 
 @bp.route('/auth/create-admin', methods=['POST'])
 def create_admin_account():
@@ -212,7 +206,7 @@ def token_required(f):
             return jsonify({'message': 'Token manquant'}), 401
         try:
             token = token.split(' ')[1]  # Enlever 'Bearer '
-            data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             conn = db_connection()
             if conn is None:
                 return jsonify({'message': 'Erreur de connexion à la base de données'}), 500
@@ -270,6 +264,7 @@ def admin_required(f):
 
 @bp.route('/users', methods=['GET'])
 @token_required
+@role_required('admin')
 def get_users(current_user):
     print(f"Tentative de récupération des utilisateurs par {current_user['email']} (rôle: {current_user['role']})")
     
@@ -356,6 +351,9 @@ def login():
                 'user_id': user['id'],
                 'exp': datetime.utcnow() + timedelta(hours=24)
             }, current_app.config['SECRET_KEY'], algorithm='HS256')
+            # PyJWT v1 returns bytes, v2 returns str; normalize to str
+            if isinstance(token, bytes):
+                token = token.decode('utf-8')
             
             # Enregistrer la connexion réussie
             log_user_action(
@@ -424,6 +422,7 @@ def logout(current_user):
 
 @bp.route('/users', methods=['POST'])
 @token_required
+@role_required('admin')
 def create_user(current_user):
     print(f"Tentative de création d'utilisateur par {current_user['email']}")
     
@@ -623,6 +622,7 @@ def create_user(current_user):
 
 @bp.route('/users/<int:user_id>', methods=['DELETE'])
 @token_required
+@role_required('admin')
 def delete_user(current_user, user_id):
     if current_user['role'].lower() != 'admin':
         return jsonify({'message': 'Accès non autorisé'}), 403
@@ -746,6 +746,7 @@ def delete_user(current_user, user_id):
 
 @bp.route('/users/<int:user_id>', methods=['PUT'])
 @token_required
+@role_required('admin')
 def update_user(current_user, user_id):
     print(f"Tentative de mise à jour de l'utilisateur {user_id} par {current_user['email']}")
     
@@ -1075,18 +1076,6 @@ def update_user_status(current_user, user_id):
         print(f"Erreur lors de la mise à jour du statut de l'utilisateur: {str(e)}")
         return jsonify({'message': str(e)}), 500
 
-@bp.route('/users/<int:user_id>', methods=['OPTIONS'])
-def handle_user_id_options(user_id):
-    response = jsonify({})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,DELETE')
-    return response
+# OPTIONS handler removed - Flask-CORS handles this automatically
 
-@bp.route('/users/<int:user_id>/status', methods=['OPTIONS'])
-def handle_user_status_options(user_id):
-    response = jsonify({})
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'PUT')
-    return response
+# OPTIONS handler removed - Flask-CORS handles this automatically
