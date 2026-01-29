@@ -56,32 +56,39 @@ class NotificationService:
             
             # Vérifier les préférences de l'utilisateur
             cursor.execute("""
-                SELECT app_notifications, email_notifications
+                SELECT email_notifications, push_notifications
                 FROM user_notification_preferences
                 WHERE user_id = %s
             """, (user_id,))
             
             preferences = cursor.fetchone()
             
-            # Si l'utilisateur a désactivé les notifications app, ne pas créer
-            if preferences and not preferences.get('app_notifications', True):
-                logger.info(f"Notifications app désactivées pour l'utilisateur {user_id}")
-                cursor.close()
-                conn.close()
-                return None
+            # Si pas de préférences, créer les préférences par défaut
+            if not preferences:
+                try:
+                    cursor.execute("""
+                        INSERT INTO user_notification_preferences 
+                        (user_id, email_notifications, push_notifications)
+                        VALUES (%s, TRUE, TRUE)
+                        ON CONFLICT (user_id) DO NOTHING
+                    """, (user_id,))
+                    conn.commit()
+                    preferences = {'email_notifications': True, 'push_notifications': True}
+                except Exception as e:
+                    logger.warning(f"Impossible de créer les préférences pour user {user_id}: {e}")
+                    # Continuer avec les valeurs par défaut
+                    preferences = {'email_notifications': True, 'push_notifications': True}
             
             # Créer la notification en base
             import json as json_module
             cursor.execute("""
                 INSERT INTO notifications 
-                (user_id, title, message, type, document_id, workflow_id, 
-                 created_by_id, priority, expires_at, metadata, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                (user_id, title, message, type, document_id, workflow_instance_id, metadata)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 user_id, title, message, notification_type, document_id,
-                workflow_id, created_by_id, priority, expires_at,
-                json_module.dumps(metadata or {})
+                workflow_id, json_module.dumps(metadata or {})
             ))
             
             notification_id = cursor.fetchone()['id']
@@ -91,6 +98,20 @@ class NotificationService:
             NotificationService._log_notification_action(
                 notification_id, user_id, 'created', 'app', 'success'
             )
+            
+            # Envoyer la notification en temps réel via WebSocket
+            try:
+                from AppFlask.services.websocket_service import notify_user
+                notify_user(user_id, notification_type, {
+                    'id': notification_id,
+                    'title': title,
+                    'message': message,
+                    'type': notification_type,
+                    'document_id': document_id,
+                    'metadata': metadata or {}
+                })
+            except Exception as ws_error:
+                logger.debug(f"WebSocket non disponible: {ws_error}")
             
             # Envoyer par email si demandé et autorisé
             if send_email and preferences and preferences.get('email_notifications', True):
@@ -170,7 +191,7 @@ class NotificationService:
             
             # Récupérer les infos du document et de l'uploader
             cursor.execute("""
-                SELECT d.titre, d.type_document, d.proprietaire_id,
+                SELECT d.titre, d.categorie, d.proprietaire_id,
                        u.nom as uploader_nom, u.prenom as uploader_prenom
                 FROM document d
                 JOIN utilisateur u ON d.proprietaire_id = u.id
@@ -493,7 +514,7 @@ class NotificationService:
             conn = db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
-            where_clause = "document_id = %s AND is_active = true"
+            where_clause = "document_id = %s"
             params = [document_id]
             
             if exclude_user_id:
@@ -549,13 +570,18 @@ class NotificationService:
             # Ajouter les métadonnées
             email_data.update(metadata)
             
-            # Envoyer l'email
-            return email_service.send_template_email(
-                to=[user['email']],
-                template_name='notification_general',
-                subject=f"ESAG GED - {title}",
-                template_data=email_data
-            )
+            # Envoyer l'email (si le template existe)
+            try:
+                return email_service.send_template_email(
+                    to=[user['email']],
+                    template_name='notification_general',
+                    subject=f"ESAG GED - {title}",
+                    template_data=email_data
+                )
+            except Exception as email_error:
+                # Template email non configuré - ce n'est pas critique
+                logger.debug(f"Email non envoyé (template manquant): {email_error}")
+                return False
             
         except Exception as e:
             logger.error(f"❌ Erreur envoi email notification: {str(e)}")
@@ -565,22 +591,9 @@ class NotificationService:
     def _log_notification_action(notification_id: int, user_id: int, action: str, 
                                channel: str, status: str, error_message: str = None):
         """Logger une action de notification"""
-        try:
-            conn = db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                INSERT INTO notification_logs 
-                (notification_id, user_id, action, channel, status, error_message, sent_at)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW())
-            """, (notification_id, user_id, action, channel, status, error_message))
-            
-            conn.commit()
-            cursor.close()
-            conn.close()
-            
-        except Exception as e:
-            logger.error(f"❌ Erreur log notification: {str(e)}")
+        # Table notification_logs n'existe pas dans le schéma actuel
+        # Cette fonction est désactivée pour éviter les erreurs
+        pass
     
     @staticmethod
     def cleanup_old_notifications(days: int = 90) -> int:

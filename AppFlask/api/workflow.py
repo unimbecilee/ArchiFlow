@@ -95,6 +95,35 @@ def get_workflow(current_user, workflow_id):
         if not workflow:
             return jsonify({'error': 'Workflow non trouvé'}), 404
         
+        return jsonify(Workflow.to_dict(workflow)), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Erreur lors de la récupération du workflow: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/workflows/<int:workflow_id>/etapes', methods=['GET'])
+@token_required
+def get_workflow_etapes(current_user, workflow_id):
+    """Récupérer les étapes d'un workflow"""
+    try:
+        # Récupérer les étapes
+        etapes = Workflow.get_etapes(workflow_id)
+        
+        return jsonify(etapes), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Erreur lors de la récupération des étapes: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/workflows/<int:workflow_id>/old', methods=['GET'])
+@token_required
+def get_workflow_old(current_user, workflow_id):
+    """DEPRECATED - Ancienne version"""
+    try:
+        workflow = Workflow.get_by_id(workflow_id)
+        if not workflow:
+            return jsonify({'error': 'Workflow non trouvé'}), 404
+        
         # Récupérer les étapes
         etapes = Workflow.get_etapes(workflow_id)
         
@@ -209,7 +238,7 @@ def start_workflow(current_user, document_id):
         cursor.execute("""
             SELECT id, titre FROM document 
             WHERE id = %s AND (proprietaire_id = %s OR id IN (
-                SELECT document_id FROM partage WHERE utilisateur_id = %s
+                SELECT document_id FROM partage_document WHERE utilisateur_id = %s AND actif = TRUE
             ))
         """, (document_id, current_user['id'], current_user['id']))
         

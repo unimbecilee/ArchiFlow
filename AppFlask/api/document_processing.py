@@ -49,8 +49,8 @@ def perform_ocr(current_user, doc_id):
             conn = db_connection()
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT permissions FROM partage 
-                WHERE document_id = %s AND utilisateur_id = %s
+                SELECT permissions FROM partage_document 
+                WHERE document_id = %s AND utilisateur_id = %s AND actif = TRUE
             """, (doc_id, current_user['id']))
             partage = cursor.fetchone()
             cursor.close()
@@ -132,8 +132,8 @@ def get_document_preview(current_user, doc_id):
             conn = db_connection()
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT permissions FROM partage 
-                WHERE document_id = %s AND utilisateur_id = %s
+                SELECT permissions FROM partage_document 
+                WHERE document_id = %s AND utilisateur_id = %s AND actif = TRUE
             """, (doc_id, current_user['id']))
             partage = cursor.fetchone()
             cursor.close()
@@ -233,8 +233,8 @@ def get_document_metadata(current_user, doc_id):
             conn = db_connection()
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT permissions FROM partage 
-                WHERE document_id = %s AND utilisateur_id = %s
+                SELECT permissions FROM partage_document 
+                WHERE document_id = %s AND utilisateur_id = %s AND actif = TRUE
             """, (doc_id, current_user['id']))
             partage = cursor.fetchone()
             cursor.close()
@@ -395,8 +395,8 @@ def analyze_document(current_user, doc_id):
             conn = db_connection()
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT permissions FROM partage 
-                WHERE document_id = %s AND utilisateur_id = %s
+                SELECT permissions FROM partage_document 
+                WHERE document_id = %s AND utilisateur_id = %s AND actif = TRUE
             """, (doc_id, current_user['id']))
             partage = cursor.fetchone()
             cursor.close()

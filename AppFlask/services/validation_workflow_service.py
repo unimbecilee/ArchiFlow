@@ -60,7 +60,7 @@ class ValidationWorkflowService:
             
             # Créer le workflow avec le bon statut
             cursor.execute("""
-                INSERT INTO workflow (nom, description, date_creation, statut)
+                INSERT INTO workflow (nom, description, created_at, statut)
                 VALUES (%s, %s, NOW(), 'en_cours')
                 RETURNING id
             """, (

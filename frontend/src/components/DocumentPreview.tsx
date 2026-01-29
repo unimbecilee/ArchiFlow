@@ -79,14 +79,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
       'text/html'
     ].includes(mimeType);
     
-    console.log(`🔍 [PREVIEW DEBUG] Type: ${mimeType}, Prévisualisable: ${previewable}`);
     return previewable;
   };
 
   // Fonction d'auto-téléchargement
   const handleAutoDownloadAndOpen = async () => {
     try {
-      console.log('🚀 [AUTO-DOWNLOAD] Début de l\'auto-téléchargement');
       
       toast({
         title: 'Téléchargement automatique',
@@ -157,25 +155,11 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({
 
   // Auto-téléchargement pour les fichiers non prévisualisables
   useEffect(() => {
-    console.log('🔍 [AUTO-DOWNLOAD DEBUG] État actuel:', {
-      document: document ? document.mime_type : 'null',
-      loading,
-      error,
-      canPreview: document ? canPreview(document.mime_type) : 'N/A',
-      autoDownloadStarted
-    });
-
     if (document && !loading && !error && !canPreview(document.mime_type) && !autoDownloadStarted) {
-      console.log('🚀 [AUTO-DOWNLOAD] Déclenchement de l\'auto-téléchargement pour:', document.mime_type);
       setAutoDownloadStarted(true);
-      
-      // Déclencher immédiatement l'auto-téléchargement INLINE
-      console.log('⏰ [AUTO-DOWNLOAD] Appel immédiat de handleAutoDownloadAndOpen');
       
       // Logique directe d'ouverture sans fonction séparée
       try {
-        console.log('🚀 [AUTO-DOWNLOAD] Début de l\'auto-téléchargement INLINE');
-        
         toast({
           title: 'Téléchargement automatique',
           description: 'Ce type de fichier va être ouvert automatiquement',

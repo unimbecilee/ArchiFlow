@@ -10,16 +10,9 @@ app = create_app()
 
 app.config['UPLOAD_FOLDER'] = "uploads/"
 
-# Route de health check pour Railway
-@app.route('/')
-def health_check():
-    """Health check endpoint pour Railway"""
-    return {'status': 'healthy', 'message': 'ESAG GED API is running'}, 200
-
-@app.route('/health')
-def health():
-    """Alternative health check endpoint"""
-    return {'status': 'healthy', 'service': 'ESAG GED'}, 200
+# Note: Les routes de santé sont définies dans app.py
+# /api/health - Health check endpoint
+# / - Sert le frontend React
 
 if __name__ == '__main__':
     try:
@@ -31,6 +24,8 @@ if __name__ == '__main__':
         logger.info(f"Debug mode: {debug}")
         logger.info(f"Environment: {os.environ.get('FLASK_ENV', 'development')}")
         
+        # Note: WebSocket temps réel désactivé temporairement
+        # Les notifications fonctionnent mais nécessitent un rafraîchissement de page
         app.run(host='0.0.0.0', port=port, debug=debug)
     except Exception as e:
         logger.error(f"Failed to start application: {e}")

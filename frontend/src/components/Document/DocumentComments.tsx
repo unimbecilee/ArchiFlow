@@ -40,6 +40,7 @@ import {
 import { asElementType } from '../../utils/iconUtils';
 import config from '../../config';
 import { useAsyncOperation } from '../../hooks/useAsyncOperation';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Comment {
   comment: {
@@ -77,6 +78,7 @@ const DocumentComments: React.FC<DocumentCommentsProps> = ({
   const [loading, setLoading] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set());
   const { executeOperation } = useAsyncOperation();
+  const { user } = useAuth();
   const toast = useToast();
 
   const formatDate = (dateString: string) => {
@@ -247,7 +249,7 @@ const DocumentComments: React.FC<DocumentCommentsProps> = ({
     const { comment, replies } = commentData;
     const hasReplies = replies && replies.length > 0;
     const isExpanded = expandedReplies.has(comment.id);
-    const currentUserId = 1; // TODO: Get from auth context
+    const currentUserId = user?.id || 0;
 
     return (
       <Box key={comment.id} ml={isReply ? 8 : 0} mb={4}>

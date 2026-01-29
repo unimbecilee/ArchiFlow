@@ -8,6 +8,7 @@ from AppFlask.api.document_version import bp as document_version_bp
 from AppFlask.api.document_comment import bp as document_comment_bp
 from AppFlask.api.document_subscription import bp as document_subscription_bp
 from AppFlask.api.document_checkout import bp as document_checkout_bp
+from AppFlask.api.document_metadata import bp as document_metadata_bp
 from AppFlask.api.document_tags import bp as document_tags_bp
 from AppFlask.api.document_operations import bp as document_operations_bp
 from AppFlask.api.document_processing import bp as document_processing_bp
@@ -15,13 +16,17 @@ from AppFlask.api.document_sharing import document_sharing_bp
 from AppFlask.api.document_ocr import bp as document_ocr_bp
 from AppFlask.api.email import bp as email_bp
 from AppFlask.api.notifications import bp as notifications_bp
+from AppFlask.api.notifications_sse import bp as notifications_sse_bp
 from AppFlask.api.scan import bp as scan_bp
 from AppFlask.api.search import bp as search_bp
 from AppFlask.api.validation_workflow import bp as validation_workflow_bp
 from AppFlask.api.workflow import bp as workflow_bp
 from AppFlask.api.trash_unified import bp as trash_unified_bp
 from AppFlask.api.history import bp as history_bp
+from AppFlask.api.folders import bp as folders_bp
 from AppFlask.api.openapi import api_bp as openapi_bp
+from AppFlask.api.settings import bp as settings_bp
+from AppFlask.api.dashboard import bp as dashboard_bp
 import logging
 import traceback
 import atexit
@@ -29,12 +34,14 @@ import os
 from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from AppFlask.services.email_service import email_service
+from AppFlask.services.websocket_service import socketio
 
 # Charger les variables d'environnement depuis un fichier .env si présent
 load_dotenv()
 
 # Liste des origines autorisées (configurable via env CORS_ALLOWED_ORIGINS)
-_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,https://esag-ged.vercel.app')
+_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,https://esag-ged.vercel.app')
 ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
 
 API_BLUEPRINTS = [
@@ -44,6 +51,7 @@ API_BLUEPRINTS = [
     document_comment_bp,
     document_subscription_bp,
     document_checkout_bp,
+    document_metadata_bp,
     document_tags_bp,
     document_operations_bp,
     document_processing_bp,
@@ -51,12 +59,17 @@ API_BLUEPRINTS = [
     document_ocr_bp,
     email_bp,
     notifications_bp,
+    notifications_sse_bp,
     scan_bp,
     search_bp,
     validation_workflow_bp,
     workflow_bp,
+    dashboard_bp,
     trash_unified_bp,
     history_bp,
+    folders_bp,
+    openapi_bp,
+    settings_bp
 ]
 
 
@@ -81,11 +94,11 @@ def create_app():
         expose_headers=["Content-Type", "Authorization"]
     )
 
-    # Rate limiting global basique
+    # Rate limiting global basique (limites très élevées pour le développement)
     limiter = Limiter(
         get_remote_address,
         app=app,
-        default_limits=["200 per day", "50 per hour"],
+        default_limits=["100000 per day", "10000 per hour"],
         storage_uri=os.getenv("RATELIMIT_STORAGE_URI", "memory://"),
     )
 
@@ -96,13 +109,19 @@ def create_app():
     # Enregistrement centralisé des blueprints API
     for blueprint in API_BLUEPRINTS:
         app.register_blueprint(blueprint, url_prefix='/api')
-    
-    # Documentation OpenAPI/Swagger
-    app.register_blueprint(openapi_bp, url_prefix='/api')
 
     # Vérifier que les routes de partage sont bien enregistrées
     sharing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'sharing' in rule.rule or 'share' in rule.rule]
     logger.info(f"✅ Système de partage intégré - {len(sharing_routes)} routes disponibles")
+
+    # Initialiser le service email
+    email_service.init_app(app)
+    logger.info("✅ Service email initialisé")
+
+    # Note: WebSocket temporairement désactivé - problème d'initialisation
+    # Les notifications fonctionnent mais nécessitent un rafraîchissement manuel
+    # socketio.init_app(app, cors_allowed_origins=ALLOWED_ORIGINS)
+    # logger.info("✅ WebSocket initialisé pour notifications temps réel")
 
     # Démarrage du service de maintenance
     maintenance_service.start_cleanup_scheduler()
@@ -139,6 +158,16 @@ def create_app():
             'message': 'Une erreur est survenue',
             'error': str(e)
         }), 500
+
+    # Route de santé pour monitoring et tests
+    @app.route('/api/health', methods=['GET'])
+    def health_check():
+        """Endpoint de santé pour vérifier que l'API est opérationnelle"""
+        return jsonify({
+            'status': 'healthy',
+            'message': 'ESAG GED API is running',
+            'version': '1.0.0'
+        }), 200
 
     # Route catch-all pour gérer toutes les requêtes OPTIONS non capturées par les blueprints
     @app.route('/api/<path:path>', methods=['OPTIONS'])

@@ -306,7 +306,7 @@ class TrashManager:
             if item_type == 'document':
                 cursor.execute("""
                     SELECT titre, description, fichier, taille, mime_type,
-                           cloudinary_url, cloudinary_public_id, proprietaire_id, dossier_id
+                           minio_url, minio_object_name, proprietaire_id, dossier_id
                     FROM document WHERE id = %s
                 """, (item_id,))
             elif item_type == 'folder':
@@ -368,7 +368,7 @@ class TrashManager:
                 cursor.execute("""
                     INSERT INTO document (
                         titre, description, fichier, taille, mime_type,
-                        cloudinary_url, cloudinary_public_id, proprietaire_id,
+                        minio_url, minio_object_name, proprietaire_id,
                         date_ajout, derniere_modification, dossier_id
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, %s)
                 """, (
@@ -377,8 +377,8 @@ class TrashManager:
                     item_data.get('fichier', ''),
                     item_data.get('taille', 0),
                     item_data.get('mime_type', ''),
-                    item_data.get('cloudinary_url', ''),
-                    item_data.get('cloudinary_public_id', ''),
+                    item_data.get('minio_url', ''),
+                    item_data.get('minio_object_name', ''),
                     item_data.get('proprietaire_id'),
                     trash_item['deleted_at'],
                     item_data.get('dossier_id')
@@ -387,7 +387,7 @@ class TrashManager:
                 cursor.execute("""
                     INSERT INTO dossier (
                         nom, description, proprietaire_id, parent_id,
-                        date_creation, derniere_modification
+                        created_at, updated_at
                     ) VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                 """, (
                     item_data.get('nom', ''),
@@ -400,7 +400,7 @@ class TrashManager:
                 cursor.execute("""
                     INSERT INTO utilisateur (
                         nom, prenom, email, role, categorie, numero_tel,
-                        date_creation
+                        created_at
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (
                     item_data.get('nom', ''),
@@ -434,10 +434,18 @@ class TrashManager:
                         os.remove(file_path)
                         logger.info(f"Fichier physique supprimé: {file_path}")
                     
-                    # TODO: Supprimer de Cloudinary si nécessaire
-                    if 'cloudinary_public_id' in item_data and item_data['cloudinary_public_id']:
-                        # Implémenter la suppression Cloudinary ici
-                        pass
+                    # Supprimer de MinIO si nécessaire
+                    if 'minio_bucket' in item_data and item_data['minio_bucket'] and 'minio_object_name' in item_data:
+                        try:
+                            from AppFlask.services.minio_service import minio_service
+                            minio_service.delete_file(item_data['minio_bucket'], item_data['minio_object_name'])
+                            logger.info(f"Fichier MinIO supprimé: {item_data['minio_bucket']}/{item_data['minio_object_name']}")
+                        except Exception as e:
+                            logger.warning(f"Erreur suppression MinIO: {str(e)}")
+                    
+                    # Support legacy Cloudinary (si encore présent) - ignoré
+                    elif 'cloudinary_public_id' in item_data and item_data['cloudinary_public_id']:
+                        logger.info(f"Fichier Cloudinary legacy détecté: {item_data['cloudinary_public_id']} (ignoré - migration MinIO)")
                         
         except Exception as e:
             logger.warning(f"Erreur lors de la suppression des fichiers physiques: {str(e)}")

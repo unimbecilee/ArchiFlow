@@ -190,8 +190,25 @@ def create_share(current_user, document_id: int):
         
         conn.commit()
         
-        # Envoyer des notifications (optionnel)
-        # TODO: Implémenter l'envoi de notifications
+        # Envoyer des notifications aux destinataires
+        try:
+            from AppFlask.utils.notification_service import NotificationService
+            
+            cursor.execute("SELECT titre FROM document WHERE id = %s", (document_id,))
+            doc = cursor.fetchone()
+            document_title = doc['titre'] if doc else 'Document'
+            
+            for partage_info in partages_crees:
+                dest = partage_info['destinataire']
+                if dest['type'] == 'utilisateur':
+                    NotificationService.notify_document_shared(
+                        document_id=document_id,
+                        shared_with_user_id=int(dest['id']),
+                        shared_by_user_id=current_user['id'],
+                        document_title=document_title
+                    )
+        except Exception as notif_error:
+            logger.warning(f"Erreur envoi notifications: {notif_error}")
         
         return jsonify({
             'success': True,

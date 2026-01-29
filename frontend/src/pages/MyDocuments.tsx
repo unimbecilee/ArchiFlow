@@ -95,14 +95,11 @@ const MyDocuments: React.FC = () => {
         }
       })
       .then(response => {
-        console.log('🔍 [DEBUG] Workflows disponibles:', response.data);
         const archiveWorkflow = response.data.find((wf: { id: number; nom: string }) => 
           wf.nom.toLowerCase().includes('archivage')
         );
         if (!archiveWorkflow) {
-          console.log('⚠️ [ALERTE] Aucun workflow d\'archivage trouvé!');
-        } else {
-          console.log('✅ [INFO] Workflow d\'archivage trouvé:', archiveWorkflow);
+          // Aucun workflow d'archivage trouvé
         }
       })
       .catch(err => {
@@ -119,20 +116,13 @@ const MyDocuments: React.FC = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      console.log('🔍 [DEBUG] Documents récupérés:', response.data);
       // Vérifier les statuts des documents et leur état d'archivage
       const documentsApprouves = response.data.filter((doc: Document) => doc.statut === 'APPROUVE');
       const documentsArchives = response.data.filter((doc: Document) => doc.est_archive === true);
       const documentsArchivables = response.data.filter((doc: Document) => doc.statut === 'APPROUVE' && !doc.est_archive);
       
-      console.log('🔍 [DEBUG] Documents approuvés:', documentsApprouves.length);
-      console.log('🔍 [DEBUG] Documents déjà archivés:', documentsArchives.length);
-      console.log('🔍 [DEBUG] Documents archivables:', documentsArchivables.length);
-      
       if (documentsArchivables.length === 0) {
-        console.log('⚠️ [ALERTE] Aucun document n\'est éligible pour l\'archivage (statut APPROUVE et non archivé)');
-      } else {
-        console.log('✅ [INFO] Documents éligibles pour l\'archivage:', documentsArchivables.map((doc: Document) => ({id: doc.id, titre: doc.titre})));
+        // Aucun document archivable
       }
       setDocuments(response.data);
       setError('');

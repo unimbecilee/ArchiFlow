@@ -55,7 +55,7 @@ interface DocumentMoveModalProps {
 
 interface Folder {
   id: number;
-  titre: string;
+  nom: string;
   parent_id: number | null;
   date_creation: string;
   documents_count: number;
@@ -214,7 +214,7 @@ const DocumentMoveModal: React.FC<DocumentMoveModalProps> = ({
 
   // Filtrage des dossiers par recherche
   const filteredFolders = folders.filter(folder =>
-    folder.titre.toLowerCase().includes(searchQuery.toLowerCase())
+    folder.nom.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Déplacer les documents
@@ -347,7 +347,7 @@ const DocumentMoveModal: React.FC<DocumentMoveModalProps> = ({
     }
     
     const selectedFolder = folders.find(f => f.id === selectedFolderId);
-    return selectedFolder ? selectedFolder.titre : "Dossier sélectionné";
+    return selectedFolder ? selectedFolder.nom : "Dossier sélectionné";
   };
 
   return (
@@ -475,7 +475,7 @@ const DocumentMoveModal: React.FC<DocumentMoveModalProps> = ({
                             <Icon as={asElementType(FiFolder)} color="#3a8bfd" />
                             <VStack align="start" spacing={0} flex={1}>
                               <Text fontWeight="medium" noOfLines={1}>
-                                {folder.titre}
+                                {folder.nom}
                               </Text>
                               <HStack spacing={2}>
                                 <Badge size="sm" colorScheme="blue">

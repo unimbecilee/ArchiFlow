@@ -83,7 +83,6 @@ class LoggingService:
                 )
             """
 
-            self.logger.info(f"Attempting to execute log query: {query}")
             cursor.execute(query, (
                 level,
                 event_type,
@@ -97,9 +96,7 @@ class LoggingService:
                 message,
                 Json(formatted_data)
             ))
-            self.logger.info("Log query executed. Attempting to commit...")
             conn.commit()
-            self.logger.info("Commit successful in log_event.")
 
         except Exception as e:
             import traceback
@@ -114,14 +111,11 @@ class LoggingService:
     def get_recent_logs(self, hours=24, level=None, event_type=None, user_id=None, limit=100):
         """Récupère les logs récents avec filtrage."""
         try:
-            self.logger.info("Attempting to get DB connection in log_event...")
             conn = db_connection()
             if conn is None:
                 self.logger.error("Failed to get DB connection in log_event.")
                 return
-            self.logger.info("DB connection successful in log_event.")
             cursor = conn.cursor()
-            self.logger.info("DB cursor created in log_event.")
 
             # Construction de la requête avec filtres
             query_parts = [

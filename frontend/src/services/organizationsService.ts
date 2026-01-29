@@ -1,6 +1,6 @@
 import api from './api';
 
 export async function getOrganizations() {
-  const { data } = await api.get('/organizations');
+  const { data } = await api.get('/api/sharing/organizations');
   return data;
 }

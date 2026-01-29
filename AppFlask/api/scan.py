@@ -19,6 +19,20 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('api_scan', __name__)
 
+def _get_pdf_page_count(filepath):
+    """Détecte le nombre de pages d'un fichier PDF"""
+    try:
+        import PyPDF2
+        with open(filepath, 'rb') as f:
+            pdf_reader = PyPDF2.PdfReader(f)
+            return len(pdf_reader.pages)
+    except ImportError:
+        logger.warning("PyPDF2 non installé - impossible de compter les pages PDF")
+        return 1
+    except Exception as e:
+        logger.warning(f"Erreur lors du comptage des pages PDF: {str(e)}")
+        return 1
+
 # Configuration
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'scans')
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf', 'tiff', 'bmp'}
@@ -289,7 +303,7 @@ def scan_with_scanner(current_user):
             'scan_id': scan_id,
             'filename': filename,
             'size': f"{file_size_mb} MB",
-            'pages': 1,  # TODO: Détecter le nombre de pages pour les PDFs
+            'pages': _get_pdf_page_count(filepath) if filename.lower().endswith('.pdf') else 1,
             'ocr_text': ocr_text if settings.get('ocrEnabled') else None,
             'preview_available': True,
             'timestamp': datetime.now().isoformat()
@@ -350,7 +364,7 @@ def list_scanned_documents(current_user):
                 'has_ocr': bool(scan[5]),
                 'method': scan[6],
                 'size': f"{file_size} MB",
-                'pages': 1  # TODO: Implémenter la détection du nombre de pages
+                'pages': _get_pdf_page_count(scan[1]) if scan[1] and scan[1].lower().endswith('.pdf') else 1
             })
         
         return jsonify({

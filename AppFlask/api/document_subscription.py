@@ -192,7 +192,7 @@ def get_document_subscribers(current_user, document_id):
             'message': f'Erreur lors de la récupération: {str(e)}'
         }), 500
 
-@bp.route('/notifications', methods=['GET'])
+@bp.route('/document-notifications', methods=['GET'])
 @token_required
 def get_my_notifications(current_user):
     """

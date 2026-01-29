@@ -17,27 +17,13 @@ class Folder:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             query = """
-                INSERT INTO dossier (titre, description, parent_id, proprietaire_id, date_creation, derniere_modification)
+                INSERT INTO dossier (nom, description, parent_id, proprietaire_id, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id
             """
             cursor.execute(query, (title, description, parent_id, owner_id))
             result = cursor.fetchone()
-            
-            # Mettre à jour le chemin une fois que l'ID est connu
             folder_id = result['id']
-            
-            # Construire le chemin
-            path = f"/{folder_id}"
-            if parent_id:
-                # Récupérer le chemin du parent
-                cursor.execute("SELECT chemin FROM dossier WHERE id = %s", (parent_id,))
-                parent = cursor.fetchone()
-                if parent and parent['chemin']:
-                    path = f"{parent['chemin']}/{folder_id}"
-            
-            # Mettre à jour le chemin
-            cursor.execute("UPDATE dossier SET chemin = %s WHERE id = %s", (path, folder_id))
             
             conn.commit()
             cursor.close()
@@ -161,7 +147,7 @@ class Folder:
             if not update_fields:
                 return False
                 
-            update_fields.append("derniere_modification = CURRENT_TIMESTAMP")
+            update_fields.append("updated_at = CURRENT_TIMESTAMP")
             
             query = f"""
                 UPDATE dossier
@@ -307,15 +293,14 @@ class Folder:
             
         return {
             'id': folder['id'],
-            'titre': folder['titre'],
+            'nom': folder['nom'],
             'description': folder['description'],
             'parent_id': folder['parent_id'],
             'proprietaire_id': folder['proprietaire_id'],
             'proprietaire_nom': folder.get('proprietaire_nom'),
             'proprietaire_prenom': folder.get('proprietaire_prenom'),
-            'date_creation': folder['date_creation'].isoformat() if folder['date_creation'] else None,
-            'derniere_modification': folder['derniere_modification'].isoformat() if folder['derniere_modification'] else None,
-            'chemin': folder['chemin'],
+            'created_at': folder.get('created_at').isoformat() if folder.get('created_at') else None,
+            'updated_at': folder.get('updated_at').isoformat() if folder.get('updated_at') else None,
             'sous_dossiers_count': folder.get('sous_dossiers_count', 0),
             'documents_count': folder.get('documents_count', 0)
         }

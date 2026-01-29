@@ -9,26 +9,26 @@ export type TrashListParams = {
 };
 
 export async function listTrash(params?: TrashListParams) {
-  const { data } = await api.get('/trash', { params });
+  const { data } = await api.get('/api/trash', { params });
   return data;
 }
 
 export async function restoreTrashItem(trashId: number) {
-  const { data } = await api.post(`/trash/${trashId}/restore`, {});
+  const { data } = await api.post(`/api/trash/${trashId}/restore`, {});
   return data;
 }
 
 export async function deleteTrashItem(trashId: number) {
-  const { data } = await api.delete(`/trash/${trashId}`);
+  const { data } = await api.delete(`/api/trash/${trashId}`);
   return data;
 }
 
 export async function bulkRestore(trashIds: number[]) {
-  const { data } = await api.post('/trash/bulk-restore', { trash_ids: trashIds });
+  const { data } = await api.post('/api/trash/bulk-restore', { trash_ids: trashIds });
   return data;
 }
 
 export async function bulkDelete(trashIds: number[]) {
-  const { data } = await api.delete('/trash/bulk-delete', { data: { trash_ids: trashIds } });
+  const { data } = await api.delete('/api/trash/bulk-delete', { data: { trash_ids: trashIds } });
   return data;
 }

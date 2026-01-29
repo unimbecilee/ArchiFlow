@@ -140,28 +140,21 @@ const Trash: React.FC = () => {
       if (searchTerm && searchTerm.trim()) params.search = searchTerm.trim();
 
       const data = await listTrash(params);
-      console.log("🔍 [DEBUG] Données reçues:", data);
 
       // Gérer différents formats de réponse
       if (Array.isArray(data)) {
-        console.log("🔍 [DEBUG] Format: tableau");
         setItems(data);
-        console.log("🔍 [DEBUG] Items définis (array):", data.length);
       } else if (data.items && Array.isArray(data.items)) {
-        console.log("🔍 [DEBUG] Format: objet avec tableau items");
         setItems(data.items);
-        console.log("🔍 [DEBUG] Items définis (object):", data.items.length);
         if (typeof data.has_next !== 'undefined') setHasNext(!!data.has_next);
         if (typeof data.has_prev !== 'undefined') setHasPrev(!!data.has_prev);
         if (typeof data.page === 'number') setPage(data.page);
         if (typeof data.per_page === 'number') setPerPage(data.per_page);
       } else {
-        console.log("🔍 [DEBUG] Format: inconnu", data);
         setItems([]);
-        console.log("🔍 [DEBUG] Aucun item trouvé");
       }
     } catch (error) {
-      console.error("🔍 [DEBUG] Erreur complète:", error);
+      console.error("Erreur chargement corbeille:", error);
       setError("Impossible de charger les éléments de la corbeille");
       
       toast({

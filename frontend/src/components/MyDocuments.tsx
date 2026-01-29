@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ElementType } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, ElementType } from "react";
 import {
   Box,
   Flex,
@@ -106,7 +106,7 @@ interface Document {
 
 interface Folder {
   id: number;
-  titre: string;
+  nom: string;
   date_creation: string;
   documents_count: number;
   sous_dossiers_count: number;
@@ -221,29 +221,7 @@ const MyDocuments: React.FC = () => {
   const [documentToArchive, setDocumentToArchive] = useState<{ id: number; title: string } | null>(null);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
-  useEffect(() => {
-    // Ne charger que si l'utilisateur est connecté
-    if (user) {
-      console.log(`🔍 [DEBUG] Chargement initial des documents - Admin: ${isAdmin}, AdminMode: ${isAdminMode}`);
-      loadCurrentView();
-    }
-  }, [currentFolderId, isAdminMode, user, isAdmin]);
-
-  const loadCurrentView = async () => {
-    setIsLoading(true);
-    await Promise.all([
-      fetchDocuments(),
-      fetchFolders(),
-      loadBreadcrumb()
-    ]);
-    setIsLoading(false);
-  };
-
-  const refreshDocuments = async () => {
-    await loadCurrentView();
-  };
-
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       const result = await executeOperation(
         async () => {
@@ -261,16 +239,11 @@ const MyDocuments: React.FC = () => {
           
           if (isAdminMode && isAdmin) {
             params.append('admin_mode', 'true');
-            console.log(`🔍 [DEBUG] Mode admin activé pour la requête`);
-          } else {
-            console.log(`🔍 [DEBUG] Mode normal pour la requête (isAdminMode: ${isAdminMode}, isAdmin: ${isAdmin})`);
           }
           
           if (params.toString()) {
             url += `?${params.toString()}`;
           }
-
-          console.log(`🔍 [DEBUG] URL documents appelée: ${url}`);
 
           const response = await fetch(url, {
             headers: {
@@ -283,7 +256,6 @@ const MyDocuments: React.FC = () => {
           }
 
           const data = await response.json();
-          console.log(`🔍 [DEBUG] ${data.length} documents reçus`);
           return data;
         },
         {
@@ -296,8 +268,6 @@ const MyDocuments: React.FC = () => {
 
       if (result) {
         setDocuments(result);
-        // Charger les statuts favoris après avoir récupéré les documents
-        loadFavoriteStatuses();
       }
     } catch (err) {
       toast({
@@ -308,9 +278,9 @@ const MyDocuments: React.FC = () => {
         isClosable: true,
       });
     }
-  };
+  }, [currentFolderId, isAdminMode, isAdmin, executeOperation, toast]);
 
-  const fetchFolders = async () => {
+  const fetchFolders = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -320,8 +290,6 @@ const MyDocuments: React.FC = () => {
         url += `?parent_id=${currentFolderId}`;
       }
 
-      console.log(`🔍 [DEBUG] URL dossiers appelée: ${url}`);
-
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -329,14 +297,13 @@ const MyDocuments: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setFolders(data);
-        console.log(`🔍 [DEBUG] ${data.length} dossiers reçus`);
       }
     } catch (error) {
       console.error('Erreur chargement dossiers:', error);
     }
-  };
+  }, [currentFolderId]);
 
-  const loadBreadcrumb = async () => {
+  const loadBreadcrumb = useCallback(async () => {
     if (!currentFolderId) {
       setBreadcrumb([]);
       return;
@@ -350,11 +317,32 @@ const MyDocuments: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setBreadcrumb(data || []);
+        setBreadcrumb(data);
       }
     } catch (error) {
       console.error('Erreur breadcrumb:', error);
     }
+  }, [currentFolderId]);
+
+  const loadCurrentView = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.all([
+      fetchDocuments(),
+      fetchFolders(),
+      loadBreadcrumb()
+    ]);
+    setIsLoading(false);
+  }, [fetchDocuments, fetchFolders, loadBreadcrumb]);
+
+  useEffect(() => {
+    if (user) {
+      loadCurrentView();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFolderId, isAdminMode]); // Retirer 'user' pour éviter les re-renders inutiles
+
+  const refreshDocuments = async () => {
+    await loadCurrentView();
   };
 
   const navigateToFolder = (folderId: number | null) => {
@@ -980,7 +968,7 @@ const MyDocuments: React.FC = () => {
                                 icon={<Icon as={FiEdit2 as ElementType} />}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleFolderAction('rename', folder.id, folder.titre);
+                                  handleFolderAction('rename', folder.id, folder.nom);
                                 }}
                                 _hover={{ bg: "#2d3250" }}
                                 color="white"
@@ -1008,7 +996,7 @@ const MyDocuments: React.FC = () => {
                           color="white"
                           fontSize="sm"
                         >
-                          {folder.titre}
+                          {folder.nom}
                         </Text>
                         <HStack spacing={1}>
                           <Badge size="xs" colorScheme="blue">

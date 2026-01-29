@@ -85,7 +85,10 @@ const HistoryLog: React.FC<HistoryLogProps> = ({ filterType = 'all' }) => {
             return data;
           } else if (data && typeof data === 'object') {
             // Vérifier si les données sont dans une propriété spécifique
-            if (Array.isArray(data.data)) {
+            if (Array.isArray(data.history)) {
+              console.log('Données trouvées dans data.history');
+              return data.history;
+            } else if (Array.isArray(data.data)) {
               console.log('Données trouvées dans data.data');
               return data.data;
             } else if (Array.isArray(data.results)) {

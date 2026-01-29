@@ -333,6 +333,7 @@ def upgrade() -> None:
             statut VARCHAR(50) NOT NULL DEFAULT 'EN_COURS',
             etape_courante_id BIGINT REFERENCES etape_workflow(id) ON DELETE SET NULL,
             initiateur_id BIGINT REFERENCES utilisateur(id) ON DELETE SET NULL,
+            commentaire TEXT,
             date_debut TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             date_fin TIMESTAMP WITH TIME ZONE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

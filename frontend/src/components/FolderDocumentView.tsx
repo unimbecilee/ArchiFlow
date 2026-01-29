@@ -60,7 +60,7 @@ import DocumentPreview from './DocumentPreview';
 
 interface Folder {
   id: number;
-  titre: string;
+  nom: string;
   description?: string;
   parent_id: number | null;
   date_creation: string;
@@ -264,7 +264,7 @@ const FolderDocumentView: React.FC = () => {
   };
 
   const filteredFolders = folders.filter(folder =>
-    folder.titre.toLowerCase().includes(searchTerm.toLowerCase())
+    folder.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredDocuments = documents.filter(doc =>
@@ -381,7 +381,7 @@ const FolderDocumentView: React.FC = () => {
                           color="white"
                           fontSize="sm"
                         >
-                          {folder.titre}
+                          {folder.nom}
                         </Text>
                         <HStack spacing={1}>
                           <Badge size="xs" colorScheme="blue">

@@ -48,6 +48,7 @@ import {
 import { asElementType } from '../utils/iconUtils';
 import config from '../config';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
+import { useNotificationSSE } from '../hooks/useNotificationSSE';
 import NotificationModal from './NotificationModal';
 import { Notification, Subscription } from '../types/notifications';
 import { listNotifications, getUnreadCount, markAsRead as apiMarkAsRead, markAllAsRead as apiMarkAllAsRead } from '../services/notificationsService';
@@ -67,6 +68,39 @@ const Notifications: React.FC = () => {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const { executeOperation } = useAsyncOperation();
   const toast = useToast();
+
+  // SSE pour les notifications en temps réel
+  const { isConnected: sseConnected } = useNotificationSSE({
+    onUpdate: (data) => {
+      console.log('🔔 Notification temps réel reçue:', data);
+      
+      // Mettre à jour le compteur
+      if (data.unread_count !== undefined) {
+        setUnreadCount(data.unread_count);
+      }
+      
+      // Rafraîchir la liste des notifications
+      fetchNotifications();
+      
+      // Afficher un toast pour les nouvelles notifications
+      if (data.recent_notifications && data.recent_notifications.length > 0) {
+        const latestNotif = data.recent_notifications[0];
+        if (!latestNotif.is_read) {
+          toast({
+            title: latestNotif.title || 'Nouvelle notification',
+            description: latestNotif.message,
+            status: 'info',
+            duration: 5000,
+            isClosable: true,
+            position: 'top-right'
+          });
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('Erreur SSE:', error);
+    }
+  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('fr-FR', {
@@ -156,6 +190,58 @@ const Notifications: React.FC = () => {
       loadingMessage: 'Marquage en cours...',
       successMessage: 'Toutes les notifications marquées comme lues',
       errorMessage: 'Erreur lors du marquage'
+    });
+  };
+
+  const handleDeleteNotification = async (notificationId: number) => {
+    await executeOperation(async () => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${config.API_URL}/api/notifications/${notificationId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression');
+      }
+
+      fetchNotifications();
+      fetchUnreadCount();
+    }, {
+      successMessage: 'Notification supprimée avec succès',
+      errorMessage: 'Erreur lors de la suppression'
+    });
+  };
+
+  const handleToggleSubscription = async (documentId: number, isActive: boolean) => {
+    await executeOperation(async () => {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${config.API_URL}/api/documents/${documentId}/subscription`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ is_active: !isActive })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la modification');
+      }
+
+      fetchSubscriptions();
+    }, {
+      successMessage: isActive ? 'Abonnement désactivé' : 'Abonnement activé',
+      errorMessage: 'Erreur lors de la modification'
     });
   };
 
@@ -377,16 +463,7 @@ const Notifications: React.FC = () => {
                               )}
                               <MenuItem
                                 icon={<Icon as={asElementType(FiTrash2)} />}
-                                onClick={() => {
-                                  // TODO: Implémenter la suppression
-                                  toast({
-                                    title: 'Fonctionnalité à venir',
-                                    description: 'La suppression sera bientôt disponible',
-                                    status: 'info',
-                                    duration: 3000,
-                                    isClosable: true,
-                                  });
-                                }}
+                                onClick={() => handleDeleteNotification(notification.id)}
                                 _hover={{ bg: "#363b5a" }}
                                 color="red.400"
                               >
@@ -471,19 +548,10 @@ const Notifications: React.FC = () => {
                           <MenuList bg="#2a3657" borderColor="#3a445e">
                             <MenuItem
                               icon={<Icon as={asElementType(FiSettings)} />}
-                              onClick={() => {
-                                // TODO: Ouvrir modal de modification
-                                toast({
-                                  title: 'Fonctionnalité à venir',
-                                  description: 'La modification sera bientôt disponible',
-                                  status: 'info',
-                                  duration: 3000,
-                                  isClosable: true,
-                                });
-                              }}
+                              onClick={() => handleToggleSubscription(subscription.document_id, subscription.is_active)}
                               _hover={{ bg: "#363b5a" }}
                             >
-                              Modifier
+                              {subscription.is_active ? 'Désactiver' : 'Activer'}
                             </MenuItem>
                             <MenuItem
                               icon={<Icon as={asElementType(FiBellOff)} />}

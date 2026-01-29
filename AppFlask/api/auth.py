@@ -13,12 +13,14 @@ import bcrypt
 import traceback
 from AppFlask.utils.auth_utils import role_required
 
+logger = logging.getLogger(__name__)
+
 def log_user_action(user_id, action_type, description, request_obj=None):
     """Enregistrer une action utilisateur dans l'historique"""
     try:
         conn = db_connection()
         if not conn:
-            print("Erreur: Impossible de se connecter à la base de données pour log_user_action")
+            logger.error("Impossible de se connecter à la base de données pour log_user_action")
             return
             
         cursor = conn.cursor()
@@ -44,10 +46,10 @@ def log_user_action(user_id, action_type, description, request_obj=None):
         conn.commit()
         cursor.close()
         conn.close()
-        print(f"Action enregistrée: {action_type} pour user_id={user_id}")
+        logger.debug(f"Action enregistrée: {action_type} pour user_id={user_id}")
         
     except Exception as e:
-        print(f"Erreur lors de l'enregistrement de l'action: {e}")
+        logger.error(f"Erreur lors de l'enregistrement de l'action: {e}")
         import traceback
         traceback.print_exc()
         if 'conn' in locals() and conn:
@@ -201,11 +203,19 @@ def generate_password(length=12):
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # Accepter le token depuis le header Authorization OU depuis les query params
         token = request.headers.get('Authorization')
+        from_header = True
+        if not token:
+            token = request.args.get('token')
+            from_header = False
+        
         if not token:
             return jsonify({'message': 'Token manquant'}), 401
         try:
-            token = token.split(' ')[1]  # Enlever 'Bearer '
+            # Enlever 'Bearer ' seulement si le token vient du header
+            if from_header and ' ' in token:
+                token = token.split(' ')[1]
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             conn = db_connection()
             if conn is None:
@@ -266,10 +276,10 @@ def admin_required(f):
 @token_required
 @role_required('admin')
 def get_users(current_user):
-    print(f"Tentative de récupération des utilisateurs par {current_user['email']} (rôle: {current_user['role']})")
+    logger.debug(f"Tentative de récupération des utilisateurs par {current_user['email']} (rôle: {current_user['role']})")
     
     if current_user['role'].lower() != 'admin':
-        print(f"Accès refusé: {current_user['email']} n'est pas admin")
+        logger.warning(f"Accès refusé: {current_user['email']} n'est pas admin")
         return jsonify({'message': 'Accès non autorisé'}), 403
     
     conn = db_connection()
@@ -283,7 +293,7 @@ def get_users(current_user):
         
         query = """
             SELECT id, nom, prenom, email, role, categorie, numero_tel, 
-                   date_creation
+                   created_at as date_creation
             FROM utilisateur 
             ORDER BY nom ASC
         """
@@ -342,9 +352,7 @@ def login():
             conn.close()
             return jsonify({'message': 'Email ou mot de passe incorrect'}), 401
 
-        print(f"Hash stocké: {user['mot_de_passe']}")
-        print(f"Mot de passe tenté: {password}")
-        print(f"Résultat vérification: {check_password_hash(user['mot_de_passe'], password)}")
+        logger.debug(f"Vérification mot de passe pour user {user.get('email', 'unknown')}")
         
         if check_password_hash(user['mot_de_passe'], password):
             token = jwt.encode({
@@ -424,7 +432,7 @@ def logout(current_user):
 @token_required
 @role_required('admin')
 def create_user(current_user):
-    print(f"Tentative de création d'utilisateur par {current_user['email']}")
+    logger.debug(f"Tentative de création d'utilisateur par {current_user['email']}")
     
     if current_user['role'].lower() != 'admin':
         print(f"Accès refusé pour {current_user['email']} - Rôle: {current_user['role']}")
@@ -457,7 +465,7 @@ def create_user(current_user):
             # Option: Si le paramètre replace_if_exists est à true, on supprime l'utilisateur existant
             if data.get('replace_if_exists'):
                 try:
-                    print(f"Suppression de l'utilisateur existant avec l'email {data['email']}")
+                    logger.debug(f"Suppression de l'utilisateur existant avec l'email {data['email']}")
                     # Avec RealDictCursor, existing_user est un dictionnaire
                     user_id = existing_user['id'] if isinstance(existing_user, dict) else existing_user[0]
                     
@@ -481,7 +489,7 @@ def create_user(current_user):
                 pass
             cursor.close()
             conn.close()
-            print(f"Email déjà utilisé: {data['email']}")
+            logger.warning(f"Email déjà utilisé: {data['email']}")
             return jsonify({'message': 'Cet email est déjà utilisé'}), 400
         
         # Générer un mot de passe aléatoire
@@ -508,7 +516,7 @@ def create_user(current_user):
                 hashed_password,
                 role_value
             )
-            print(f"Exécution de la requête: {query} avec les valeurs: {data['email']}, {data['nom']}, {data['prenom']}, [MOT_DE_PASSE_MASQUÉ], {role_value}")
+            logger.debug(f"Création utilisateur: {data['email']}, {data['nom']}, {data['prenom']}, rôle: {role_value}")
             
             cursor.execute(query, values)
             
@@ -551,7 +559,7 @@ def create_user(current_user):
                     except (ValueError, IndexError):
                         pass
                 
-                print(f"Utilisateur créé avec succès: {data['email']} avec le rôle '{role_value}', ID: {user_id}")
+                logger.info(f"Utilisateur créé avec succès: {data['email']} avec le rôle '{role_value}', ID: {user_id}")
             except Exception as e:
                 print(f"Avertissement: Impossible d'extraire l'ID utilisateur du résultat: {new_user}, erreur: {str(e)}")
                 # Continuer même si on ne peut pas extraire l'ID
@@ -569,30 +577,63 @@ def create_user(current_user):
             try:
                 from AppFlask.services.email_service import email_service
                 
-                # Préparer les données pour le template
-                email_data = {
-                    'user_name': f"{data['prenom']} {data['nom']}",
-                    'user_email': data['email'],
-                    'user_role': role_value,
-                    'generated_password': generated_password,
-                    'login_url': 'http://localhost:3000/login'
-                }
+                logger.info(f"🔍 Tentative d'envoi d'email à {data['email']}")
+                logger.info(f"🔍 Service email configuré: {email_service.is_configured()}")
                 
-                # Envoyer l'email de bienvenue
-                email_sent = email_service.send_template_email(
+                # Créer un email HTML simple
+                html_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Bienvenue sur ESAG GED !</h2>
+                    <p>Bonjour {data['prenom']} {data['nom']},</p>
+                    <p>Votre compte a été créé avec succès.</p>
+                    <p><strong>Informations de connexion :</strong></p>
+                    <ul>
+                        <li>Email : {data['email']}</li>
+                        <li>Mot de passe : {generated_password}</li>
+                        <li>Rôle : {role_value}</li>
+                    </ul>
+                    <p><a href="http://localhost:3000/login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Se connecter</a></p>
+                    <p>Cordialement,<br>L'équipe ESAG GED</p>
+                </body>
+                </html>
+                """
+                
+                text_body = f"""
+                Bienvenue sur ESAG GED !
+                
+                Bonjour {data['prenom']} {data['nom']},
+                
+                Votre compte a été créé avec succès.
+                
+                Informations de connexion :
+                - Email : {data['email']}
+                - Mot de passe : {generated_password}
+                - Rôle : {role_value}
+                
+                Lien de connexion : http://localhost:3000/login
+                
+                Cordialement,
+                L'équipe ESAG GED
+                """
+                
+                # Envoyer l'email directement
+                email_sent = email_service.send_email(
                     to=[data['email']],
-                    template_name='welcome',
                     subject='Bienvenue sur ESAG GED - Votre compte a été créé',
-                    template_data=email_data
+                    body=text_body,
+                    html_body=html_body
                 )
                 
                 if email_sent:
-                    print(f"✅ Email de bienvenue envoyé à {data['email']}")
+                    logger.info(f"✅ Email de bienvenue envoyé à {data['email']}")
                 else:
-                    print(f"⚠️ Échec de l'envoi de l'email de bienvenue à {data['email']}")
+                    logger.warning(f"⚠️ Échec de l'envoi de l'email de bienvenue à {data['email']}")
                     
             except Exception as email_error:
-                print(f"❌ Erreur lors de l'envoi de l'email de bienvenue: {str(email_error)}")
+                logger.error(f"❌ Erreur lors de l'envoi de l'email de bienvenue: {str(email_error)}")
+                import traceback
+                logger.error(traceback.format_exc())
                 # L'utilisateur est créé même si l'email échoue
             
             return jsonify({
@@ -645,7 +686,7 @@ def delete_user(current_user, user_id):
             conn.close()
             return jsonify({'message': 'Utilisateur non trouvé'}), 404
         
-        print(f"Tentative de suppression définitive de l'utilisateur {user_id}: {user['prenom']} {user['nom']}")
+        logger.debug(f"Tentative de suppression définitive de l'utilisateur {user_id}: {user['prenom']} {user['nom']}")
         
         # Identifier les tables qui ont une référence à l'utilisateur dans la table trash
         # Nous nous concentrons uniquement sur les colonnes connues pour exister
@@ -748,7 +789,7 @@ def delete_user(current_user, user_id):
 @token_required
 @role_required('admin')
 def update_user(current_user, user_id):
-    print(f"Tentative de mise à jour de l'utilisateur {user_id} par {current_user['email']}")
+    logger.debug(f"Tentative de mise à jour de l'utilisateur {user_id} par {current_user['email']}")
     
     if current_user['role'].lower() != 'admin':
         print(f"Accès refusé pour {current_user['email']} - Rôle: {current_user['role']}")
@@ -801,7 +842,7 @@ def update_user(current_user, user_id):
         if 'role' in data:
             update_fields.append("role = %s")
             update_values.append(data['role'])
-            print(f"Mise à jour du rôle: '{data['role']}'")
+            logger.debug(f"Mise à jour du rôle: '{data['role']}'")
         
         if not update_fields:
             cursor.close()

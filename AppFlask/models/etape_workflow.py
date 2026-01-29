@@ -117,8 +117,7 @@ class EtapeWorkflow:
                 SELECT u.id, u.nom, u.prenom, u.email, 'organisation' as type_approbateur, o.nom as organisation_nom
                 FROM workflow_approbateur wa
                 JOIN organisation o ON wa.organisation_id = o.id
-                JOIN membre m ON o.id = m.organisation_id
-                JOIN utilisateur u ON m.utilisateur_id = u.id
+                JOIN utilisateur u ON u.organisation_id = o.id
                 WHERE wa.etape_id = %s AND wa.organisation_id IS NOT NULL
             """, (etape_id,))
             

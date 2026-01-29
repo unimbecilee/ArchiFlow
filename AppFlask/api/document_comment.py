@@ -30,6 +30,13 @@ def add_document_comment(current_user, document_id):
     Ajoute un nouveau commentaire à un document
     """
     try:
+        # Vérifier la permission de commenter
+        if not check_document_permission(document_id, current_user['id'], PERMISSION_COMMENTAIRE):
+            return jsonify({
+                'success': False,
+                'message': 'Vous n\'avez pas la permission de commenter ce document'
+            }), 403
+        
         data = request.get_json()
         content = data.get('content')
         parent_id = data.get('parent_id')  # Pour les réponses

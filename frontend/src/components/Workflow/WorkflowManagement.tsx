@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -97,11 +97,12 @@ interface WorkflowTemplate {
   id: number;
   nom: string;
   description: string;
-  date_creation: string;
-  statut: string | null;
-  createur_nom: string;
-  createur_prenom: string;
+  created_at?: string;
+  created_by?: number;
+  createur_nom?: string;
+  createur_prenom?: string;
   instances_count: number;
+  organisation_id?: number;
 }
 
 interface WorkflowInstance {
@@ -130,7 +131,7 @@ interface PendingApproval {
   description: string;
 }
 
-const WorkflowManagement: React.FC = () => {
+const WorkflowManagement: React.FC = React.memo(() => {
   const { executeOperation } = useAsyncOperation();
   const { user } = useAuth();
   const toast = useToast();
@@ -182,8 +183,19 @@ const WorkflowManagement: React.FC = () => {
 
   // Hydrate local state from React Query data (temp migration)
   useEffect(() => {
-    if (workflowsData) setWorkflowTemplates(workflowsData as any);
+    console.log('🔍 workflowsData reçu:', workflowsData);
+    if (workflowsData) {
+      console.log('✅ Setting workflowTemplates avec', workflowsData);
+      setWorkflowTemplates(workflowsData as any);
+    }
   }, [workflowsData]);
+
+  // Mettre à jour isLoading quand React Query a fini de charger
+  useEffect(() => {
+    if (!workflowsLoading && !pendingLoading && !instancesLoading) {
+      setIsLoading(false);
+    }
+  }, [workflowsLoading, pendingLoading, instancesLoading]);
   useEffect(() => {
     if (pendingData) setPendingApprovals(pendingData as any);
   }, [pendingData]);
@@ -322,9 +334,13 @@ const WorkflowManagement: React.FC = () => {
   const filteredTemplates = workflowTemplates.filter(template => {
     const matchesSearch = template.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || (template.statut && template.statut.toLowerCase() === statusFilter.toLowerCase());
-    return matchesSearch && matchesStatus;
+    // Pas de filtrage par statut car le champ n'existe pas dans l'API
+    return matchesSearch;
   });
+
+  console.log('📊 workflowTemplates:', workflowTemplates);
+  console.log('📊 filteredTemplates:', filteredTemplates);
+  console.log('📊 isLoading:', isLoading, 'workflowsLoading:', workflowsLoading);
 
   return (
     <Box p={6}>
@@ -494,8 +510,8 @@ const WorkflowManagement: React.FC = () => {
                               {workflow.createur_prenom} {workflow.createur_nom}
                             </Td>
                             <Td>
-                              <Badge colorScheme={getStatusBadgeColor(workflow.statut)}>
-                                {workflow.statut || 'Non défini'}
+                              <Badge colorScheme="green">
+                                Actif
                               </Badge>
                             </Td>
                             <Td color="white">
@@ -504,7 +520,7 @@ const WorkflowManagement: React.FC = () => {
                               </Badge>
                             </Td>
                             <Td color="gray.300">
-                              {new Date(workflow.date_creation).toLocaleDateString('fr-FR')}
+                              {workflow.created_at ? new Date(workflow.created_at).toLocaleDateString('fr-FR') : 'N/A'}
                             </Td>
                             <Td>
                               <Menu>
@@ -793,7 +809,7 @@ const WorkflowManagement: React.FC = () => {
       </VStack>
     </Box>
   );
-};
+});
 
 export default WorkflowManagement; 
 

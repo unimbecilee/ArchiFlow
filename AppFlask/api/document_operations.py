@@ -119,10 +119,22 @@ def copy_document(current_user, document_id):
             }), 404
         
         # Vérifier les droits de lecture sur le document source
-        # (pour simplifier, on vérifie si c'est le propriétaire ou si c'est partagé)
         if source_doc['proprietaire_id'] != current_user['id']:
-            # TODO: Vérifier les permissions de partage
-            pass
+            # Vérifier les permissions de partage
+            cursor.execute("""
+                SELECT permissions FROM partage_document 
+                WHERE document_id = %s 
+                AND utilisateur_id = %s 
+                AND actif = TRUE
+                AND (date_expiration IS NULL OR date_expiration > CURRENT_TIMESTAMP)
+            """, (document_id, current_user['id']))
+            
+            partage = cursor.fetchone()
+            if not partage or 'lecture' not in partage.get('permissions', []):
+                return jsonify({
+                    'success': False,
+                    'message': 'Vous n\'avez pas les droits de lecture sur ce document'
+                }), 403
         
         # Vérifier que le dossier cible existe et appartient à l'utilisateur
         if target_folder_id:

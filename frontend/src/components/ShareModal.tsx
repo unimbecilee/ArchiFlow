@@ -152,6 +152,14 @@ const PERMISSIONS_OPTIONS = [
   { key: 'partage_supplementaire', label: 'Re-partage', icon: <CustomIcon type="share" />, description: 'Peut partager à son tour' }
 ];
 
+const PERMISSION_PRESETS = [
+  { name: 'Lecteur', permissions: ['lecture'], icon: '👁️', description: 'Lecture seule' },
+  { name: 'Téléchargeur', permissions: ['lecture', 'téléchargement'], icon: '⬇️', description: 'Lecture + téléchargement' },
+  { name: 'Contributeur', permissions: ['lecture', 'téléchargement', 'commentaire'], icon: '💬', description: 'Lecture, téléchargement et commentaires' },
+  { name: 'Éditeur', permissions: ['lecture', 'téléchargement', 'modification', 'commentaire'], icon: '✏️', description: 'Toutes les permissions sauf re-partage' },
+  { name: 'Administrateur', permissions: ['lecture', 'téléchargement', 'modification', 'commentaire', 'partage_supplementaire'], icon: '👑', description: 'Toutes les permissions' }
+];
+
 const ShareModal: React.FC<ShareModalProps> = ({
   open,
   onClose,
@@ -543,48 +551,103 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
                           {/* Destinataires sélectionnés */}
                           {shareData.destinataires.length > 0 && (
-                            <Box>
-                              <Text fontSize="sm" color={mutedColor} mb={2}>
-                                Destinataires sélectionnés:
-                              </Text>
+                            <Box p={4} bg={inputBg} borderRadius="md" border="1px" borderColor={borderColor}>
+                              <HStack justify="space-between" mb={3}>
+                                <Text fontSize="sm" fontWeight="medium" color={textColor}>
+                                  Destinataires sélectionnés ({shareData.destinataires.length})
+                                </Text>
+                                <Button
+                                  size="xs"
+                                  variant="ghost"
+                                  colorScheme="red"
+                                  onClick={() => setShareData(prev => ({ ...prev, destinataires: [] }))}
+                                >
+                                  Tout effacer
+                                </Button>
+                              </HStack>
                               <HStack wrap="wrap" spacing={2}>
                                 {shareData.destinataires.map((dest, index) => (
                                   <Tag
                                     key={`${dest.type}-${dest.id}`}
-                                    size="md"
+                                    size="lg"
                                     variant="solid"
                                     colorScheme="blue"
+                                    borderRadius="full"
+                                    px={3}
+                                    py={2}
                                   >
-                                    {getDestinationIcon(dest.type)}
-                                    <TagLabel ml={1}>{dest.nom}</TagLabel>
+                                    <Box fontSize="18px" mr={2}>{getDestinationIcon(dest.type)}</Box>
+                                    <TagLabel fontWeight="medium">{dest.nom}</TagLabel>
                                     <TagCloseButton onClick={() => handleDestinationRemove(index)} />
                                   </Tag>
                                 ))}
                               </HStack>
                             </Box>
                           )}
+                          {shareData.destinataires.length === 0 && (
+                            <Alert status="info" borderRadius="md">
+                              <AlertIcon />
+                              Sélectionnez au moins un destinataire pour partager ce document
+                            </Alert>
+                          )}
                         </Box>
 
                         {/* Permissions */}
                         <Box>
                           <Heading size="md" mb={4} color={textColor}>Permissions</Heading>
+                          
+                          {/* Raccourcis de permissions */}
+                          <Box mb={4} p={4} bg={inputBg} borderRadius="md" border="1px" borderColor={borderColor}>
+                            <Text fontSize="sm" color={mutedColor} mb={3}>Raccourcis rapides :</Text>
+                            <HStack spacing={2} wrap="wrap">
+                              {PERMISSION_PRESETS.map((preset) => (
+                                <Tooltip key={preset.name} label={preset.description}>
+                                  <Button
+                                    size="sm"
+                                    variant={JSON.stringify(shareData.permissions.sort()) === JSON.stringify(preset.permissions.sort()) ? 'solid' : 'outline'}
+                                    colorScheme="blue"
+                                    leftIcon={<span>{preset.icon}</span>}
+                                    onClick={() => handlePermissionChange(preset.permissions)}
+                                  >
+                                    {preset.name}
+                                  </Button>
+                                </Tooltip>
+                              ))}
+                            </HStack>
+                          </Box>
+
+                          {/* Permissions détaillées */}
                           <CheckboxGroup
                             value={shareData.permissions}
                             onChange={handlePermissionChange}
                             colorScheme="blue"
                           >
-                            <VStack align="start" spacing={3}>
+                            <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={3}>
                               {PERMISSIONS_OPTIONS.map((perm) => (
-                                <Tooltip key={perm.key} label={perm.description}>
-                                  <Checkbox value={perm.key} color={textColor}>
-                                    <HStack spacing={2}>
-                                      {perm.icon}
-                                      <Text color={textColor}>{perm.label}</Text>
-                                    </HStack>
-                                  </Checkbox>
+                                <Tooltip key={perm.key} label={perm.description} placement="top">
+                                  <Box
+                                    p={3}
+                                    bg={shareData.permissions.includes(perm.key) ? 'blue.900' : inputBg}
+                                    borderRadius="md"
+                                    border="2px"
+                                    borderColor={shareData.permissions.includes(perm.key) ? 'blue.500' : borderColor}
+                                    cursor="pointer"
+                                    transition="all 0.2s"
+                                    _hover={{ borderColor: 'blue.400', transform: 'translateY(-2px)' }}
+                                  >
+                                    <Checkbox value={perm.key} color={textColor} width="100%">
+                                      <VStack align="start" spacing={1}>
+                                        <HStack spacing={2}>
+                                          <Box fontSize="20px">{perm.icon}</Box>
+                                          <Text color={textColor} fontWeight="medium">{perm.label}</Text>
+                                        </HStack>
+                                        <Text fontSize="xs" color={mutedColor}>{perm.description}</Text>
+                                      </VStack>
+                                    </Checkbox>
+                                  </Box>
                                 </Tooltip>
                               ))}
-                            </VStack>
+                            </Grid>
                           </CheckboxGroup>
                         </Box>
 
@@ -633,55 +696,94 @@ const ShareModal: React.FC<ShareModalProps> = ({
                       {/* Partages existants */}
                       {existingShares.length === 0 ? (
                         <Box textAlign="center" py={8}>
-                          <Text color="gray.500">
+                          <Box fontSize="48px" mb={3}>🔒</Box>
+                          <Text color={mutedColor} fontSize="lg">
                             Aucun partage existant pour ce document
+                          </Text>
+                          <Text color={mutedColor} fontSize="sm" mt={2}>
+                            Utilisez l'onglet "Nouveau partage" pour commencer
                           </Text>
                         </Box>
                       ) : (
-                        <List spacing={3}>
-                          {existingShares.map((share, index) => (
-                            <Box key={share.id}>
-                              <ListItem>
-                                <HStack justify="space-between" align="start" w="100%">
-                                  <HStack align="start" spacing={3} flex={1}>
+                        <VStack spacing={3} align="stretch">
+                          {existingShares.map((share) => (
+                            <Box
+                              key={share.id}
+                              p={4}
+                              bg={inputBg}
+                              borderRadius="md"
+                              border="1px"
+                              borderColor={borderColor}
+                              _hover={{ borderColor: 'blue.500', transform: 'translateY(-2px)' }}
+                              transition="all 0.2s"
+                            >
+                              <HStack justify="space-between" align="start" w="100%">
+                                <HStack align="start" spacing={3} flex={1}>
+                                  <Box fontSize="24px" mt={1}>
                                     {getDestinationIcon(share.type_destinataire)}
-                                    <VStack align="start" spacing={1} flex={1}>
-                                      <Text fontWeight="medium">{share.destinataire_nom}</Text>
-                                      <Text fontSize="sm" color="gray.600">
-                                        Permissions: {share.permissions.join(', ')}
+                                  </Box>
+                                  <VStack align="start" spacing={2} flex={1}>
+                                    <HStack>
+                                      <Text fontWeight="bold" color={textColor} fontSize="md">{share.destinataire_nom}</Text>
+                                      <Tag size="sm" colorScheme="blue" variant="subtle">
+                                        {share.type_destinataire}
+                                      </Tag>
+                                    </HStack>
+                                    
+                                    <HStack wrap="wrap" spacing={1}>
+                                      {share.permissions.map((perm) => (
+                                        <Tag key={perm} size="sm" colorScheme="green" variant="outline">
+                                          {PERMISSIONS_OPTIONS.find(p => p.key === perm)?.icon}
+                                          <TagLabel ml={1}>{perm}</TagLabel>
+                                        </Tag>
+                                      ))}
+                                    </HStack>
+                                    
+                                    <VStack align="start" spacing={1}>
+                                      <Text fontSize="xs" color={mutedColor}>
+                                        📅 Partagé le {formatDate(share.date_partage)}
                                       </Text>
-                                      <Text fontSize="sm" color="gray.600">
-                                        Partagé le {formatDate(share.date_partage)} par {share.createur_nom}
+                                      <Text fontSize="xs" color={mutedColor}>
+                                        👤 Par {share.createur_nom}
                                       </Text>
                                       {share.date_expiration && (
-                                        <Text fontSize="sm" color="orange.500">
-                                          Expire le {formatDate(share.date_expiration)}
-                                        </Text>
-                                      )}
-                                      {share.commentaire && (
-                                        <Text fontSize="sm" color="gray.500" fontStyle="italic">
-                                          "{share.commentaire}"
+                                        <Text fontSize="xs" color="orange.400" fontWeight="medium">
+                                          ⏰ Expire le {formatDate(share.date_expiration)}
                                         </Text>
                                       )}
                                     </VStack>
-                                  </HStack>
-                                  <Tooltip label="Révoquer le partage">
-                                    <IconButton
-                                      aria-label="Révoquer"
-                                      size="sm"
-                                      variant="ghost"
-                                      colorScheme="red"
-                                      onClick={() => handleRevokeShare(share.id)}
-                                    >
-                                      <CustomIcon type="delete" />
-                                    </IconButton>
-                                  </Tooltip>
+                                    
+                                    {share.commentaire && (
+                                      <Box
+                                        p={2}
+                                        bg={cardBg}
+                                        borderRadius="md"
+                                        borderLeft="3px solid"
+                                        borderLeftColor="blue.500"
+                                        w="100%"
+                                      >
+                                        <Text fontSize="sm" color={mutedColor} fontStyle="italic">
+                                          💬 "{share.commentaire}"
+                                        </Text>
+                                      </Box>
+                                    )}
+                                  </VStack>
                                 </HStack>
-                              </ListItem>
-                              {index < existingShares.length - 1 && <Divider />}
+                                <Tooltip label="Révoquer le partage">
+                                  <IconButton
+                                    aria-label="Révoquer"
+                                    size="sm"
+                                    variant="ghost"
+                                    colorScheme="red"
+                                    icon={<CustomIcon type="delete" />}
+                                    onClick={() => handleRevokeShare(share.id)}
+                                    _hover={{ bg: 'red.900' }}
+                                  />
+                                </Tooltip>
+                              </HStack>
                             </Box>
                           ))}
-                        </List>
+                        </VStack>
                       )}
                     </TabPanel>
                   </TabPanels>

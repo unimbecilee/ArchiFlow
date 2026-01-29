@@ -90,6 +90,7 @@ const WorkflowDetailsModal: React.FC<WorkflowDetailsModalProps> = ({
     if (isOpen && workflowId) {
       loadWorkflowDetails(workflowId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, workflowId]);
 
   const loadWorkflowDetails = async (id: number) => {

@@ -227,6 +227,11 @@ def search(current_user):
 @token_required
 def debug_search(current_user):
     """Endpoint de debug pour tester la recherche"""
+    # Désactiver en production pour des raisons de sécurité
+    import os
+    if os.getenv('FLASK_ENV') == 'production':
+        return jsonify({'error': 'Debug endpoint not available in production'}), 403
+    
     try:
         conn = db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)

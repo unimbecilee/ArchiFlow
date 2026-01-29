@@ -14,7 +14,7 @@ export type ShareRequest = {
 };
 
 export async function createShare(documentId: number, payload: ShareRequest) {
-  const { data } = await api.post(`/documents/${documentId}/share`, payload);
+  const { data } = await api.post(`/api/documents/${documentId}/share`, payload);
   return data;
 }
 

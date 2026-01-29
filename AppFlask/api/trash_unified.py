@@ -587,7 +587,7 @@ def restore_document(cursor, trash_item, restored_by_id):
         cursor.execute("""
             INSERT INTO document (
                 titre, description, fichier, taille, mime_type,
-                cloudinary_url, cloudinary_public_id, proprietaire_id,
+                minio_url, minio_object_name, proprietaire_id,
                 date_ajout, derniere_modification, modifie_par, dossier_id
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
@@ -601,8 +601,8 @@ def restore_document(cursor, trash_item, restored_by_id):
             item_data.get('fichier', ''),
             item_data.get('taille', 0),
             item_data.get('mime_type', ''),
-            item_data.get('cloudinary_url', ''),
-            item_data.get('cloudinary_public_id', ''),
+            item_data.get('minio_url', ''),
+            item_data.get('minio_object_name', ''),
             trash_item['deleted_by'],
             trash_item['deleted_at'],
             datetime.now(),

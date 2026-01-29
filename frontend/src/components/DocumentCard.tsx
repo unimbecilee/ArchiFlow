@@ -219,20 +219,6 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   const canDelete = user?.role === 'admin';
   const canSubmitWorkflow = document.statut === 'BROUILLON' || document.statut === 'REJETE';
   const canRequestArchive = document.statut === 'APPROUVE' && !document.est_archive;
-  
-  // Débogage
-  console.log('🔍 [DEBUG] Document:', document.id, document.titre);
-  console.log('🔍 [DEBUG] Statut:', document.statut);
-  console.log('🔍 [DEBUG] Est archivé:', document.est_archive);
-  console.log('🔍 [DEBUG] Peut demander archivage:', canRequestArchive);
-  
-  // Vérifier si le document est éligible pour l'archivage
-  if (document.statut !== 'APPROUVE') {
-    console.log('⚠️ [ALERTE] Document non éligible pour l\'archivage - statut non APPROUVE:', document.statut);
-  }
-  if (document.est_archive) {
-    console.log('⚠️ [ALERTE] Document déjà archivé');
-  }
 
   return (
     <Card maxW='sm' variant='outline'>

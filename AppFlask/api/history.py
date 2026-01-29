@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('history', __name__)
 
 @bp.route('/history', methods=['GET'])
+@bp.route('/history/', methods=['GET'])
 @token_required
 def get_history(current_user):
     """Récupérer l'historique des actions"""

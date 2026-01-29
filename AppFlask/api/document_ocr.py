@@ -2,6 +2,9 @@ from flask import Blueprint, request, jsonify
 from AppFlask.db import db_connection
 from .auth import token_required, log_user_action
 from psycopg2.extras import RealDictCursor
+import logging
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('api_document_ocr', __name__)
 
@@ -26,10 +29,10 @@ def has_permission(doc_id, user_id, required_permission='lecture'):
             conn.close()
             return True
 
-        # Sinon, vérifier dans la table partage
+        # Sinon, vérifier dans la table partage_document
         cursor.execute("""
-            SELECT permissions FROM partage
-            WHERE document_id = %s AND utilisateur_id = %s
+            SELECT permissions FROM partage_document
+            WHERE document_id = %s AND utilisateur_id = %s AND actif = TRUE
         """, (doc_id, user_id))
         partage = cursor.fetchone()
 
@@ -50,7 +53,7 @@ def has_permission(doc_id, user_id, required_permission='lecture'):
         return False
 
     except Exception as e:
-        print(f"Erreur dans has_permission: {e}")
+        logger.error(f"Erreur dans has_permission: {e}")
         return False
 
 @bp.route('/documents/<int:doc_id>/ocr', methods=['POST'])
@@ -73,7 +76,7 @@ def extract_ocr_text(current_user, doc_id):
 
         # Récupérer les informations du document
         cursor.execute("""
-            SELECT titre, fichier, cloudinary_url, mime_type 
+            SELECT titre, fichier, minio_url, mime_type 
             FROM document 
             WHERE id = %s
         """, (doc_id,))
@@ -120,5 +123,5 @@ def extract_ocr_text(current_user, doc_id):
         }), 200
 
     except Exception as e:
-        print(f"Erreur lors de l'extraction OCR: {e}")
+        logger.error(f"Erreur lors de l'extraction OCR: {e}")
         return jsonify({'error': 'Erreur lors de l\'extraction OCR'}), 500 

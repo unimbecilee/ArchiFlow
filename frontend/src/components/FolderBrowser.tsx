@@ -37,7 +37,7 @@ const API_URL = config.API_URL;
 
 interface Folder {
   id: number;
-  titre: string;
+  nom: string;
   description?: string;
   parent_id: number | null;
   date_creation: string;
@@ -433,7 +433,7 @@ const FolderBrowser: React.FC<FolderBrowserProps> = ({
                   <Icon as={FiFolder as ElementType} color="#3a8bfd" boxSize={5} mr={3} />
                   <VStack align="start" spacing={0}>
                     <Text fontWeight="medium" noOfLines={1} color="white">
-                      {folder.titre}
+                      {folder.nom}
                     </Text>
                     <Text fontSize="xs" color="gray.400">
                       {new Date(folder.date_creation).toLocaleDateString()}

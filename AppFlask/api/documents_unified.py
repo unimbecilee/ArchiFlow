@@ -1,76 +1,42 @@
 from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from AppFlask.db import db_connection
 from AppFlask.api.auth import token_required, log_user_action
+from AppFlask.utils.permissions import (
+    check_document_permission,
+    get_user_permissions,
+    can_user_share_document,
+    PERMISSION_LECTURE,
+    PERMISSION_TELECHARGEMENT,
+    PERMISSION_MODIFICATION,
+    PERMISSION_COMMENTAIRE,
+    PERMISSION_REPARTAGE
+)
 from psycopg2.extras import RealDictCursor
 import os
 import json
+import logging
 from datetime import datetime
 from AppFlask.services.notification_service import notification_service
 from AppFlask.utils.trash_manager import move_document_to_trash
 from werkzeug.utils import secure_filename
 
+logger = logging.getLogger(__name__)
+
 # Blueprint unifié pour tous les documents
 bp = Blueprint('documents_unified', __name__)
 
+# Fonction has_permission conservée pour compatibilité mais utilise check_document_permission
 def has_permission(doc_id, user_id, required_permission='lecture'):
-    """Vérifier les permissions de l'utilisateur sur un document"""
-    try:
-        conn = db_connection()
-        if not conn:
-            return False
-            
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        # Récupérer le document et vérifier qu'il existe
-        cursor.execute("SELECT proprietaire_id FROM document WHERE id = %s", (doc_id,))
-        doc = cursor.fetchone()
-
-        if doc is None:
-            cursor.close()
-            conn.close()
-            return False
-
-        # L'utilisateur est propriétaire → tous les droits
-        if doc['proprietaire_id'] == int(user_id):
-            cursor.close()
-            conn.close()
-            return True
-
-        # Vérifier si l'utilisateur est admin
-        cursor.execute("SELECT role FROM utilisateur WHERE id = %s", (user_id,))
-        user = cursor.fetchone()
-        if user and user.get('role', '').lower() == 'admin':
-            cursor.close()
-            conn.close()
-            return True
-
-        # Sinon, vérifier dans la table partage
-        cursor.execute("""
-            SELECT permissions FROM partage
-            WHERE document_id = %s AND utilisateur_id = %s
-        """, (doc_id, user_id))
-        partage = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
-
-        if not partage:
-            return False
-
-        # Vérifier les droits selon le niveau requis
-        permissions = partage['permissions']
-        if required_permission == 'lecture':
-            return True
-        elif required_permission == 'edition' and permissions in ('édition', 'admin'):
-            return True
-        elif required_permission == 'admin' and permissions == 'admin':
-            return True
-
-        return False
-
-    except Exception as e:
-        print(f"🚨 Erreur dans has_permission: {e}")
-        return False
+    """Vérifier les permissions de l'utilisateur sur un document (legacy)"""
+    # Mapper les anciennes permissions vers les nouvelles
+    permission_map = {
+        'lecture': PERMISSION_LECTURE,
+        'edition': PERMISSION_MODIFICATION,
+        'admin': PERMISSION_REPARTAGE
+    }
+    
+    mapped_permission = permission_map.get(required_permission, PERMISSION_LECTURE)
+    return check_document_permission(doc_id, user_id, mapped_permission)
 
 # ================================
 # ROUTES PRINCIPALES
@@ -85,7 +51,7 @@ def get_my_documents(current_user):
         dossier_id = request.args.get('dossier_id')
         admin_mode = request.args.get('admin_mode', 'false').lower() == 'true'
         
-        print(f"🔍 [API DEBUG] user_id: {user_id}, dossier_id: '{dossier_id}', admin_mode: {admin_mode}")
+        logger.debug(f"user_id: {user_id}, dossier_id: '{dossier_id}', admin_mode: {admin_mode}")
         
         # Convertir dossier_id
         if dossier_id == '' or dossier_id == 'None':
@@ -114,7 +80,7 @@ def get_my_documents(current_user):
                 query = """
                     SELECT d.id, d.titre, d.description, d.date_ajout as date_creation,
                            d.derniere_modification, d.taille, d.categorie as type_document,
-                           d.dossier_id, d.cloudinary_url,
+                           d.dossier_id, d.minio_url,
                            CASE 
                                WHEN d.taille < 1024 THEN CONCAT(d.taille::text, ' B')
                                WHEN d.taille < 1048576 THEN CONCAT(ROUND(d.taille/1024.0, 2)::text, ' KB')
@@ -138,7 +104,7 @@ def get_my_documents(current_user):
                 query = """
                     SELECT d.id, d.titre, d.description, d.date_ajout as date_creation,
                            d.derniere_modification, d.taille, d.categorie as type_document,
-                           d.dossier_id, d.cloudinary_url,
+                           d.dossier_id, d.minio_url,
                            CASE 
                                WHEN d.taille < 1024 THEN CONCAT(d.taille::text, ' B')
                                WHEN d.taille < 1048576 THEN CONCAT(ROUND(d.taille/1024.0, 2)::text, ' KB')
@@ -164,7 +130,7 @@ def get_my_documents(current_user):
                 query = """
                     SELECT d.id, d.titre, d.description, d.date_ajout as date_creation,
                            d.derniere_modification, d.taille, d.categorie as type_document,
-                           d.dossier_id, d.cloudinary_url,
+                           d.dossier_id, d.minio_url,
                            CASE 
                                WHEN d.taille < 1024 THEN CONCAT(d.taille::text, ' B')
                                WHEN d.taille < 1048576 THEN CONCAT(ROUND(d.taille/1024.0, 2)::text, ' KB')
@@ -188,7 +154,7 @@ def get_my_documents(current_user):
                 query = """
                     SELECT d.id, d.titre, d.description, d.date_ajout as date_creation,
                            d.derniere_modification, d.taille, d.categorie as type_document,
-                           d.dossier_id, d.cloudinary_url,
+                           d.dossier_id, d.minio_url,
                            CASE 
                                WHEN d.taille < 1024 THEN CONCAT(d.taille::text, ' B')
                                WHEN d.taille < 1048576 THEN CONCAT(ROUND(d.taille/1024.0, 2)::text, ' KB')
@@ -234,13 +200,10 @@ def get_document_by_id(current_user, doc_id):
     try:
         user_id = current_user['id']
         
-        print(f"🔍 [API DEBUG] Récupération document {doc_id} par utilisateur {user_id}")
+        logger.debug(f"Récupération document {doc_id} par utilisateur {user_id}")
         
-        # Vérifier les permissions avec debug
-        has_perm = has_permission(doc_id, user_id, 'lecture')
-        print(f"🔍 [API DEBUG] Permission lecture pour doc {doc_id}: {has_perm}")
-        
-        if not has_perm:
+        # Vérifier les permissions de lecture
+        if not check_document_permission(doc_id, user_id, PERMISSION_LECTURE):
             return jsonify({'error': 'Accès non autorisé'}), 403
 
         conn = db_connection()
@@ -282,7 +245,7 @@ def get_document_by_id(current_user, doc_id):
         if doc_dict.get('derniere_modification'):
             doc_dict['derniere_modification'] = doc_dict['derniere_modification'].isoformat() if hasattr(doc_dict['derniere_modification'], 'isoformat') else str(doc_dict['derniere_modification'])
         
-        print(f"✅ [API DEBUG] Document {doc_id} récupéré avec succès")
+        logger.debug(f"Document {doc_id} récupéré avec succès")
         return jsonify(doc_dict), 200
 
     except Exception as e:
@@ -296,11 +259,11 @@ def download_document_api(current_user, doc_id):
     try:
         user_id = current_user['id']
         
-        print(f"🔍 [API DEBUG] Téléchargement document {doc_id} par utilisateur {user_id}")
+        logger.debug(f"Téléchargement document {doc_id} par utilisateur {user_id}")
         
-        # Vérifier les permissions
-        if not has_permission(doc_id, user_id, 'lecture'):
-            return jsonify({'error': 'Permission refusée'}), 403
+        # Vérifier les permissions de téléchargement
+        if not check_document_permission(doc_id, user_id, PERMISSION_TELECHARGEMENT):
+            return jsonify({'error': 'Permission de téléchargement refusée'}), 403
 
         conn = db_connection()
         if not conn:
@@ -308,9 +271,9 @@ def download_document_api(current_user, doc_id):
             
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        # Récupérer l'URL Cloudinary du document
+        # Récupérer l'URL MinIO du document
         cursor.execute("""
-            SELECT titre, fichier, cloudinary_url, mime_type 
+            SELECT titre, fichier, minio_url, mime_type 
             FROM document 
             WHERE id = %s
         """, (doc_id,))
@@ -321,19 +284,19 @@ def download_document_api(current_user, doc_id):
         if not doc:
             return jsonify({'error': 'Document non trouvé'}), 404
 
-        # Priorité à l'URL Cloudinary
-        if doc.get('cloudinary_url'):
+        # Priorité à l'URL MinIO
+        if doc.get('minio_url'):
             # Enregistrer l'action
             log_user_action(
                 user_id, 
-                'DOCUMENT_DOWNLOAD_API', 
-                f"Téléchargement API du document '{doc['titre']}' (ID: {doc_id})",
+                'DOCUMENT_DOWNLOAD', 
+                f"Téléchargement du document '{doc['titre']}' (ID: {doc_id})",
                 request
             )
             
-            # Redirection vers Cloudinary
+            # Redirection vers MinIO
             from flask import redirect
-            return redirect(doc['cloudinary_url'])
+            return redirect(doc['minio_url'])
         
         elif doc.get('fichier'):
             # Fallback vers fichier local
@@ -369,7 +332,7 @@ def get_recent_activities(current_user):
     try:
         user_id = current_user['id']
         
-        print(f"🔍 [RECENT DEBUG] Récupération activités pour user_id: {user_id}")
+        logger.debug(f"Récupération activités pour user_id: {user_id}")
         
         conn = db_connection()
         if not conn:
@@ -406,7 +369,7 @@ def get_recent_activities(current_user):
         cursor.close()
         conn.close()
         
-        print(f"🔍 [RECENT DEBUG] {len(activities)} activités trouvées")
+        logger.debug(f"{len(activities)} activités trouvées")
         return jsonify({'activities': activities}), 200
         
     except Exception as e:
@@ -420,7 +383,7 @@ def get_favorite_documents(current_user):
     try:
         user_id = current_user['id']
         
-        print(f"🔍 [FAVORITES DEBUG] Récupération favoris pour user_id: {user_id}")
+        logger.debug(f"Récupération favoris pour user_id: {user_id}")
         
         conn = db_connection()
         if not conn:
@@ -464,7 +427,7 @@ def get_favorite_documents(current_user):
         cursor.close()
         conn.close()
         
-        print(f"🔍 [FAVORITES DEBUG] {len(favorites)} favoris trouvés")
+        logger.debug(f"{len(favorites)} favoris trouvés")
         return jsonify(favorites), 200
         
     except Exception as e:
@@ -478,10 +441,10 @@ def add_to_favorites(current_user, doc_id):
     try:
         user_id = current_user['id']
         
-        print(f"🔍 [FAVORITES ADD] User {user_id} ajoute document {doc_id} aux favoris")
+        logger.debug(f"User {user_id} ajoute document {doc_id} aux favoris")
         
         # Vérifier que l'utilisateur a accès au document
-        if not has_permission(doc_id, user_id, 'lecture'):
+        if not check_document_permission(doc_id, user_id, PERMISSION_LECTURE):
             return jsonify({'error': 'Permission refusée'}), 403
         
         conn = db_connection()
@@ -526,10 +489,10 @@ def add_to_favorites(current_user, doc_id):
         conn.close()
         
         if affected_rows > 0:
-            print(f"✅ [FAVORITES ADD] Document {doc_id} ajouté aux favoris de l'utilisateur {user_id}")
+            logger.debug(f"Document {doc_id} ajouté aux favoris de l'utilisateur {user_id}")
             return jsonify({'message': 'Document ajouté aux favoris', 'is_favorite': True}), 200
         else:
-            print(f"ℹ️ [FAVORITES ADD] Document {doc_id} déjà dans les favoris de l'utilisateur {user_id}")
+            logger.debug(f"Document {doc_id} déjà dans les favoris de l'utilisateur {user_id}")
             return jsonify({'message': 'Document déjà dans les favoris', 'is_favorite': True}), 200
             
     except Exception as e:
@@ -545,7 +508,7 @@ def remove_from_favorites(current_user, doc_id):
     try:
         user_id = current_user['id']
         
-        print(f"🔍 [FAVORITES REMOVE] User {user_id} retire document {doc_id} des favoris")
+        logger.debug(f"User {user_id} retire document {doc_id} des favoris")
         
         conn = db_connection()
         if not conn:
@@ -582,7 +545,7 @@ def remove_from_favorites(current_user, doc_id):
         cursor.close()
         conn.close()
         
-        print(f"✅ [FAVORITES REMOVE] Document {doc_id} retiré des favoris de l'utilisateur {user_id}")
+        logger.debug(f"Document {doc_id} retiré des favoris de l'utilisateur {user_id}")
         return jsonify({'message': 'Document retiré des favoris', 'is_favorite': False}), 200
         
     except Exception as e:
@@ -624,8 +587,8 @@ def extract_ocr_text(current_user, doc_id):
     try:
         user_id = current_user['id']
         
-        # Vérifier les permissions
-        if not has_permission(doc_id, user_id, 'lecture'):
+        # Vérifier les permissions de lecture
+        if not check_document_permission(doc_id, user_id, PERMISSION_LECTURE):
             return jsonify({'error': 'Accès non autorisé'}), 403
 
         # Récupérer les paramètres
@@ -640,7 +603,7 @@ def extract_ocr_text(current_user, doc_id):
 
         # Récupérer les informations du document
         cursor.execute("""
-            SELECT titre, fichier, cloudinary_url, mime_type 
+            SELECT titre, fichier, minio_url, mime_type 
             FROM document 
             WHERE id = %s
         """, (doc_id,))
@@ -728,17 +691,21 @@ def upload_document_with_notifications(current_user):
         
         print(f"📊 Taille du fichier: {file_size} octets")
         
-        # Upload du fichier vers Cloudinary
-        from AppFlask.utils.cloudinary_storage import upload_file
+        # Upload du fichier vers MinIO
+        from AppFlask.utils.storage_adapter import storage_adapter
         try:
-            print("🔄 Début de l'upload vers Cloudinary")
-            cloudinary_result = upload_file(file, resource_type="auto")
-            cloudinary_url = cloudinary_result.get('secure_url')
-            cloudinary_public_id = cloudinary_result.get('public_id')
-            print(f"✅ Upload Cloudinary réussi: URL={cloudinary_url}, Public ID={cloudinary_public_id}")
-        except Exception as cloud_error:
-            print(f"❌ Erreur lors de l'upload vers Cloudinary: {str(cloud_error)}")
-            return jsonify({'error': 'Erreur lors de l\'upload vers Cloudinary'}), 500
+            print("🔄 Début de l'upload vers MinIO")
+            upload_result = storage_adapter.upload_file(
+                file_data=file,
+                filename=secure_filename(file.filename),
+                content_type=mime_type
+            )
+            minio_url = upload_result.get('url')
+            minio_object_name = upload_result.get('object_name')
+            print(f"✅ Upload MinIO réussi: URL={minio_url}, Object={minio_object_name}")
+        except Exception as storage_error:
+            print(f"❌ Erreur lors de l'upload vers MinIO: {str(storage_error)}")
+            return jsonify({'error': 'Erreur lors de l\'upload du fichier'}), 500
         
         conn = db_connection()
         if not conn:
@@ -752,14 +719,14 @@ def upload_document_with_notifications(current_user):
         insert_query = """
             INSERT INTO document (titre, fichier, description, categorie, taille, 
                                 date_ajout, proprietaire_id, dossier_id, mime_type, 
-                                cloudinary_url, cloudinary_public_id)
+                                minio_url, minio_object_name)
             VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s, %s)
             RETURNING id
         """
         
         query_params = (title, filename, description, categorie, file_size, 
                        current_user['id'], dossier_id, mime_type,
-                       cloudinary_url, cloudinary_public_id)
+                       minio_url, minio_object_name)
         print(f"🔄 Exécution de la requête SQL: {insert_query}")
         print(f"🔄 Paramètres: {query_params}")
         
@@ -791,7 +758,7 @@ def upload_document_with_notifications(current_user):
             'message': 'Document uploadé avec succès',
             'document_id': document_id,
             'title': title,
-            'url': cloudinary_url
+            'url': minio_url
         }), 201
         
     except Exception as e:
@@ -943,6 +910,10 @@ def create_share(current_user, document_id: int):
         
         if not data:
             return jsonify({'error': 'Données JSON requises'}), 400
+        
+        # Vérifier que l'utilisateur peut partager ce document
+        if not can_user_share_document(document_id, current_user['id']):
+            return jsonify({'error': 'Vous n\'avez pas la permission de partager ce document'}), 403
             
         destinataires = data.get('destinataires', [])
         permissions = data.get('permissions', ['lecture'])
@@ -996,7 +967,7 @@ def create_share(current_user, document_id: int):
                 continue
             
             # Créer le partage dans la table partage_document
-        cursor.execute("""
+            cursor.execute("""
                 INSERT INTO partage_document 
                 (document_id, utilisateur_id, role_nom, organisation_id, 
                  permissions, createur_id, date_expiration, commentaire)
@@ -1005,11 +976,20 @@ def create_share(current_user, document_id: int):
             """, (document_id, utilisateur_id, role_nom, organisation_id,
                   permissions, current_user['id'], date_exp_parsed, commentaire))
             
-        partage = cursor.fetchone()
-        partages_crees.append({
-            'id': partage['id'],
-            'destinataire': destinataire
-        })
+            partage = cursor.fetchone()
+            partages_crees.append({
+                'id': partage['id'],
+                'destinataire': destinataire
+            })
+            
+            # Envoyer une notification si c'est un partage avec un utilisateur spécifique
+            if utilisateur_id:
+                from AppFlask.services.notification_service import NotificationService
+                NotificationService.notify_document_shared(
+                    document_id=document_id,
+                    shared_with_user_id=utilisateur_id,
+                    shared_by_user_id=current_user['id']
+                )
         
         conn.commit()
         cursor.close()
@@ -1049,7 +1029,7 @@ def get_document_shares(current_user, document_id: int):
             LEFT JOIN utilisateur u ON pd.utilisateur_id = u.id
             LEFT JOIN organisation o ON pd.organisation_id = o.id
             WHERE pd.document_id = %s AND pd.actif = TRUE
-            ORDER BY pd.created_at DESC
+            ORDER BY pd.id DESC
         """, (document_id,))
         
         partages = cursor.fetchall()
@@ -1093,7 +1073,7 @@ def get_shared_documents(current_user):
         return jsonify([dict(doc) for doc in documents]), 200
         
     except Exception as e:
-        print(f"❌ Erreur lors de la récupération des documents partagés: {e}")
+        logger.error(f"Erreur lors de la récupération des documents partagés: {e}")
         return jsonify({'error': 'Erreur lors de la récupération des documents partagés'}), 500
 
 @bp.route('/sharing/users', methods=['GET'])
@@ -1101,7 +1081,7 @@ def get_shared_documents(current_user):
 def get_users_for_sharing(current_user):
     """Récupérer la liste des utilisateurs pour le partage"""
     try:
-        print(f"🔍 [SHARING DEBUG] Début récupération utilisateurs pour user_id: {current_user['id']}")
+        logger.debug(f"Début récupération utilisateurs pour user_id: {current_user['id']}")
         
         conn = db_connection()
         if not conn:
@@ -1110,7 +1090,7 @@ def get_users_for_sharing(current_user):
             
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        print("🔍 [SHARING DEBUG] Exécution de la requête utilisateurs...")
+        logger.debug("Exécution de la requête utilisateurs pour sharing")
         cursor.execute("""
             SELECT id, nom, prenom, email 
             FROM utilisateur 
@@ -1120,7 +1100,7 @@ def get_users_for_sharing(current_user):
         """, (current_user['id'],))
         
         users = cursor.fetchall()
-        print(f"✅ [SHARING DEBUG] {len(users)} utilisateurs trouvés")
+        logger.debug(f"{len(users)} utilisateurs trouvés")
         
         cursor.close()
         conn.close()
@@ -1128,7 +1108,7 @@ def get_users_for_sharing(current_user):
         return jsonify([dict(user) for user in users]), 200
         
     except Exception as e:
-        print(f"❌ Erreur lors de la récupération des utilisateurs: {e}")
+        logger.error(f"Erreur lors de la récupération des utilisateurs: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Erreur lors de la récupération des utilisateurs'}), 500
@@ -1150,7 +1130,7 @@ def get_roles_for_sharing(current_user):
         return jsonify(roles), 200
         
     except Exception as e:
-        print(f"❌ Erreur lors de la récupération des rôles: {e}")
+        logger.error(f"Erreur lors de la récupération des rôles: {e}")
         return jsonify({'error': 'Erreur lors de la récupération des rôles'}), 500
 
 @bp.route('/sharing/organizations', methods=['GET'])
@@ -1158,7 +1138,7 @@ def get_roles_for_sharing(current_user):
 def get_organizations_for_sharing(current_user):
     """Récupérer la liste des organisations pour le partage"""
     try:
-        print(f"🔍 [SHARING DEBUG] Début récupération organisations pour user_id: {current_user['id']}")
+        logger.debug(f"Début récupération organisations pour user_id: {current_user['id']}")
         
         conn = db_connection()
         if not conn:
@@ -1167,7 +1147,7 @@ def get_organizations_for_sharing(current_user):
             
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        print("🔍 [SHARING DEBUG] Exécution de la requête organisations...")
+        logger.debug("Exécution de la requête organisations pour sharing")
         cursor.execute("""
             SELECT id, nom, description 
             FROM organisation 
@@ -1176,7 +1156,7 @@ def get_organizations_for_sharing(current_user):
         """)
         
         organizations = cursor.fetchall()
-        print(f"✅ [SHARING DEBUG] {len(organizations)} organisations trouvées")
+        logger.debug(f"{len(organizations)} organisations trouvées")
         
         cursor.close()
         conn.close()
@@ -1184,7 +1164,7 @@ def get_organizations_for_sharing(current_user):
         return jsonify([dict(org) for org in organizations]), 200
         
     except Exception as e:
-        print(f"❌ Erreur lors de la récupération des organisations: {e}")
+        logger.error(f"Erreur lors de la récupération des organisations: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Erreur lors de la récupération des organisations'}), 500
@@ -1223,7 +1203,7 @@ def get_document_subscription(current_user, doc_id):
         }), 200
         
     except Exception as e:
-        print(f"🚨 Erreur vérification abonnement: {e}")
+        logger.error(f"Erreur vérification abonnement: {e}")
         return jsonify({'error': 'Erreur lors de la vérification'}), 500
 
 @bp.route('/documents/<int:doc_id>/subscribe', methods=['POST'])
@@ -1386,15 +1366,36 @@ def delete_document(current_user, doc_id):
         conn = db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Vérifier que le document existe et appartient à l'utilisateur ou que l'utilisateur est admin
-        cursor.execute("""
-            SELECT * FROM document 
-            WHERE id = %s AND (proprietaire_id = %s OR %s = true)
-        """, (doc_id, current_user['id'], current_user['role'].lower() == 'admin'))
-        
+        # Vérifier que le document existe
+        cursor.execute("SELECT * FROM document WHERE id = %s", (doc_id,))
         document = cursor.fetchone()
+        
         if not document:
-            return jsonify({'message': 'Document non trouvé ou accès refusé'}), 404
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'Document non trouvé'}), 404
+        
+        # Vérifier les permissions: propriétaire, admin, ou document partagé avec l'utilisateur
+        is_owner = document['proprietaire_id'] == current_user['id']
+        is_admin = current_user['role'].lower() == 'admin'
+        
+        # Vérifier si le document est partagé avec l'utilisateur
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM partage_document
+            WHERE document_id = %s 
+            AND (utilisateur_id = %s 
+                 OR role_nom = (SELECT role FROM utilisateur WHERE id = %s)
+                 OR organisation_id = (SELECT organisation_id FROM utilisateur WHERE id = %s))
+            AND actif = TRUE
+        """, (doc_id, current_user['id'], current_user['id'], current_user['id']))
+        
+        shared_result = cursor.fetchone()
+        has_shared_access = shared_result and shared_result['count'] > 0
+        
+        if not (is_owner or is_admin or has_shared_access):
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'Accès refusé - vous n\'avez pas les permissions pour supprimer ce document'}), 403
         
         cursor.close()
         conn.close()

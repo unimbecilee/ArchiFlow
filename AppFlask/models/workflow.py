@@ -25,7 +25,7 @@ class Workflow:
         try:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             cursor.execute("""
-                INSERT INTO workflow (nom, description, date_creation, createur_id, organisation_id)
+                INSERT INTO workflow (nom, description, created_at, created_by, organisation_id)
                 VALUES (%s, %s, NOW(), %s, %s)
                 RETURNING id
             """, (nom, description, createur_id, organisation_id))
@@ -53,7 +53,7 @@ class Workflow:
             cursor.execute("""
                 SELECT w.*, u.nom as createur_nom, u.prenom as createur_prenom
                 FROM workflow w
-                LEFT JOIN utilisateur u ON w.createur_id = u.id
+                LEFT JOIN utilisateur u ON w.created_by = u.id
                 WHERE w.id = %s
             """, (workflow_id,))
             
@@ -77,21 +77,21 @@ class Workflow:
                     SELECT w.*, u.nom as createur_nom, u.prenom as createur_prenom,
                            COUNT(wi.id) as instances_count
                     FROM workflow w
-                    LEFT JOIN utilisateur u ON w.createur_id = u.id
+                    LEFT JOIN utilisateur u ON w.created_by = u.id
                     LEFT JOIN workflow_instance wi ON w.id = wi.workflow_id
                     WHERE w.organisation_id = %s OR w.organisation_id IS NULL
                     GROUP BY w.id, u.nom, u.prenom
-                    ORDER BY w.date_creation DESC
+                    ORDER BY w.created_at DESC
                 """, (organisation_id,))
             else:
                 cursor.execute("""
                     SELECT w.*, u.nom as createur_nom, u.prenom as createur_prenom,
                            COUNT(wi.id) as instances_count
                     FROM workflow w
-                    LEFT JOIN utilisateur u ON w.createur_id = u.id
+                    LEFT JOIN utilisateur u ON w.created_by = u.id
                     LEFT JOIN workflow_instance wi ON w.id = wi.workflow_id
                     GROUP BY w.id, u.nom, u.prenom
-                    ORDER BY w.date_creation DESC
+                    ORDER BY w.created_at DESC
                 """)
             
             return cursor.fetchall()
@@ -316,11 +316,10 @@ class Workflow:
         return {
             'id': workflow_row['id'],
             'nom': workflow_row['nom'],
-            'description': workflow_row['description'],
-            'date_creation': workflow_row['date_creation'].isoformat() if workflow_row['date_creation'] else None,
-            'statut': workflow_row['statut'],
-            'createur_id': workflow_row['createur_id'],
-            'organisation_id': workflow_row['organisation_id'],
+            'description': workflow_row.get('description'),
+            'created_at': workflow_row.get('created_at').isoformat() if workflow_row.get('created_at') else None,
+            'created_by': workflow_row.get('created_by'),
+            'organisation_id': workflow_row.get('organisation_id'),
             'createur_nom': workflow_row.get('createur_nom'),
             'createur_prenom': workflow_row.get('createur_prenom'),
             'instances_count': workflow_row.get('instances_count', 0)

@@ -164,7 +164,10 @@ class WorkflowInstance:
                         JOIN utilisateur u2 ON u2.role = r.nom 
                         WHERE r.nom = wa.role_nom AND u2.id = %s
                     ))
-                    OR wa.organisation_id IN (SELECT organisation_id FROM membre WHERE utilisateur_id = %s)
+                    OR (wa.organisation_id IS NOT NULL AND EXISTS (
+                        SELECT 1 FROM utilisateur u3 
+                        WHERE u3.id = %s AND u3.organisation_id = wa.organisation_id
+                    ))
                 )
                 AND NOT EXISTS (
                     SELECT 1 FROM workflow_approbation 
@@ -426,7 +429,7 @@ class WorkflowInstance:
             
         except Exception as e:
             # Journaliser l'erreur mais ne pas interrompre le processus
-            print(f"Erreur lors de l'archivage du document {document_id}: {e}")
+            logger.error(f"Erreur lors de l'archivage du document {document_id}: {e}")
 
     @staticmethod
     def _notify_approvers(cursor, instance_id: int, etape_id: int, document_id: int):
@@ -472,8 +475,7 @@ class WorkflowInstance:
         cursor.execute("""
             SELECT u.id, u.nom, u.prenom, u.email
             FROM workflow_approbateur wa
-            JOIN membre m ON wa.organisation_id = m.organisation_id
-            JOIN utilisateur u ON m.utilisateur_id = u.id
+            JOIN utilisateur u ON u.organisation_id = wa.organisation_id
             WHERE wa.etape_id = %s AND wa.organisation_id IS NOT NULL
         """, (etape_id,))
         
@@ -490,16 +492,16 @@ class WorkflowInstance:
         for approver_id, approver in all_approvers.items():
             cursor.execute("""
                 INSERT INTO workflow_notification
-                (instance_id, etape_id, utilisateur_id, message, date_creation, lu)
+                (instance_id, etape_id, utilisateur_id, message, created_at, lu)
                 VALUES (%s, %s, %s, %s, NOW(), FALSE)
             """, (instance_id, etape_id, approver_id, message))
             
             # Si intégration avec le système de notifications général
             try:
                 cursor.execute("""
-                    INSERT INTO notification
-                    (utilisateur_id, type, titre, message, lien, date_creation, lu)
-                    VALUES (%s, 'WORKFLOW', 'Document à valider', %s, %s, NOW(), FALSE)
+                    INSERT INTO notifications
+                    (user_id, type, title, message, metadata, created_at, is_read)
+                    VALUES (%s, 'WORKFLOW', 'Document à valider', %s, %s::jsonb, NOW(), FALSE)
                 """, (approver_id, message, f"/workflow?instance={instance_id}"))
             except:
                 # La table notification peut ne pas exister
@@ -535,9 +537,9 @@ class WorkflowInstance:
         # Créer une notification pour l'initiateur
         try:
             cursor.execute("""
-                INSERT INTO notification
-                (utilisateur_id, type, titre, message, lien, date_creation, lu)
-                VALUES (%s, 'WORKFLOW', 'Document approuvé', %s, %s, NOW(), FALSE)
+                INSERT INTO notifications
+                (user_id, type, title, message, metadata, created_at, is_read)
+                VALUES (%s, 'WORKFLOW', 'Document approuvé', %s, %s::jsonb, NOW(), FALSE)
             """, (initiateur_id, message, f"/documents/{document_id}"))
         except:
             # La table notification peut ne pas exister
@@ -575,9 +577,9 @@ class WorkflowInstance:
         # Créer une notification pour l'initiateur
         try:
             cursor.execute("""
-                INSERT INTO notification
-                (utilisateur_id, type, titre, message, lien, date_creation, lu)
-                VALUES (%s, 'WORKFLOW', 'Document rejeté', %s, %s, NOW(), FALSE)
+                INSERT INTO notifications
+                (user_id, type, title, message, metadata, created_at, is_read)
+                VALUES (%s, 'WORKFLOW', 'Document rejeté', %s, %s::jsonb, NOW(), FALSE)
             """, (initiateur_id, message, f"/documents/{document_id}"))
         except:
             # La table notification peut ne pas exister

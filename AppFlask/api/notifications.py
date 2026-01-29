@@ -4,12 +4,13 @@ API pour le système de notifications ESAG GED
 Gestion des notifications en temps réel et par email
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, Response, stream_with_context
 from AppFlask.db import db_connection
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 import logging
 import json
+import time
 
 # Import du décorateur d'authentification depuis auth.py
 from AppFlask.api.auth import token_required
@@ -40,7 +41,7 @@ def get_notifications(current_user):
         if unread_only:
             where_conditions.append("is_read = false")
         
-        if notification_type:
+        if notification_type and notification_type.strip():
             where_conditions.append("type = %s")
             params.append(notification_type)
         
@@ -57,9 +58,8 @@ def get_notifications(current_user):
         
         # Récupérer les notifications
         cursor.execute(f"""
-            SELECT n.*, d.titre as document_title
+            SELECT n.*
             FROM notifications n
-            LEFT JOIN document d ON n.document_id = d.id
             WHERE {where_clause}
             ORDER BY n.created_at DESC
             LIMIT %s OFFSET %s
@@ -81,7 +81,9 @@ def get_notifications(current_user):
         
     except Exception as e:
         logger.error(f"Erreur récupération notifications: {str(e)}")
-        return jsonify({'message': 'Erreur lors de la récupération des notifications'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'message': f'Erreur lors de la récupération des notifications: {str(e)}'}), 500
 
 @bp.route('/notifications/unread-count', methods=['GET'])
 @token_required
@@ -117,7 +119,7 @@ def mark_as_read(current_user, notification_id):
         
         cursor.execute("""
             UPDATE notifications 
-            SET is_read = true, read_at = NOW() 
+            SET is_read = true, read_at = CURRENT_TIMESTAMP 
             WHERE id = %s AND user_id = %s
         """, (notification_id, current_user['id']))
         
@@ -163,6 +165,43 @@ def mark_all_as_read(current_user):
     except Exception as e:
         logger.error(f"Erreur marquage notifications: {str(e)}")
         return jsonify({'message': 'Erreur lors du marquage'}), 500
+
+@bp.route('/notifications/<int:notification_id>', methods=['DELETE'])
+@token_required
+def delete_notification(current_user, notification_id):
+    """Supprimer une notification"""
+    try:
+        conn = db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Vérifier que la notification appartient à l'utilisateur
+        cursor.execute("""
+            SELECT id FROM notification 
+            WHERE id = %s AND user_id = %s
+        """, (notification_id, current_user['id']))
+        
+        notification = cursor.fetchone()
+        if not notification:
+            cursor.close()
+            conn.close()
+            return jsonify({'message': 'Notification non trouvée'}), 404
+        
+        # Supprimer la notification
+        cursor.execute("""
+            DELETE FROM notification 
+            WHERE id = %s AND user_id = %s
+        """, (notification_id, current_user['id']))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"Notification {notification_id} supprimée pour l'utilisateur {current_user['id']}")
+        return jsonify({'message': 'Notification supprimée avec succès'}), 200
+        
+    except Exception as e:
+        logger.error(f"Erreur suppression notification: {str(e)}")
+        return jsonify({'message': 'Erreur lors de la suppression'}), 500
 
 @bp.route('/notifications/preferences', methods=['GET'])
 @token_required
@@ -286,7 +325,7 @@ def handle_notification_click(current_user, notification_id):
         
         # Récupérer la notification avec ses métadonnées
         cursor.execute("""
-            SELECT id, type, metadata, workflow_id, document_id, is_read
+            SELECT id, type, metadata, workflow_instance_id, document_id, is_read
             FROM notifications 
             WHERE id = %s AND user_id = %s
         """, (notification_id, current_user['id']))

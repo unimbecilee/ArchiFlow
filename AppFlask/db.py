@@ -9,7 +9,7 @@ from urllib.parse import urlparse, unquote
 load_dotenv()
 
 # Configuration du logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 def parse_database_url(url):

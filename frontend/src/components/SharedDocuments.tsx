@@ -14,7 +14,6 @@ import {
   Badge,
   Tag,
   TagLabel,
-
   Alert,
   AlertIcon,
   Spinner,
@@ -26,12 +25,36 @@ import {
   Divider,
   useToast,
   Container,
-  useDisclosure
+  useDisclosure,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  MenuDivider,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  Textarea,
+  FormControl,
+  FormLabel,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay
 } from '@chakra-ui/react';
 import { format, isBefore, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import api from '../services/api';
 import DocumentPreview from './DocumentPreview';
+import ShareModal from './ShareModal';
+import { MetadataModal, CommentModal, DeleteAlert } from './SharedDocumentsModals';
 import config from '../config';
 
 // Composant d'icône personnalisé avec emojis
@@ -126,8 +149,18 @@ const SharedDocuments: React.FC = () => {
   const [previewDocumentId, setPreviewDocumentId] = useState<number | null>(null);
   const [previewDocumentTitle, setPreviewDocumentTitle] = useState<string>('');
   
-  // Hook pour le modal d'aperçu
+  // États pour les modals
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
+  const { isOpen: isShareOpen, onOpen: onShareOpen, onClose: onShareClose } = useDisclosure();
+  const { isOpen: isMetadataOpen, onOpen: onMetadataOpen, onClose: onMetadataClose } = useDisclosure();
+  const { isOpen: isCommentOpen, onOpen: onCommentOpen, onClose: onCommentClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  
+  // États pour les actions
+  const [selectedDocument, setSelectedDocument] = useState<SharedDocument | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [metadata, setMetadata] = useState({ titre: '', description: '', tags: '' });
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
 
   // Filtres
   const [filters, setFilters] = useState<FilterState>({
@@ -265,6 +298,165 @@ const SharedDocuments: React.FC = () => {
     setPreviewDocumentId(document.id);
     setPreviewDocumentTitle(document.titre);
     onPreviewOpen();
+  };
+
+  const handleEdit = (document: SharedDocument) => {
+    if (!document.permissions.includes('modification')) {
+      toast({
+        title: 'Permission refusée',
+        description: 'Vous n\'avez pas la permission de modifier ce document',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    setSelectedDocument(document);
+    setMetadata({ titre: document.titre, description: document.description || '', tags: '' });
+    onMetadataOpen();
+  };
+
+  const handleComment = (document: SharedDocument) => {
+    if (!document.permissions.includes('commentaire')) {
+      toast({
+        title: 'Permission refusée',
+        description: 'Vous n\'avez pas la permission de commenter ce document',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    setSelectedDocument(document);
+    setCommentText('');
+    onCommentOpen();
+  };
+
+  const handleShare = (document: SharedDocument) => {
+    if (!document.permissions.includes('partage_supplementaire')) {
+      toast({
+        title: 'Permission refusée',
+        description: 'Vous n\'avez pas la permission de partager ce document',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    setSelectedDocument(document);
+    onShareOpen();
+  };
+
+  const handleDeleteConfirm = (document: SharedDocument) => {
+    setSelectedDocument(document);
+    onDeleteOpen();
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!selectedDocument) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_URL}/api/documents/${selectedDocument.id}/metadata`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(metadata)
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la mise à jour');
+
+      toast({
+        title: 'Succès',
+        description: 'Métadonnées mises à jour avec succès',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onMetadataClose();
+      loadSharedDocuments();
+    } catch (err) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour les métadonnées',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleSaveComment = async () => {
+    if (!selectedDocument || !commentText.trim()) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_URL}/api/documents/${selectedDocument.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: commentText })
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de l\'ajout du commentaire');
+
+      toast({
+        title: 'Succès',
+        description: 'Commentaire ajouté avec succès',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onCommentClose();
+      setCommentText('');
+    } catch (err) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'ajouter le commentaire',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedDocument) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_URL}/api/documents/${selectedDocument.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de la suppression');
+
+      toast({
+        title: 'Succès',
+        description: 'Document supprimé avec succès',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      onDeleteClose();
+      loadSharedDocuments();
+    } catch (err) {
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le document',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -623,10 +815,10 @@ const SharedDocuments: React.FC = () => {
 
                   <Divider borderColor={borderColor} />
 
-                  {/* Actions centrées - sans menu */}
+                  {/* Actions améliorées avec menu */}
                   <CardBody pt={4} pb={6}>
-                    <Flex justify="center" align="center">
-                      <HStack spacing={4}>
+                    <Flex justify="space-between" align="center">
+                      <HStack spacing={3}>
                         {document.permissions.includes('lecture') && (
                           <Tooltip label="Voir le document" hasArrow>
                             <Button
@@ -642,19 +834,81 @@ const SharedDocuments: React.FC = () => {
                         )}
                         
                         {document.permissions.includes('téléchargement') && (
-                          <Tooltip label="Télécharger le document" hasArrow>
-                            <Button
+                          <Tooltip label="Télécharger" hasArrow>
+                            <IconButton
+                              aria-label="Télécharger"
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               colorScheme="green"
-                              leftIcon={<CustomIcon type="download" />}
+                              icon={<CustomIcon type="download" />}
                               onClick={() => handleDownload(document)}
-                            >
-                              Télécharger
-                            </Button>
+                            />
                           </Tooltip>
                         )}
                       </HStack>
+
+                      {/* Menu d'actions */}
+                      <Menu>
+                        <MenuButton
+                          as={IconButton}
+                          aria-label="Actions"
+                          icon={<CustomIcon type="menu" />}
+                          variant="ghost"
+                          size="sm"
+                          colorScheme="gray"
+                        />
+                        <MenuList bg={cardBg} borderColor={borderColor}>
+                          {document.permissions.includes('modification') && (
+                            <MenuItem
+                              icon={<CustomIcon type="edit" />}
+                              onClick={() => handleEdit(document)}
+                              bg={cardBg}
+                              color={textColor}
+                              _hover={{ bg: inputBg }}
+                            >
+                              Modifier les métadonnées
+                            </MenuItem>
+                          )}
+                          
+                          {document.permissions.includes('commentaire') && (
+                            <MenuItem
+                              icon={<CustomIcon type="comment" />}
+                              onClick={() => handleComment(document)}
+                              bg={cardBg}
+                              color={textColor}
+                              _hover={{ bg: inputBg }}
+                            >
+                              Ajouter un commentaire
+                            </MenuItem>
+                          )}
+                          
+                          {document.permissions.includes('partage_supplementaire') && (
+                            <>
+                              <MenuDivider />
+                              <MenuItem
+                                icon={<span style={{ fontSize: '16px' }}>🔗</span>}
+                                onClick={() => handleShare(document)}
+                                bg={cardBg}
+                                color={textColor}
+                                _hover={{ bg: inputBg }}
+                              >
+                                Re-partager
+                              </MenuItem>
+                            </>
+                          )}
+                          
+                          <MenuDivider />
+                          <MenuItem
+                            icon={<CustomIcon type="delete" />}
+                            onClick={() => handleDeleteConfirm(document)}
+                            bg={cardBg}
+                            color="red.400"
+                            _hover={{ bg: 'red.900' }}
+                          >
+                            Supprimer
+                          </MenuItem>
+                        </MenuList>
+                      </Menu>
                     </Flex>
                   </CardBody>
                 </Card>
@@ -670,6 +924,65 @@ const SharedDocuments: React.FC = () => {
         onClose={onPreviewClose}
         documentId={previewDocumentId}
         documentTitle={previewDocumentTitle}
+      />
+
+      {/* Modal de partage */}
+      {selectedDocument && (
+        <ShareModal
+          open={isShareOpen}
+          onClose={onShareClose}
+          documentId={selectedDocument.id}
+          documentTitle={selectedDocument.titre}
+          onShareSuccess={() => {
+            loadSharedDocuments();
+            toast({
+              title: 'Succès',
+              description: 'Document partagé avec succès',
+              status: 'success',
+              duration: 3000,
+              isClosable: true,
+            });
+          }}
+        />
+      )}
+
+      {/* Modal de modification des métadonnées */}
+      <MetadataModal
+        isOpen={isMetadataOpen}
+        onClose={onMetadataClose}
+        metadata={metadata}
+        setMetadata={setMetadata}
+        onSave={handleSaveMetadata}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textColor={textColor}
+        inputBg={inputBg}
+      />
+
+      {/* Modal de commentaire */}
+      <CommentModal
+        isOpen={isCommentOpen}
+        onClose={onCommentClose}
+        commentText={commentText}
+        setCommentText={setCommentText}
+        onSave={handleSaveComment}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textColor={textColor}
+        inputBg={inputBg}
+        mutedColor={mutedColor}
+      />
+
+      {/* Dialog de confirmation de suppression */}
+      <DeleteAlert
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        onConfirm={handleDelete}
+        cancelRef={cancelRef}
+        documentTitle={selectedDocument?.titre || ''}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textColor={textColor}
       />
     </Box>
   );

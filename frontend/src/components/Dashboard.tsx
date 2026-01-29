@@ -12,43 +12,32 @@ import {
   CardHeader,
   VStack,
   HStack,
-  Progress,
   Stat,
   StatLabel,
   StatNumber,
-  Avatar,
-  AvatarGroup,
   Button,
   IconButton,
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
-  Divider,
   useColorModeValue,
   Skeleton,
-  SkeletonText,
-  Tooltip,
   Container,
   Grid,
   GridItem,
-  CircularProgress,
-  CircularProgressLabel,
 } from "@chakra-ui/react";
 import {
   FiUsers,
   FiFileText,
   FiFolder,
   FiArchive,
-  FiTrendingUp,
-  FiTrendingDown,
   FiMoreVertical,
   FiDownload,
   FiEye,
   FiEdit,
   FiClock,
   FiActivity,
-  FiPieChart,
   FiBarChart2,
   FiCalendar,
   FiRefreshCw,
@@ -59,7 +48,6 @@ import {
 } from "react-icons/fi";
 import { ElementType } from 'react';
 import { useAuthStatus } from "../hooks/useAuthStatus";
-import PendingApprovals from './ValidationWorkflow/PendingApprovals';
 import config from '../config';
 
 const API_URL = config.API_URL;
@@ -92,7 +80,6 @@ interface Notification {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuthStatus();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
