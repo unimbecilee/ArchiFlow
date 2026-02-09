@@ -73,4 +73,13 @@ htmlcov/
 README_OLD.md
 STRUCTURE.md
 DEPLOYMENT.md
-MIGRATION_
+
+
+# BMAD & AI Agents
+_bmad/
+_bmad-output/
+.agents/
+.claude/
+.cursor/
+.windsurf/
+docs/

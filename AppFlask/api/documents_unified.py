@@ -1359,7 +1359,11 @@ def get_my_subscriptions(current_user):
 @bp.route('/documents/<int:doc_id>', methods=['DELETE'])
 @token_required
 def delete_document(current_user, doc_id):
-    """Supprimer un document (déplacer vers la corbeille)"""
+    """
+    Supprimer un document:
+    - Si propriétaire/admin: déplacer vers la corbeille (suppression globale)
+    - Si utilisateur partagé: désactiver son accès (suppression locale)
+    """
     try:
         from AppFlask.utils.trash_manager import move_document_to_trash
         
@@ -1375,13 +1379,14 @@ def delete_document(current_user, doc_id):
             conn.close()
             return jsonify({'message': 'Document non trouvé'}), 404
         
-        # Vérifier les permissions: propriétaire, admin, ou document partagé avec l'utilisateur
+        # Vérifier les permissions
         is_owner = document['proprietaire_id'] == current_user['id']
         is_admin = current_user['role'].lower() == 'admin'
         
         # Vérifier si le document est partagé avec l'utilisateur
         cursor.execute("""
-            SELECT COUNT(*) as count FROM partage_document
+            SELECT id, utilisateur_id, role_nom, organisation_id 
+            FROM partage_document
             WHERE document_id = %s 
             AND (utilisateur_id = %s 
                  OR role_nom = (SELECT role FROM utilisateur WHERE id = %s)
@@ -1389,33 +1394,66 @@ def delete_document(current_user, doc_id):
             AND actif = TRUE
         """, (doc_id, current_user['id'], current_user['id'], current_user['id']))
         
-        shared_result = cursor.fetchone()
-        has_shared_access = shared_result and shared_result['count'] > 0
+        shared_access = cursor.fetchall()
+        has_shared_access = len(shared_access) > 0
         
         if not (is_owner or is_admin or has_shared_access):
             cursor.close()
             conn.close()
             return jsonify({'message': 'Accès refusé - vous n\'avez pas les permissions pour supprimer ce document'}), 403
         
-        cursor.close()
-        conn.close()
-        
-        # Déplacer vers la corbeille au lieu de supprimer définitivement
-        deletion_reason = request.json.get('reason', 'Suppression par l\'utilisateur') if request.is_json else 'Suppression par l\'utilisateur'
-        success = move_document_to_trash(doc_id, current_user['id'], deletion_reason)
-        
-        if not success:
-            return jsonify({'message': 'Erreur lors du déplacement vers la corbeille'}), 500
-        
-        # Log de l'action
-        log_user_action(
-            current_user['id'],
-            'MOVE_TO_TRASH',
-            f"Document déplacé vers la corbeille: {document['titre']}",
-            request
-        )
-        
-        return jsonify({'message': 'Document déplacé vers la corbeille avec succès'}), 200
+        # LOGIQUE DE SUPPRESSION DIFFÉRENCIÉE
+        if is_owner or is_admin:
+            # PROPRIÉTAIRE/ADMIN: Suppression globale (corbeille)
+            cursor.close()
+            conn.close()
+            
+            data = request.get_json(silent=True) or {}
+            deletion_reason = data.get('reason', 'Suppression par le propriétaire')
+            success = move_document_to_trash(doc_id, current_user['id'], deletion_reason)
+            
+            if not success:
+                return jsonify({'message': 'Erreur lors du déplacement vers la corbeille'}), 500
+            
+            log_user_action(
+                current_user['id'],
+                'MOVE_TO_TRASH',
+                f"Document déplacé vers la corbeille: {document['titre']}",
+                request
+            )
+            
+            return jsonify({
+                'message': 'Document déplacé vers la corbeille avec succès',
+                'deletion_type': 'global'
+            }), 200
+            
+        else:
+            # UTILISATEUR PARTAGÉ: Suppression locale (désactiver l'accès)
+            # Désactiver tous les partages de cet utilisateur pour ce document
+            for share in shared_access:
+                if share['utilisateur_id'] == current_user['id']:
+                    # Partage direct
+                    cursor.execute("""
+                        UPDATE partage_document 
+                        SET actif = FALSE, date_fin = NOW()
+                        WHERE id = %s
+                    """, (share['id'],))
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            log_user_action(
+                current_user['id'],
+                'REMOVE_SHARED_ACCESS',
+                f"Accès retiré au document partagé: {document['titre']}",
+                request
+            )
+            
+            return jsonify({
+                'message': 'Votre accès au document a été retiré avec succès',
+                'deletion_type': 'local'
+            }), 200
         
     except Exception as e:
         print(f"🚨 Erreur suppression document: {e}")

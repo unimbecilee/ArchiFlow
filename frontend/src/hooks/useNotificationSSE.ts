@@ -28,8 +28,8 @@ export const useNotificationSSE = (options: UseNotificationSSEOptions = {}) => {
       return;
     }
 
-    // Créer la connexion SSE
-    const url = `${config.API_URL}/api/notifications/stream`;
+    // Créer la connexion SSE avec le token dans l'URL (EventSource ne supporte pas les headers personnalisés)
+    const url = `${config.API_URL}/api/notifications/stream?token=${encodeURIComponent(token)}`;
     const eventSource = new EventSource(url, {
       withCredentials: true
     });

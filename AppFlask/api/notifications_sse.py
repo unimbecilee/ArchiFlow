@@ -3,28 +3,45 @@
 Server-Sent Events (SSE) pour les notifications en temps réel
 """
 
-from flask import Blueprint, Response, stream_with_context
+from flask import Blueprint, Response, stream_with_context, request, jsonify
 from AppFlask.db import db_connection
 from psycopg2.extras import RealDictCursor
 import logging
 import json
 import time
-
-from AppFlask.api.auth import token_required
+import jwt
+import os
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('notifications_sse', __name__)
 
 @bp.route('/notifications/stream', methods=['GET'])
-@token_required
-def notification_stream(current_user):
+def notification_stream():
     """
     Stream SSE pour les notifications en temps réel
     Envoie le compteur de notifications non lues toutes les 5 secondes
     """
+    # Récupérer le token depuis les query parameters
+    token = request.args.get('token')
+    if not token:
+        return jsonify({'message': 'Token manquant'}), 401
+    
+    # Valider le token
+    try:
+        secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+        user_id = payload.get('user_id')
+        
+        if not user_id:
+            return jsonify({'message': 'Token invalide'}), 401
+    except jwt.ExpiredSignatureError:
+        return jsonify({'message': 'Token expiré'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'message': 'Token invalide'}), 401
+    
     def generate():
-        user_id = current_user['id']
+        user_id_local = user_id
         last_count = -1
         
         # Envoyer un message de connexion
@@ -44,7 +61,7 @@ def notification_stream(current_user):
                     SELECT COUNT(*) as count 
                     FROM notifications 
                     WHERE user_id = %s AND is_read = false
-                """, (user_id,))
+                """, (user_id_local,))
                 
                 result = cursor.fetchone()
                 current_count = result['count'] if result else 0
@@ -57,7 +74,7 @@ def notification_stream(current_user):
                         WHERE user_id = %s 
                         ORDER BY created_at DESC 
                         LIMIT 5
-                    """, (user_id,))
+                    """, (user_id_local,))
                     
                     recent_notifications = cursor.fetchall()
                     
