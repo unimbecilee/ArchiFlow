@@ -27,6 +27,7 @@ from AppFlask.api.folders import bp as folders_bp
 from AppFlask.api.openapi import api_bp as openapi_bp
 from AppFlask.api.settings import bp as settings_bp
 from AppFlask.api.dashboard import bp as dashboard_bp
+from AppFlask.api.pydio_integration import bp as pydio_integration_bp
 import logging
 import traceback
 import atexit
@@ -41,7 +42,7 @@ from AppFlask.services.websocket_service import socketio
 load_dotenv()
 
 # Liste des origines autorisées (configurable via env CORS_ALLOWED_ORIGINS)
-_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,https://esag-ged.vercel.app')
+_cors_origins = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002,https://archiflow.vercel.app')
 ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',') if o.strip()]
 
 API_BLUEPRINTS = [
@@ -69,7 +70,8 @@ API_BLUEPRINTS = [
     history_bp,
     folders_bp,
     openapi_bp,
-    settings_bp
+    settings_bp,
+    pydio_integration_bp
 ]
 
 
@@ -165,7 +167,7 @@ def create_app():
         """Endpoint de santé pour vérifier que l'API est opérationnelle"""
         return jsonify({
             'status': 'healthy',
-            'message': 'ESAG GED API is running',
+            'message': 'ArchiFlow API is running',
             'version': '1.0.0'
         }), 200
 

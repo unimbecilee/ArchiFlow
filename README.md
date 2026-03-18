@@ -1,239 +1,172 @@
-# 📁 ESAG GED - Système de Gestion Électronique de Documents
+# ArchiFlow
 
-[![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)](https://flask.palletsprojects.com/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
+**Système de Gestion Électronique de Documents (GED) avec intégration Pydio Cells**
 
-Système complet de gestion électronique de documents (GED) avec workflows de validation, partage sécurisé et stockage S3-compatible.
+ArchiFlow est une solution complète de gestion documentaire qui combine un backend Flask, un frontend React moderne, et une intégration avec Pydio Cells pour la collaboration et l'archivage.
 
-## ✨ Fonctionnalités principales
+## 🚀 Fonctionnalités
 
-### 📄 Gestion des documents
-- ✅ Upload et stockage sécurisé (MinIO S3)
-- ✅ Versioning automatique
-- ✅ Prévisualisation et téléchargement
-- ✅ Organisation en dossiers
-- ✅ Recherche avancée et filtres
-- ✅ Métadonnées et tags
+### Gestion Documentaire
+- **Upload & Stockage** - Téléversement de documents avec stockage MinIO
+- **OCR Intégré** - Extraction automatique de texte des documents scannés
+- **Versioning** - Historique complet des versions de documents
+- **Tags & Métadonnées** - Organisation flexible des documents
+- **Recherche Avancée** - Recherche full-text et par métadonnées
 
-### 🔄 Workflows de validation
-- ✅ Workflows personnalisables
-- ✅ Validation séquentielle ou parallèle
-- ✅ Approbation par rôle ou utilisateur
-- ✅ Historique complet des validations
-- ✅ Notifications en temps réel
+### Workflows
+- **Validation** - Workflows de validation multi-niveaux
+- **Notifications** - Alertes en temps réel par email et in-app
+- **Archivage** - Processus d'archivage avec approbation
 
-### 🔐 Sécurité et partage
-- ✅ Authentification JWT
-- ✅ Gestion des rôles et permissions
-- ✅ Partage sécurisé avec expiration
-- ✅ Liens publics temporaires
-- ✅ Audit trail complet
+### Collaboration
+- **Partage** - Partage de documents avec permissions granulaires
+- **Commentaires** - Discussion sur les documents
+- **Checkout/Checkin** - Verrouillage de documents pour édition
 
-### 📊 Tableau de bord
-- ✅ Statistiques en temps réel
-- ✅ Activités récentes
-- ✅ Documents favoris
-- ✅ Notifications
-- ✅ Gestion de la corbeille
+### Intégration Pydio Cells
+- **Synchronisation** - Sync bidirectionnelle des documents
+- **Archivage Pydio** - Demandes d'archivage depuis Pydio
+- **Webhooks** - Notifications automatiques des événements
 
-## 🚀 Démarrage rapide
+## 📁 Structure du Projet
 
-### Avec Docker (recommandé)
+```
+archiflow/
+├── AppFlask/              # Backend Flask
+│   ├── api/               # Endpoints REST API
+│   ├── models/            # Modèles de données
+│   ├── services/          # Services métier
+│   └── utils/             # Utilitaires
+│
+├── frontend/              # Frontend React
+│   ├── src/
+│   │   ├── components/    # Composants React
+│   │   ├── pages/         # Pages
+│   │   ├── services/      # Services API
+│   │   └── contexts/      # Contextes React
+│   └── public/
+│
+├── pydio_cells/           # Intégration Pydio Cells
+│   ├── frontend/plugins/  # Plugins Pydio
+│   └── *.sh               # Scripts de configuration
+│
+├── docs/                  # Documentation
+├── docker-compose.yml     # Orchestration Docker
+└── Dockerfile             # Image Docker backend
+```
+
+## 🛠️ Installation
+
+### Prérequis
+- Docker & Docker Compose
+- Node.js 18+ (pour le développement frontend)
+- Python 3.11+ (pour le développement backend)
+
+### Démarrage Rapide
 
 ```bash
-# 1. Cloner le projet
+# Cloner le projet
 git clone <repository-url>
-cd esag_ged
+cd archiflow
 
-# 2. Copier les variables d'environnement
-cp .env.example .env
+# Copier la configuration
+cp .env.exemple .env
 
-# 3. Démarrer tous les services
+# Démarrer les services
 docker-compose up -d
 
-# 4. Accéder à l'application
-# Frontend: http://localhost:3003
-# Backend: http://localhost:5000
-# API Docs: http://localhost:5000/api/docs
+# Vérifier les services
+docker-compose ps
 ```
 
-### Compte administrateur par défaut
+### Services Disponibles
 
-```
-Email: admin@esag.com
-Mot de passe: Admin@12345
-```
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Frontend** | http://localhost:3000 | Interface utilisateur React |
+| **Backend API** | http://localhost:5000 | API REST Flask |
+| **Pydio Cells** | http://localhost:8080 | Gestion de fichiers |
+| **MinIO Console** | http://localhost:9001 | Stockage objets |
 
-⚠️ **Changez ce mot de passe en production !**
+### Identifiants par Défaut
 
-## 🏗️ Architecture
+**Pydio Cells:**
+- Login: `superadmin`
+- Password: `superadmin`
 
-### Stack technique
+**MinIO:**
+- Access Key: `minioadmin`
+- Secret Key: `minioadmin123`
 
-**Backend**
-- Python 3.13
-- Flask 3.0
-- PostgreSQL 16
-- Alembic (migrations)
-- MinIO (stockage S3)
+## 📖 Documentation
 
-**Frontend**
-- React 18
-- TypeScript
-- Chakra UI
-- React Query
-- Axios
-
-**Infrastructure**
-- Docker & Docker Compose
-- Nginx (production)
-- pgAdmin (administration)
-
-### Structure du projet
-
-```
-esag_ged/
-├── AppFlask/              # Backend Flask
-│   ├── api/              # Routes API
-│   ├── models/           # Modèles de données
-│   ├── services/         # Logique métier
-│   └── utils/            # Utilitaires
-├── frontend/             # Frontend React
-│   ├── src/
-│   │   ├── components/  # Composants React
-│   │   ├── services/    # Services API
-│   │   └── config/      # Configuration
-├── migrations/           # Migrations Alembic
-│   └── versions/        # Migration unique complète
-├── docs_clean/          # Documentation organisée
-├── docker-compose.yml   # Configuration Docker
-└── README.md           # Ce fichier
-```
-
-## 📚 Documentation
-
-- [Guide de démarrage rapide](docs_clean/guides/QUICK_START.md)
-- [Configuration Docker](docs_clean/guides/DOCKER_SETUP.md)
-- [Architecture](docs_clean/architecture/ARCHITECTURE.md)
-- [Base de données](docs_clean/architecture/DATABASE.md)
-- [API Reference](docs_clean/api/API_REFERENCE.md)
+- [Architecture](docs/architecture.md)
+- [API Reference](docs/API.md)
+- [Guide Scanner](docs/SCANNER_USER_GUIDE.md)
+- [Intégration Pydio](docs/PYDIO_INTEGRATION.md)
+- [Configuration Docker](docs/DOCKER_SETUP.md)
 
 ## 🔧 Développement
 
-### Prérequis
-- Python 3.13+
-- Node.js 18+
-- PostgreSQL 16+
-- Docker (optionnel)
-
-### Installation locale
+### Backend (Flask)
 
 ```bash
-# Backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+cd AppFlask
+pip install -r ../requirements.txt
+python -m flask run --debug
+```
 
-# Frontend
+### Frontend (React)
+
+```bash
 cd frontend
 npm install
-
-# Base de données
-alembic upgrade head
-
-# Démarrer le backend
-python main.py
-
-# Démarrer le frontend (nouveau terminal)
-cd frontend
 npm start
 ```
 
-### Variables d'environnement
+## 📝 API Endpoints Principaux
 
-Consultez `.env.example` pour la liste complète des variables.
+### Documents
+- `GET /api/documents` - Liste des documents
+- `POST /api/documents/upload` - Upload document
+- `GET /api/documents/{id}` - Détail document
+- `DELETE /api/documents/{id}` - Supprimer document
 
-**Essentielles :**
-```env
-# Base de données
-DATABASE_URL=postgresql://esag_user:password@localhost:5432/esag_ged
+### Workflows
+- `POST /api/validation-workflow/start` - Démarrer validation
+- `GET /api/workflow/pending` - Validations en attente
+- `POST /api/workflow/{id}/approve` - Approuver
 
-# MinIO
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
+### Pydio Integration
+- `GET /api/api/v1/pydio/health` - Santé intégration
+- `POST /api/api/v1/pydio/archive-requests` - Demande archivage
+- `GET /api/api/v1/pydio/stats` - Statistiques
 
-# JWT
-SECRET_KEY=your-secret-key-here
-```
+## 🐳 Docker
 
-## 🧪 Tests
-
-```bash
-# Backend
-pytest AppFlask/tests/
-
-# Frontend
-cd frontend
-npm test
-```
-
-## 📦 Déploiement
-
-### Production avec Docker
+### Commandes Utiles
 
 ```bash
-# Build et démarrage
-docker-compose -f docker-compose.prod.yml up -d
+# Démarrer tous les services
+docker-compose up -d
 
-# Vérifier les logs
+# Voir les logs
 docker-compose logs -f
+
+# Reconstruire les images
+docker-compose build --no-cache
+
+# Arrêter les services
+docker-compose down
+
+# Supprimer les volumes (reset complet)
+docker-compose down -v
 ```
-
-### Variables d'environnement production
-
-```env
-FLASK_ENV=production
-DEBUG=False
-SECRET_KEY=<strong-random-key>
-DATABASE_URL=<production-database-url>
-CORS_ALLOWED_ORIGINS=https://your-domain.com
-```
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour les guidelines.
-
-## 📝 Changelog
-
-Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir [LICENSE](LICENSE) pour plus de détails.
-
-## 👥 Équipe
-
-Développé pour ESAG - École Supérieure Africaine de Gestion
-
-## 🆘 Support
-
-- 📧 Email: support@esag.com
-- 📖 Documentation: [docs_clean/](docs_clean/)
-- 🐛 Issues: [GitHub Issues](https://github.com/your-repo/issues)
-
-## 🎯 Roadmap
-
-- [ ] Application mobile (React Native)
-- [ ] Signature électronique
-- [ ] OCR avancé avec IA
-- [ ] Intégration Microsoft 365
-- [ ] Recherche sémantique
-- [ ] Export PDF avec watermark
+MIT License - Voir [LICENSE](LICENSE) pour plus de détails.
 
 ---
 
-**Made with ❤️ by the ESAG GED Team**
+**ArchiFlow** - Gestion documentaire moderne et collaborative

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-API pour le système de notifications ESAG GED
+API pour le système de notifications ArchiFlow
 Gestion des notifications en temps réel et par email
 """
 

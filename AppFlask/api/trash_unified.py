@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-API unifiée pour le système de corbeille ESAG GED
+API unifiée pour le système de corbeille ArchiFlow
 Gestion complète de la corbeille avec configuration automatique
 """
 

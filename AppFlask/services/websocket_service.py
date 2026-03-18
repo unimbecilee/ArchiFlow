@@ -114,3 +114,93 @@ def broadcast_notification(notification_type, data):
         logger.info(f"Notification broadcast envoyée: {notification_type}")
     except Exception as e:
         logger.error(f"Erreur lors du broadcast: {e}")
+
+# Fonctions spécifiques pour le scanner
+
+@socketio.on('join_scan_task')
+@token_required_ws
+def handle_join_scan_task(user_data, data):
+    """Rejoindre la room d'une tâche de scan pour les mises à jour en temps réel"""
+    task_id = data.get('task_id')
+    if task_id:
+        join_room(f"scan_task_{task_id}")
+        logger.info(f"Utilisateur {user_data.get('id')} a rejoint scan_task_{task_id}")
+        emit('joined_scan_task', {'task_id': task_id})
+
+@socketio.on('leave_scan_task')
+@token_required_ws
+def handle_leave_scan_task(user_data, data):
+    """Quitter la room d'une tâche de scan"""
+    task_id = data.get('task_id')
+    if task_id:
+        leave_room(f"scan_task_{task_id}")
+        logger.info(f"Utilisateur {user_data.get('id')} a quitté scan_task_{task_id}")
+        emit('left_scan_task', {'task_id': task_id})
+
+def notify_scan_progress(task_id, progress_data):
+    """
+    Notifier la progression d'une tâche de scan
+    
+    Args:
+        task_id: ID de la tâche
+        progress_data: Données de progression (status, progress, current_page, etc.)
+    """
+    try:
+        socketio.emit('scan_progress', {
+            'task_id': task_id,
+            'data': progress_data
+        }, room=f"scan_task_{task_id}")
+        logger.debug(f"Scan progress notification sent for task {task_id}")
+    except Exception as e:
+        logger.error(f"Error sending scan progress notification: {e}")
+
+def notify_scan_completed(task_id, result_data):
+    """
+    Notifier la fin d'une tâche de scan
+    
+    Args:
+        task_id: ID de la tâche
+        result_data: Résultats de la tâche
+    """
+    try:
+        socketio.emit('scan_completed', {
+            'task_id': task_id,
+            'data': result_data
+        }, room=f"scan_task_{task_id}")
+        logger.info(f"Scan completed notification sent for task {task_id}")
+    except Exception as e:
+        logger.error(f"Error sending scan completed notification: {e}")
+
+def notify_scan_failed(task_id, error_message):
+    """
+    Notifier l'échec d'une tâche de scan
+    
+    Args:
+        task_id: ID de la tâche
+        error_message: Message d'erreur
+    """
+    try:
+        socketio.emit('scan_failed', {
+            'task_id': task_id,
+            'error': error_message
+        }, room=f"scan_task_{task_id}")
+        logger.info(f"Scan failed notification sent for task {task_id}")
+    except Exception as e:
+        logger.error(f"Error sending scan failed notification: {e}")
+
+def notify_page_processed(task_id, page_data):
+    """
+    Notifier qu'une page a été traitée
+    
+    Args:
+        task_id: ID de la tâche
+        page_data: Données de la page (page_number, ocr_text, etc.)
+    """
+    try:
+        socketio.emit('page_processed', {
+            'task_id': task_id,
+            'data': page_data
+        }, room=f"scan_task_{task_id}")
+        logger.debug(f"Page processed notification sent for task {task_id}")
+    except Exception as e:
+        logger.error(f"Error sending page processed notification: {e}")

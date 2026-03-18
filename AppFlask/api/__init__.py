@@ -14,4 +14,5 @@ from .document_comment import bp as document_comment_bp
 from .document_subscription import bp as document_subscription_bp
 from .document_tags import bp as document_tags_bp
 from .document_operations import bp as document_operations_bp
-from .document_processing import bp as document_processing_bp 
+from .document_processing import bp as document_processing_bp
+from .pydio_integration import bp as pydio_integration_bp 

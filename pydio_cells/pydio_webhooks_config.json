@@ -1,0 +1,34 @@
+{
+  "webhooks": [
+    {
+      "name": "ArchiFlow - Node Created",
+      "events": ["node:create"],
+      "url": "http://archiflow_backend:5000/api/api/v1/pydio/webhooks/node-created",
+      "headers": {
+        "X-Pydio-Token": "archiflow_pydio_api_token_2024",
+        "Content-Type": "application/json"
+      },
+      "enabled": true
+    },
+    {
+      "name": "ArchiFlow - Node Updated",
+      "events": ["node:update"],
+      "url": "http://archiflow_backend:5000/api/api/v1/pydio/webhooks/node-updated",
+      "headers": {
+        "X-Pydio-Token": "archiflow_pydio_api_token_2024",
+        "Content-Type": "application/json"
+      },
+      "enabled": true
+    },
+    {
+      "name": "ArchiFlow - Node Deleted",
+      "events": ["node:delete"],
+      "url": "http://archiflow_backend:5000/api/api/v1/pydio/webhooks/node-deleted",
+      "headers": {
+        "X-Pydio-Token": "archiflow_pydio_api_token_2024",
+        "Content-Type": "application/json"
+      },
+      "enabled": true
+    }
+  ]
+}

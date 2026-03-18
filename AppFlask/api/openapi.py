@@ -11,8 +11,8 @@ api_bp = Blueprint('api_docs', __name__)
 api = Api(
     api_bp,
     version='1.0',
-    title='ESAG GED API',
-    description='API REST pour le système de Gestion Électronique de Documents ESAG GED',
+    title='ArchiFlow API',
+    description='API REST pour le système de Gestion Électronique de Documents ArchiFlow',
     # Le blueprint est monté avec url_prefix='/api' dans app.py, donc exposer la doc à /api/docs
     doc='/docs',
     prefix='',
@@ -108,9 +108,9 @@ class ApiInfo(Resource):
     @api.doc('api_info')
     @api.marshal_with(success_model)
     def get(self):
-        """Informations sur l'API ESAG GED"""
+        """Informations sur l'API ArchiFlow"""
         return {
-            'message': 'ESAG GED API v1.0',
+            'message': 'ArchiFlow API v1.0',
             'status': 'active',
             'endpoints': {
                 'documents': '/api/documents',

@@ -1,9 +1,0 @@
-frontend/
-*.md
-.git/
-node_modules/
-.env
-*.log
-package.json
-package-lock.json
-tsconfig.json 

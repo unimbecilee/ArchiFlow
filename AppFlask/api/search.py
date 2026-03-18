@@ -12,7 +12,7 @@ bp = Blueprint('api_search', __name__)
 @bp.route('/search', methods=['GET'])
 @token_required
 def search(current_user):
-    """Recherche globale unifiée dans toute l'application ESAG GED"""
+    """Recherche globale unifiée dans toute l'application ArchiFlow"""
     try:
         query = request.args.get('q', '').strip()
         limit = request.args.get('limit', 50, type=int)

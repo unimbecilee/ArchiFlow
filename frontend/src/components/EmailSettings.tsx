@@ -503,7 +503,7 @@ const EmailSettings: React.FC = () => {
                     <Input
                       value={config.mail_default_sender}
                       onChange={(e) => setConfig(prev => ({ ...prev, mail_default_sender: e.target.value }))}
-                      placeholder="noreply@esag.com"
+                      placeholder="noreply@archiflow.com"
                       bg="#2a2f4a"
                       borderColor="#363b5a"
                     />

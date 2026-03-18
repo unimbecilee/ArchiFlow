@@ -168,10 +168,10 @@ const Login: React.FC<LoginProps> = ({ onAuthSuccess }) => {
           </Box>
         </Flex>
         <Heading color="white" size="lg" mb={1}>
-          ESAG GED
+          ArchiFlow
         </Heading>
         <Text color="gray.300" mb={8} fontSize="md">
-          Bienvenue sur la plateforme GED de l'ESAG.
+          Bienvenue sur la plateforme GED ArchiFlow.
         </Text>
         <form onSubmit={handleSubmit}>
           <VStack spacing={4} align="stretch">

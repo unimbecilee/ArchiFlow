@@ -1,0 +1,40 @@
+#!/bin/bash
+# Script de configuration des webhooks Pydio Cells vers ArchiFlow
+
+set -e
+
+PYDIO_URL="${PYDIO_URL:-http://localhost:8080}"
+PYDIO_ADMIN="${PYDIO_ADMIN:-superadmin}"
+PYDIO_PASSWORD="${PYDIO_PASSWORD:-superadmin}"
+ARCHIFLOW_API_URL="${ARCHIFLOW_API_URL:-http://archiflow_backend:5000}"
+PYDIO_API_TOKEN="${PYDIO_API_TOKEN:-archiflow_pydio_api_token_2024}"
+
+echo "========================================"
+echo "Configuration des Webhooks Pydio Cells"
+echo "========================================"
+echo ""
+echo "Pydio URL: $PYDIO_URL"
+echo "ArchiFlow API URL: $ARCHIFLOW_API_URL"
+echo ""
+
+echo "📋 Configuration manuelle requise:"
+echo "   1. Connectez-vous à Pydio Cells: $PYDIO_URL"
+echo "   2. Allez dans Cells Console > Scheduler > Hooks"
+echo "   3. Créez les webhooks suivants:"
+echo ""
+echo "   Webhook 1 - Node Created:"
+echo "   - Event: node:create"
+echo "   - URL: $ARCHIFLOW_API_URL/api/api/v1/pydio/webhooks/node-created"
+echo "   - Header: X-Pydio-Token: $PYDIO_API_TOKEN"
+echo ""
+echo "   Webhook 2 - Node Updated:"
+echo "   - Event: node:update"
+echo "   - URL: $ARCHIFLOW_API_URL/api/api/v1/pydio/webhooks/node-updated"
+echo "   - Header: X-Pydio-Token: $PYDIO_API_TOKEN"
+echo ""
+echo "   Webhook 3 - Node Deleted:"
+echo "   - Event: node:delete"
+echo "   - URL: $ARCHIFLOW_API_URL/api/api/v1/pydio/webhooks/node-deleted"
+echo "   - Header: X-Pydio-Token: $PYDIO_API_TOKEN"
+echo ""
+echo "========================================"

@@ -286,12 +286,12 @@ class NotificationService:
                         <html>
                         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                                <h2 style="color: #2c3e50;">ESAG GED - Notification</h2>
+                                <h2 style="color: #2c3e50;">ArchiFlow - Notification</h2>
                                 <p>Bonjour {email_data['user_name']},</p>
                                 <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
                                     <p style="margin: 0;">{message}</p>
                                 </div>
-                                <p>Cordialement,<br>L'équipe ESAG GED</p>
+                                <p>Cordialement,<br>L'équipe ArchiFlow</p>
                             </div>
                         </body>
                         </html>

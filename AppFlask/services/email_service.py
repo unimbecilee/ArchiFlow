@@ -189,7 +189,7 @@ class EmailService:
                 'template': 'workflow_notification'
             },
             'user_created': {
-                'subject': 'Bienvenue sur ESAG GED',
+                'subject': 'Bienvenue sur ArchiFlow',
                 'template': 'welcome'
             },
             'password_reset': {
@@ -290,14 +290,14 @@ class EmailService:
         """Templates d'email par défaut"""
         return {
             'welcome': {
-                'subject': 'Bienvenue sur ESAG GED - Votre compte a été créé',
+                'subject': 'Bienvenue sur ArchiFlow - Votre compte a été créé',
                 'html': '''
                 <html>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; margin: 0; padding: 20px;">
                     <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <!-- Header -->
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 30px; border-radius: 10px 10px 0 0;">
-                            <h1 style="margin: 0; font-size: 24px;">🎉 Bienvenue sur ESAG GED</h1>
+                            <h1 style="margin: 0; font-size: 24px;">🎉 Bienvenue sur ArchiFlow</h1>
                             <p style="margin: 10px 0 0 0; opacity: 0.9;">Votre compte a été créé avec succès</p>
                         </div>
                         
@@ -305,7 +305,7 @@ class EmailService:
                         <div style="padding: 30px;">
                             <p style="font-size: 16px; margin-bottom: 20px;">Bonjour <strong>{{user_name}}</strong>,</p>
                             
-                            <p>Votre compte ESAG GED a été créé par un administrateur. Voici vos informations de connexion :</p>
+                            <p>Votre compte ArchiFlow a été créé par un administrateur. Voici vos informations de connexion :</p>
                             
                             <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0;">
                                 <h3 style="color: #495057; margin-top: 0;">🔐 Vos informations de connexion</h3>
@@ -324,22 +324,22 @@ class EmailService:
                             
                             <p>Si vous avez des questions, n'hésitez pas à contacter l'équipe d'administration.</p>
                             
-                            <p>Cordialement,<br><strong>L'équipe ESAG GED</strong></p>
+                            <p>Cordialement,<br><strong>L'équipe ArchiFlow</strong></p>
                         </div>
                         
                         <!-- Footer -->
                         <div style="background: #f8f9fa; text-align: center; padding: 20px; border-radius: 0 0 10px 10px; border-top: 1px solid #dee2e6;">
-                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ESAG GED - Système de Gestion Électronique de Documents</p>
+                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ArchiFlow - Système de Gestion Électronique de Documents</p>
                         </div>
                     </div>
                 </body>
                 </html>
                 ''',
-                'text': '''Bienvenue sur ESAG GED !
+                'text': '''Bienvenue sur ArchiFlow !
 
 Bonjour {{user_name}},
 
-Votre compte ESAG GED a été créé par un administrateur.
+Votre compte ArchiFlow a été créé par un administrateur.
 
 Vos informations de connexion :
 - Email : {{user_email}}
@@ -351,11 +351,11 @@ IMPORTANT : Nous vous recommandons de changer votre mot de passe lors de votre p
 Connectez-vous ici : {{login_url}}
 
 Cordialement,
-L'équipe ESAG GED'''
+L'équipe ArchiFlow'''
             },
             
             'password_reset': {
-                'subject': 'Réinitialisation de votre mot de passe - ESAG GED',
+                'subject': 'Réinitialisation de votre mot de passe - ArchiFlow',
                 'html': '''
                 <html>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; margin: 0; padding: 20px;">
@@ -387,18 +387,18 @@ L'équipe ESAG GED'''
                             
                             <p style="color: #6c757d; font-size: 14px;">Si vous n'avez pas demandé cette réinitialisation, contactez immédiatement l'administrateur.</p>
                             
-                            <p>Cordialement,<br><strong>L'équipe ESAG GED</strong></p>
+                            <p>Cordialement,<br><strong>L'équipe ArchiFlow</strong></p>
                         </div>
                         
                         <!-- Footer -->
                         <div style="background: #f8f9fa; text-align: center; padding: 20px; border-radius: 0 0 10px 10px; border-top: 1px solid #dee2e6;">
-                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ESAG GED - Système de Gestion Électronique de Documents</p>
+                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ArchiFlow - Système de Gestion Électronique de Documents</p>
                         </div>
                     </div>
                 </body>
                 </html>
                 ''',
-                'text': '''Réinitialisation de votre mot de passe - ESAG GED
+                'text': '''Réinitialisation de votre mot de passe - ArchiFlow
 
 Bonjour {{user_name}},
 
@@ -413,7 +413,7 @@ Connectez-vous ici : {{login_url}}
 Si vous n'avez pas demandé cette réinitialisation, contactez immédiatement l'administrateur.
 
 Cordialement,
-L'équipe ESAG GED'''
+L'équipe ArchiFlow'''
             },
             
             'document_notification': {
@@ -449,18 +449,18 @@ L'équipe ESAG GED'''
                                 <a href="{{login_url}}" style="display: inline-block; background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold;">Voir le document</a>
                             </div>
                             
-                            <p>Cordialement,<br><strong>L'équipe ESAG GED</strong></p>
+                            <p>Cordialement,<br><strong>L'équipe ArchiFlow</strong></p>
                         </div>
                         
                         <!-- Footer -->
                         <div style="background: #f8f9fa; text-align: center; padding: 20px; border-radius: 0 0 10px 10px; border-top: 1px solid #dee2e6;">
-                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ESAG GED - Système de Gestion Électronique de Documents</p>
+                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ArchiFlow - Système de Gestion Électronique de Documents</p>
                         </div>
                     </div>
                 </body>
                 </html>
                 ''',
-                'text': '''Nouveau Document - ESAG GED
+                'text': '''Nouveau Document - ArchiFlow
 
 Bonjour {{user_name}},
 
@@ -476,7 +476,7 @@ Détails :
 Connectez-vous pour voir le document : {{login_url}}
 
 Cordialement,
-L'équipe ESAG GED'''
+L'équipe ArchiFlow'''
             },
             
             'document_shared': {
@@ -508,18 +508,18 @@ L'équipe ESAG GED'''
                                 <a href="{{login_url}}" style="display: inline-block; background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold;">Voir les documents partagés</a>
                             </div>
                             
-                            <p>Cordialement,<br><strong>L'équipe ESAG GED</strong></p>
+                            <p>Cordialement,<br><strong>L'équipe ArchiFlow</strong></p>
                         </div>
                         
                         <!-- Footer -->
                         <div style="background: #f8f9fa; text-align: center; padding: 20px; border-radius: 0 0 10px 10px; border-top: 1px solid #dee2e6;">
-                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ESAG GED - Système de Gestion Électronique de Documents</p>
+                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ArchiFlow - Système de Gestion Électronique de Documents</p>
                         </div>
                     </div>
                 </body>
                 </html>
                 ''',
-                'text': '''Document partagé avec vous - ESAG GED
+                'text': '''Document partagé avec vous - ArchiFlow
 
 Bonjour {{user_name}},
 
@@ -533,7 +533,7 @@ Document :
 Voir les documents partagés : {{login_url}}
 
 Cordialement,
-L'équipe ESAG GED'''
+L'équipe ArchiFlow'''
             },
             
             'workflow_notification': {
@@ -569,18 +569,18 @@ L'équipe ESAG GED'''
                                 <a href="{{login_url}}" style="display: inline-block; background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%); color: #333; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: bold;">Voir la tâche</a>
                             </div>
                             
-                            <p>Cordialement,<br><strong>L'équipe ESAG GED</strong></p>
+                            <p>Cordialement,<br><strong>L'équipe ArchiFlow</strong></p>
                         </div>
                         
                         <!-- Footer -->
                         <div style="background: #f8f9fa; text-align: center; padding: 20px; border-radius: 0 0 10px 10px; border-top: 1px solid #dee2e6;">
-                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ESAG GED - Système de Gestion Électronique de Documents</p>
+                            <p style="margin: 0; color: #6c757d; font-size: 14px;">© 2025 ArchiFlow - Système de Gestion Électronique de Documents</p>
                         </div>
                     </div>
                 </body>
                 </html>
                 ''',
-                'text': '''Nouvelle tâche assignée - ESAG GED
+                'text': '''Nouvelle tâche assignée - ArchiFlow
 
 Bonjour {{user_name}},
 
@@ -596,11 +596,11 @@ ACTION REQUISE : Connectez-vous pour traiter cette tâche dans les délais impar
 Voir la tâche : {{login_url}}
 
 Cordialement,
-L'équipe ESAG GED'''
+L'équipe ArchiFlow'''
             },
             
             'test': {
-                'subject': 'Test de configuration email - ESAG GED',
+                'subject': 'Test de configuration email - ArchiFlow',
                 'html': '''
                 <html>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -612,12 +612,12 @@ L'équipe ESAG GED'''
                         <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; padding: 15px; margin: 20px 0;">
                             <p style="margin: 0; color: #155724;">🎉 Votre système d'email est opérationnel et prêt à envoyer des notifications !</p>
                         </div>
-                        <p>Cordialement,<br>L'équipe ESAG GED</p>
+                        <p>Cordialement,<br>L'équipe ArchiFlow</p>
                     </div>
                 </body>
                 </html>
                 ''',
-                'text': '''Test de Configuration Email - ESAG GED
+                'text': '''Test de Configuration Email - ArchiFlow
 
 Félicitations ! Votre configuration email fonctionne parfaitement.
 
@@ -627,7 +627,7 @@ Serveur SMTP : {{smtp_server}}
 Votre système d'email est opérationnel et prêt à envoyer des notifications !
 
 Cordialement,
-L'équipe ESAG GED'''
+L'équipe ArchiFlow'''
             }
         }
     

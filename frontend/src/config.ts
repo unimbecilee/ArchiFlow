@@ -28,8 +28,8 @@ interface Config {
 }
 
 const config: Config = {
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
-  APP_NAME: 'ESAG GED',
+  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:5001',
+  APP_NAME: 'ArchiFlow',
   APP_VERSION: '2.0.0',
   MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
   SUPPORTED_FILE_TYPES: [

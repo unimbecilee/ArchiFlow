@@ -288,7 +288,7 @@ const SearchPage: React.FC = () => {
     <Box p={5}>
       <Heading mb={6} size="lg" color="white">
         <Icon as={FiSearch as ElementType} mr={3} />
-        Recherche Globale ESAG GED
+        Recherche Globale ArchiFlow
       </Heading>
       
       {/* Barre de recherche avec filtres et options */}
@@ -512,7 +512,7 @@ const SearchPage: React.FC = () => {
           <CardBody textAlign="center" py={8}>
             <Icon as={FiSearch as ElementType} boxSize={12} color="gray.400" mb={4} />
             <Text fontSize="lg" color="white" mb={2}>
-              Recherche Globale ESAG GED
+              Recherche Globale ArchiFlow
             </Text>
             <Text color="gray.400" mb={4}>
               Recherchez dans tous les éléments de l'application : documents, utilisateurs, dossiers, organisations, workflows, tags et historique.

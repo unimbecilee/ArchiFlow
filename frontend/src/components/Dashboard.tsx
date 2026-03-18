@@ -48,6 +48,7 @@ import {
 } from "react-icons/fi";
 import { ElementType } from 'react';
 import { useAuthStatus } from "../hooks/useAuthStatus";
+import { canAccessAllStats } from "../utils/permissions";
 import config from '../config';
 
 const API_URL = config.API_URL;
@@ -80,6 +81,9 @@ interface Notification {
 }
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuthStatus();
+  const isAdmin = canAccessAllStats(user);
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -391,7 +395,8 @@ const Dashboard: React.FC = () => {
     return notifTime.toLocaleDateString('fr-FR');
   };
 
-  const statCards = [
+  // Cartes de statistiques adaptées selon le rôle
+  const statCards = isAdmin ? [
     { 
       title: "Utilisateurs", 
       value: stats.users, 
@@ -419,6 +424,36 @@ const Dashboard: React.FC = () => {
       icon: FiArchive, 
       color: "orange",
       bgGradient: "linear(to-r, orange.500, orange.700)"
+    },
+  ] : [
+    // Pour les non-admins (chef de service, etc.) - statistiques personnelles uniquement
+    { 
+      title: "Mes Documents", 
+      value: stats.documents, 
+      icon: FiFileText, 
+      color: "green",
+      bgGradient: "linear(to-r, green.500, green.700)"
+    },
+    { 
+      title: "Mes Dossiers", 
+      value: stats.dossiers, 
+      icon: FiFolder, 
+      color: "purple",
+      bgGradient: "linear(to-r, purple.500, purple.700)"
+    },
+    { 
+      title: "En attente", 
+      value: workflowStats.pending, 
+      icon: FiAlertCircle, 
+      color: "yellow",
+      bgGradient: "linear(to-r, yellow.500, yellow.700)"
+    },
+    { 
+      title: "Validés", 
+      value: workflowStats.completed, 
+      icon: FiCheckCircle, 
+      color: "blue",
+      bgGradient: "linear(to-r, blue.500, blue.700)"
     },
   ];
 
@@ -454,10 +489,13 @@ const Dashboard: React.FC = () => {
         <Flex justify="space-between" align="center" mb={4}>
           <Box>
             <Heading color="white" size="xl" mb={2} fontWeight="bold">
-              Tableau de bord
+              Tableau de bord {!isAdmin && user?.role && `- ${user.role}`}
             </Heading>
             <Text color="gray.300" fontSize="lg">
-              Bienvenue ! Voici un aperçu de votre espace de travail
+              {isAdmin 
+                ? "Bienvenue ! Voici un aperçu de votre espace de travail" 
+                : `Bienvenue ${user?.prenom || ''} ! Voici un aperçu de vos documents et workflows`
+              }
             </Text>
           </Box>
           <HStack spacing={3}>
@@ -535,7 +573,9 @@ const Dashboard: React.FC = () => {
                 <Flex justify="space-between" align="center">
                   <HStack spacing={3}>
                     <Icon as={FiClock as ElementType} color="blue.400" boxSize={6} />
-                    <Heading size="md" color="white" fontWeight="bold">Documents récents</Heading>
+                    <Heading size="md" color="white" fontWeight="bold">
+                      {isAdmin ? "Documents récents" : "Mes documents récents"}
+                    </Heading>
                   </HStack>
                   <Button size="sm" variant="solid" colorScheme="blue" onClick={handleVoirToutDocs}>
                     Voir tout
@@ -730,7 +770,9 @@ const Dashboard: React.FC = () => {
                 <CardHeader py={5} px={6}>
                   <HStack spacing={3}>
                     <Icon as={FiActivity as ElementType} color="green.400" boxSize={6} />
-                    <Heading size="md" color="white" fontWeight="bold">Activité récente</Heading>
+                    <Heading size="md" color="white" fontWeight="bold">
+                      {isAdmin ? "Activité récente" : "Mon activité"}
+                    </Heading>
                   </HStack>
                 </CardHeader>
                 <CardBody pt={0} px={6} pb={6}>

@@ -200,28 +200,28 @@ def send_test_email(current_user):
         # Envoyer l'email de test
         success = email_service.send_email(
             to=[test_email],
-            subject='Test ESAG GED - Configuration Email',
+            subject='Test ArchiFlow - Configuration Email',
             body='''
             Bonjour,
             
-            Ceci est un email de test pour vérifier la configuration du système ESAG GED.
+            Ceci est un email de test pour vérifier la configuration du système ArchiFlow.
             
             Si vous recevez cet email, la configuration est correcte !
             
             Cordialement,
-            L'équipe ESAG GED
+            L'équipe ArchiFlow
             ''',
             html_body='''
             <html>
             <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2 style="color: #2c3e50;">Test ESAG GED - Configuration Email</h2>
+                    <h2 style="color: #2c3e50;">Test ArchiFlow - Configuration Email</h2>
                     <p>Bonjour,</p>
-                    <p>Ceci est un email de test pour vérifier la configuration du système ESAG GED.</p>
+                    <p>Ceci est un email de test pour vérifier la configuration du système ArchiFlow.</p>
                     <div style="background: #d4edda; color: #155724; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;">
                         <p style="margin: 0;"><strong>✅ Si vous recevez cet email, la configuration est correcte !</strong></p>
                     </div>
-                    <p>Cordialement,<br>L'équipe ESAG GED</p>
+                    <p>Cordialement,<br>L'équipe ArchiFlow</p>
                 </div>
             </body>
             </html>
@@ -289,72 +289,72 @@ def get_email_templates(current_user):
             default_templates = [
                 {
                     'name': 'document_notification',
-                    'subject': 'Notification de document - ESAG GED',
+                    'subject': 'Notification de document - ArchiFlow',
                     'description': 'Template pour les notifications de documents',
                     'html_content': '''
                     <html>
                     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h2 style="color: #2c3e50;">ESAG GED - Notification</h2>
+                            <h2 style="color: #2c3e50;">ArchiFlow - Notification</h2>
                             <p>Bonjour,</p>
-                            <p>Un document a été {{ action }} dans le système ESAG GED :</p>
+                            <p>Un document a été {{ action }} dans le système ArchiFlow :</p>
                             <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
                                 <h3 style="margin: 0 0 10px 0;">{{ document_title }}</h3>
                                 <p style="margin: 0;"><strong>Type :</strong> {{ document_type }}</p>
                                 <p style="margin: 0;"><strong>Date :</strong> {{ date }}</p>
                             </div>
-                            <p>Cordialement,<br>L'équipe ESAG GED</p>
+                            <p>Cordialement,<br>L'équipe ArchiFlow</p>
                         </div>
                     </body>
                     </html>
                     ''',
                     'text_content': '''
-                    ESAG GED - Notification
+                    ArchiFlow - Notification
                     
                     Bonjour,
                     
-                    Un document a été {{ action }} dans le système ESAG GED :
+                    Un document a été {{ action }} dans le système ArchiFlow :
                     
                     Titre : {{ document_title }}
                     Type : {{ document_type }}
                     Date : {{ date }}
                     
                     Cordialement,
-                    L'équipe ESAG GED
+                    L'équipe ArchiFlow
                     '''
                 },
                 {
                     'name': 'welcome',
-                    'subject': 'Bienvenue sur ESAG GED',
+                    'subject': 'Bienvenue sur ArchiFlow',
                     'description': 'Template de bienvenue pour les nouveaux utilisateurs',
                     'html_content': '''
                     <html>
                     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                            <h2 style="color: #2c3e50;">Bienvenue sur ESAG GED</h2>
+                            <h2 style="color: #2c3e50;">Bienvenue sur ArchiFlow</h2>
                             <p>Bonjour {{ user_name }},</p>
-                            <p>Votre compte a été créé avec succès sur ESAG GED.</p>
+                            <p>Votre compte a été créé avec succès sur ArchiFlow.</p>
                             <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;">
                                 <p style="margin: 0;"><strong>Email :</strong> {{ user_email }}</p>
                                 <p style="margin: 0;"><strong>Rôle :</strong> {{ user_role }}</p>
                             </div>
-                            <p>Cordialement,<br>L'équipe ESAG GED</p>
+                            <p>Cordialement,<br>L'équipe ArchiFlow</p>
                         </div>
                     </body>
                     </html>
                     ''',
                     'text_content': '''
-                    Bienvenue sur ESAG GED
+                    Bienvenue sur ArchiFlow
                     
                     Bonjour {{ user_name }},
                     
-                    Votre compte a été créé avec succès sur ESAG GED.
+                    Votre compte a été créé avec succès sur ArchiFlow.
                     
                     Email : {{ user_email }}
                     Rôle : {{ user_role }}
                     
                     Cordialement,
-                    L'équipe ESAG GED
+                    L'équipe ArchiFlow
                     '''
                 }
             ]

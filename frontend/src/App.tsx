@@ -28,6 +28,7 @@ const Organization = lazy(() => import("./components/Organization"));
 const Notifications = lazy(() => import("./components/Notifications"));
 const ImportExport = lazy(() => import("./components/ImportExport"));
 const BatchOperations = lazy(() => import("./components/BatchOperations"));
+const PydioArchiveManagement = lazy(() => import("./pages/admin/PydioArchiveManagement"));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuthStatus();
@@ -114,6 +115,7 @@ const AppLayout: React.FC = () => {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/import-export" element={<ImportExport />} />
             <Route path="/batch-operations" element={<BatchOperations />} />
+            <Route path="/admin/pydio-archives" element={<PydioArchiveManagement />} />
           </Routes>
         </Suspense>
       </Box>

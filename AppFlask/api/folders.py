@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-API pour la gestion des dossiers ESAG GED
+API pour la gestion des dossiers ArchiFlow
 """
 
 from flask import Blueprint, request, jsonify
@@ -60,7 +60,7 @@ def get_folders(current_user):
                     FROM dossier d
                     LEFT JOIN utilisateur u ON d.proprietaire_id = u.id
                     WHERE d.parent_id = %s AND d.proprietaire_id = %s
-                    ORDER BY d.titre
+                    ORDER BY d.nom
                 """, (parent_id, user_id))
             else:
                 cursor.execute("""
@@ -70,7 +70,7 @@ def get_folders(current_user):
                     FROM dossier d
                     LEFT JOIN utilisateur u ON d.proprietaire_id = u.id
                     WHERE d.parent_id IS NULL AND d.proprietaire_id = %s
-                    ORDER BY d.titre
+                    ORDER BY d.nom
                 """, (user_id,))
         
         folders = cursor.fetchall()

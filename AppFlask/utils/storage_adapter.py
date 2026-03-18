@@ -81,7 +81,7 @@ class StorageAdapter:
                 # Logique Cloudinary (à adapter selon votre code existant)
                 result = self.service.uploader.upload(
                     file_data,
-                    folder='esag-documents' if not is_thumbnail else 'esag-thumbnails',
+                    folder='archiflow-documents' if not is_thumbnail else 'archiflow-thumbnails',
                     resource_type='auto'
                 )
                 return {

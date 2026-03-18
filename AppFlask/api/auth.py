@@ -67,9 +67,9 @@ SECRET_KEY = current_app.config.get('SECRET_KEY') if current_app else os.getenv(
 MODE = os.getenv('MODE', 'prod')
 
 # Configuration de l'administrateur par défaut
-DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@esag.com')
+DEFAULT_ADMIN_EMAIL = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@archiflow.com')
 DEFAULT_ADMIN_NOM = os.getenv('DEFAULT_ADMIN_NOM', 'Admin')
-DEFAULT_ADMIN_PRENOM = os.getenv('DEFAULT_ADMIN_PRENOM', 'ESAG')
+DEFAULT_ADMIN_PRENOM = os.getenv('DEFAULT_ADMIN_PRENOM', 'ArchiFlow')
 DEFAULT_ADMIN_PASSWORD = os.getenv('DEFAULT_ADMIN_PASSWORD', None)  # Si None, un mot de passe sera généré
 
 
@@ -584,7 +584,7 @@ def create_user(current_user):
                 html_body = f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Bienvenue sur ESAG GED !</h2>
+                    <h2>Bienvenue sur ArchiFlow !</h2>
                     <p>Bonjour {data['prenom']} {data['nom']},</p>
                     <p>Votre compte a été créé avec succès.</p>
                     <p><strong>Informations de connexion :</strong></p>
@@ -594,13 +594,13 @@ def create_user(current_user):
                         <li>Rôle : {role_value}</li>
                     </ul>
                     <p><a href="http://localhost:3000/login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Se connecter</a></p>
-                    <p>Cordialement,<br>L'équipe ESAG GED</p>
+                    <p>Cordialement,<br>L'équipe ArchiFlow</p>
                 </body>
                 </html>
                 """
                 
                 text_body = f"""
-                Bienvenue sur ESAG GED !
+                Bienvenue sur ArchiFlow !
                 
                 Bonjour {data['prenom']} {data['nom']},
                 
@@ -614,13 +614,13 @@ def create_user(current_user):
                 Lien de connexion : http://localhost:3000/login
                 
                 Cordialement,
-                L'équipe ESAG GED
+                L'équipe ArchiFlow
                 """
                 
                 # Envoyer l'email directement
                 email_sent = email_service.send_email(
                     to=[data['email']],
-                    subject='Bienvenue sur ESAG GED - Votre compte a été créé',
+                    subject='Bienvenue sur ArchiFlow - Votre compte a été créé',
                     body=text_body,
                     html_body=html_body
                 )
@@ -937,7 +937,7 @@ def reset_password():
             email_sent = email_service.send_template_email(
                 to=[user['email']],
                 template_name='password_reset',
-                subject='Réinitialisation de votre mot de passe - ESAG GED',
+                subject='Réinitialisation de votre mot de passe - ArchiFlow',
                 template_data=email_data
             )
             
@@ -1028,7 +1028,7 @@ def admin_reset_user_password(current_user):
             email_sent = email_service.send_template_email(
                 to=[user['email']],
                 template_name='password_reset',
-                subject='Votre mot de passe a été réinitialisé - ESAG GED',
+                subject='Votre mot de passe a été réinitialisé - ArchiFlow',
                 template_data=email_data
             )
             

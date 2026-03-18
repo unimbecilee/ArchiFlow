@@ -238,7 +238,7 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
           }
 
           const data = await response.json();
-          return data.data.folder_id;
+          return data.folder_id;
         },
         {
           loadingMessage: 'Création du dossier...',

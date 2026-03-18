@@ -30,6 +30,7 @@ import {
   FiChevronRight,
   FiHeart,
   FiStar,
+  FiArchive,
 } from "react-icons/fi";
 import { IconType } from "react-icons";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -250,6 +251,7 @@ const Sidebar: React.FC = () => {
     { icon: FiGitBranch, label: "Workflows", path: "/workflow", show: canAccessWorkflows(user) }, // Admin, chef_de_service, validateur
     { icon: FiBriefcase, label: "Organisation", path: "/organization", show: canAccessOrganization(user) }, // Admin uniquement
     { icon: FiTrash2, label: "Corbeille", path: "/trash", show: canAccessTrash(user) }, // Admin et archiviste
+    { icon: FiArchive, label: "Archives Pydio", path: "/admin/pydio-archives", show: canAccessUsers(user) }, // Admin uniquement
     { icon: FiSettings, label: "Paramètres", path: "/settings", show: true }, // Accessible à tous
   ];
 
@@ -336,7 +338,7 @@ const Sidebar: React.FC = () => {
           bgGradient="linear(to-r, #3a8bfd, #ffe066)"
           bgClip="text"
         >
-          ESAG GED
+          ArchiFlow
         </Text>
       </Flex>
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-API pour l'historique des actions ESAG GED
+API pour l'historique des actions ArchiFlow
 """
 
 from flask import Blueprint, request, jsonify

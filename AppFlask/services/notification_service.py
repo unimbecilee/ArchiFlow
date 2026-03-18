@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Service de notifications complet pour ESAG GED
+Service de notifications complet pour ArchiFlow
 Gestion des notifications en temps réel et par email
 """
 
@@ -575,7 +575,7 @@ class NotificationService:
                 return email_service.send_template_email(
                     to=[user['email']],
                     template_name='notification_general',
-                    subject=f"ESAG GED - {title}",
+                    subject=f"ArchiFlow - {title}",
                     template_data=email_data
                 )
             except Exception as email_error:

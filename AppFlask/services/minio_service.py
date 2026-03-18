@@ -27,8 +27,8 @@ class MinioService:
         self.access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
         self.secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin123')
         self.use_ssl = os.getenv('MINIO_USE_SSL', 'false').lower() == 'true'
-        self.bucket_documents = os.getenv('MINIO_BUCKET_DOCUMENTS', 'esag-documents')
-        self.bucket_thumbnails = os.getenv('MINIO_BUCKET_THUMBNAILS', 'esag-thumbnails')
+        self.bucket_documents = os.getenv('MINIO_BUCKET_DOCUMENTS', 'archiflow-documents')
+        self.bucket_thumbnails = os.getenv('MINIO_BUCKET_THUMBNAILS', 'archiflow-thumbnails')
 
         try:
             self.client = Minio(

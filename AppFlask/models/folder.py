@@ -80,7 +80,7 @@ class Folder:
                     FROM dossier d
                     LEFT JOIN utilisateur u ON d.proprietaire_id = u.id
                     WHERE d.parent_id IS NULL
-                    ORDER BY d.titre
+                    ORDER BY d.nom
                 """
                 logger.info("Exécution de la requête pour les dossiers racine")
                 cursor.execute(query)
@@ -93,7 +93,7 @@ class Folder:
                     FROM dossier d
                     LEFT JOIN utilisateur u ON d.proprietaire_id = u.id
                     WHERE d.parent_id = %s
-                    ORDER BY d.titre
+                    ORDER BY d.nom
                 """
                 logger.info(f"Exécution de la requête pour les sous-dossiers de {parent_id}")
                 cursor.execute(query, (parent_id,))
@@ -103,7 +103,7 @@ class Folder:
             
             # Log des détails des dossiers trouvés
             for folder in folders:
-                logger.info(f"Dossier trouvé: ID={folder['id']}, Titre={folder['titre']}, Parent={folder['parent_id']}")
+                logger.info(f"Dossier trouvé: ID={folder['id']}, Nom={folder['nom']}, Parent={folder['parent_id']}")
             
             # Vérification supplémentaire pour le parent_id=2
             if parent_id == 2 and len(folders) == 0:
@@ -133,7 +133,7 @@ class Folder:
             params = []
             
             if title is not None:
-                update_fields.append("titre = %s")
+                update_fields.append("nom = %s")
                 params.append(title)
                 
             if description is not None:
@@ -263,7 +263,7 @@ class Folder:
             # Récupérer les informations de tous les dossiers dans le chemin
             placeholders = ', '.join(['%s'] * len(folder_ids))
             query = f"""
-                SELECT id, titre
+                SELECT id, nom
                 FROM dossier
                 WHERE id IN ({placeholders})
                 ORDER BY POSITION(id::text IN %s)

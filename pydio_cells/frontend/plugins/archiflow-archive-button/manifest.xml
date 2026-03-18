@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ajxp_plugin id="action.archiflow_archive" 
+             label="ArchiFlow Archive" 
+             description="Bouton d'archivage vers ArchiFlow">
+    
+    <plugin_info>
+        <plugin_author>ArchiFlow</plugin_author>
+        <plugin_version>1.0.0</plugin_version>
+    </plugin_info>
+    
+    <client_settings>
+        <resources>
+            <js file="plugins/archiflow-archive-button/index.js"/>
+        </resources>
+    </client_settings>
+    
+    <registry_contributions>
+        <actions>
+            <action name="archiflow_archive">
+                <gui text="Archiver vers ArchiFlow" title="Envoyer vers ArchiFlow" 
+                     iconClass="mdi mdi-archive" accessKey="">
+                    <context selection="true" dir="false" recycle="false" 
+                             actionBar="true" contextMenu="true"/>
+                    <selectionContext dir="false" file="true" recycle="false"/>
+                </gui>
+            </action>
+        </actions>
+    </registry_contributions>
+</ajxp_plugin>

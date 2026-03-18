@@ -2,21 +2,21 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: esag_ged_postgres
+    container_name: archiflow_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: esag_ged
-      POSTGRES_USER: esag_user
-      POSTGRES_PASSWORD: esag_password_2024
+      POSTGRES_DB: archiflow
+      POSTGRES_USER: archiflow_user
+      POSTGRES_PASSWORD: archiflow_password_2024
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - esag_network
+      - archiflow_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U esag_user -d esag_ged"]
+      test: ["CMD-SHELL", "pg_isready -U archiflow_user -d archiflow"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,25 +26,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.migrations
-    container_name: esag_ged_migrations
+    container_name: archiflow_migrations
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DB: esag_ged
-      POSTGRES_USER: esag_user
-      POSTGRES_PASSWORD: esag_password_2024
-      DATABASE_URL: postgresql://esag_user:esag_password_2024@postgres:5432/esag_ged
+      POSTGRES_DB: archiflow
+      POSTGRES_USER: archiflow_user
+      POSTGRES_PASSWORD: archiflow_password_2024
+      DATABASE_URL: postgresql://archiflow_user:archiflow_password_2024@postgres:5432/archiflow
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - esag_network
+      - archiflow_network
     restart: "no"
 
   # MinIO Object Storage
   minio:
     image: minio/minio:latest
-    container_name: esag_ged_minio
+    container_name: archiflow_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -56,7 +56,7 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      - esag_network
+      - archiflow_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -66,30 +66,30 @@ services:
   # MinIO Client pour initialisation
   minio-init:
     image: minio/mc:latest
-    container_name: esag_ged_minio_init
+    container_name: archiflow_minio_init
     depends_on:
       - minio
     entrypoint: >
       /bin/sh -c "
       sleep 5;
       /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin123;
-      /usr/bin/mc mb myminio/esag-documents --ignore-existing;
-      /usr/bin/mc mb myminio/esag-thumbnails --ignore-existing;
-      /usr/bin/mc anonymous set download myminio/esag-documents;
-      /usr/bin/mc anonymous set download myminio/esag-thumbnails;
+      /usr/bin/mc mb myminio/archiflow-documents --ignore-existing;
+      /usr/bin/mc mb myminio/archiflow-thumbnails --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/archiflow-documents;
+      /usr/bin/mc anonymous set download myminio/archiflow-thumbnails;
       echo 'MinIO buckets créés avec succès';
       exit 0;
       "
     networks:
-      - esag_network
+      - archiflow_network
 
   # PgAdmin (optionnel - interface web pour PostgreSQL)
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: esag_ged_pgadmin
+    container_name: archiflow_pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@esag.com
+      PGADMIN_DEFAULT_EMAIL: admin@archiflow.com
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
@@ -97,9 +97,56 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
-      - esag_network
+      - archiflow_network
     depends_on:
       - postgres
+
+  # Pydio Cells - Base de données MySQL
+  cells_db:
+    image: mysql:8
+    container_name: archiflow_cells_db
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: P@ssw0rd
+      MYSQL_DATABASE: archiflow_cells
+      MYSQL_USER: pydio
+      MYSQL_PASSWORD: P@ssw0rd
+    command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pP@ssw0rd"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - cells_db_data:/var/lib/mysql
+    networks:
+      - archiflow_network
+
+  # Pydio Cells - Application
+  pydio_cells:
+    build:
+      context: ./pydio_cells
+      dockerfile: cells.dockerfile
+    container_name: archiflow_pydio_cells
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - pydio_cells.env
+    environment:
+      - CELLS_WORKING_DIR=/var/cells
+    depends_on:
+      cells_db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    volumes:
+      - cells_data:/var/cells
+    networks:
+      - archiflow_network
 
 volumes:
   postgres_data:
@@ -108,7 +155,15 @@ volumes:
     driver: local
   pgadmin_data:
     driver: local
+  redis_data:
+    driver: local
+  celery_tmp:
+    driver: local
+  cells_db_data:
+    driver: local
+  cells_data:
+    driver: local
 
 networks:
-  esag_network:
+  archiflow_network:
     driver: bridge
