@@ -1,0 +1,193 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: archiflow-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-archiflow}
+      POSTGRES_USER: ${POSTGRES_USER:-archiflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-archiflow_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archiflow -d archiflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - archiflow
+
+  minio:
+    image: minio/minio:latest
+    container_name: archiflow-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - archiflow
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: archiflow-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      mc mb myminio/archiflow-documents --ignore-existing;
+      mc mb myminio/archives-requests --ignore-existing;
+      exit 0;
+      "
+    networks:
+      - archiflow
+
+  redis:
+    image: redis:7-alpine
+    container_name: archiflow-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - archiflow
+
+  backend:
+    build: ./backend
+    container_name: archiflow-backend
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    ports:
+      - "5010:5000"  # 5001 often taken (e.g. documanager-logger-service)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - archiflow
+    # Avec profil office : ONLYOFFICE_INTERNAL_API_URL=http://backend:5000 dans .env
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        INTERNAL_API_URL: http://backend:5000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5010}
+        NEXT_PUBLIC_REALTIME_MODE: ${NEXT_PUBLIC_REALTIME_MODE:-ws}
+    container_name: archiflow-frontend
+    env_file:
+      - .env
+    environment:
+      INTERNAL_API_URL: http://backend:5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - archiflow
+
+  cells_db:
+    image: mysql:8
+    container_name: archiflow-cells-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: P@ssw0rd
+      MYSQL_DATABASE: archiflow_cells
+      MYSQL_USER: pydio
+      MYSQL_PASSWORD: P@ssw0rd
+    command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pP@ssw0rd"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - cells_db_data:/var/lib/mysql
+    networks:
+      - archiflow
+
+  onlyoffice:
+    image: onlyoffice/documentserver:8.2
+    container_name: archiflow-onlyoffice
+    profiles: ["office"]
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-archiflow_onlyoffice_jwt_change_me}
+    ports:
+      - "9980:80"
+    restart: unless-stopped
+    networks:
+      - archiflow
+
+  cells:
+    build:
+      context: ./pydio_cells
+      dockerfile: cells.dockerfile
+    container_name: archiflow-cells
+    restart: unless-stopped
+    ports:
+      - "4001:8080"
+    env_file:
+      - ./pydio_cells/.env
+    environment:
+      CELLS_WORKING_DIR: /var/cells
+      CELLS_ARCHIVE_API_BASE_URL: http://localhost:5010
+      CELLS_SESSION_EXPIRED_REDIRECT_URL: http://localhost:3000/login
+      CELLS_SITE_EXTERNAL: http://localhost:4001
+      CELLS_SUPERVISION_CONSOLE_URL: http://localhost:3000/
+      CELLS_CUSTOM_SIDEBAR_BUTTON_URL: http://localhost:3000/dashboard
+      DB_HOST: cells_db
+      DB_PORT: "3306"
+      DB_NAME: archiflow_cells
+      DB_USER: pydio
+      DB_PASSWORD: P@ssw0rd
+    depends_on:
+      cells_db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    volumes:
+      - cells_data:/var/cells
+    networks:
+      - archiflow
+
+volumes:
+  postgres_data:
+  minio_data:
+  cells_db_data:
+  cells_data:
+
+networks:
+  archiflow:
+    driver: bridge

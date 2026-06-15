@@ -1,0 +1,67 @@
+docs/
+graphify-out/
+
+
+vendor/
+node_modules/
+var/
+cache/
+public/build/
+dist/
+build/
+coverage/
+.git/
+.idea/
+.cursor/
+graphify-out/
+*.min.js
+*.lock
+themeforest_mIlCHJiC_metronic_responsive_admin_dashboard_template/
+pydio_cells/
+unidoc/maarchrm/
+_bmads/
+
+
+
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Environment variables
+.env
+.env.local
+
+# Uploads directory (fichiers uploadés)
+uploads/
+*.upload
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+maarchrm/data/maarchRM/.db_initialized
+
+

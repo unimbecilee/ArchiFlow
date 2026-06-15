@@ -1,0 +1,36 @@
+package config
+
+import (
+	"fmt"
+	"log"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+var DB *gorm.DB
+
+func InitDatabase(databaseURL string) (*gorm.DB, error) {
+	config := &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	}
+
+	db, err := gorm.Open(postgres.Open(databaseURL), config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+
+	// Connection pool settings
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+
+	DB = db
+	log.Println("✅ Database connected successfully")
+	return db, nil
+}

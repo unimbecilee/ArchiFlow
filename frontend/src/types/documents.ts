@@ -1,0 +1,53 @@
+export interface Document {
+  id: number;
+  titre: string;
+  title?: string;
+  description?: string;
+  date_creation: string;
+  derniere_modification?: string;
+  taille: number;
+  taille_formatee?: string;
+  type_document?: string;
+  categorie?: string;
+  dossier_id?: number | null;
+  folder_id?: number | null;
+  minio_url?: string;
+  mime_type?: string;
+  file_name?: string;
+  status?: string;
+  current_version_number?: number;
+  rejected_at_version?: number | null;
+  previewable?: boolean;
+  editable?: boolean;
+  office_editable?: boolean;
+  is_locked?: boolean;
+  locked_by_id?: number | null;
+}
+
+export interface Folder {
+  id: number;
+  name: string;
+  description?: string;
+  owner_id: number;
+  parent_id?: number | null;
+  subfolders_count?: number;
+  documents_count?: number;
+  created_at?: string;
+}
+
+export interface FolderBreadcrumbItem {
+  id: number;
+  name: string;
+}
+
+export interface FolderFlatOption {
+  id: number;
+  name: string;
+  path: string;
+}
+
+export interface DocumentsResponse {
+  success?: boolean;
+  documents: Document[];
+  total: number;
+}

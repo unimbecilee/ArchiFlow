@@ -1,0 +1,59 @@
+package middleware
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"net/http"
+	"os"
+
+	"archiflow/backend/internal/config"
+
+	"github.com/labstack/echo/v4"
+)
+
+// PydioAPIAuth vérifie X-Pydio-Token ou X-Pydio-Signature pour les appels Cells → ArchiFlow.
+func PydioAPIAuth() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if config.PydioSignatureCheckSkipped() {
+				if config.IsProduction() {
+					return echo.NewHTTPError(http.StatusInternalServerError, "pydio signature check disabled in production")
+				}
+				return next(c)
+			}
+
+			token := c.Request().Header.Get("X-Pydio-Token")
+			expected := os.Getenv("PYDIO_API_TOKEN")
+			if expected == "" {
+				if config.IsProduction() {
+					return echo.NewHTTPError(http.StatusUnauthorized, "PYDIO_API_TOKEN not configured")
+				}
+				expected = "archiflow_pydio_api_token_2024"
+			}
+			if token != "" && token == expected {
+				return next(c)
+			}
+
+			sig := c.Request().Header.Get("X-Pydio-Signature")
+			if sig != "" {
+				secret := os.Getenv("PYDIO_WEBHOOK_SECRET")
+				if secret == "" {
+					secret = "archiflow_pydio_webhook_secret_2024"
+				}
+				body, err := readBodyPreserve(c)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+				}
+				mac := hmac.New(sha256.New, []byte(secret))
+				mac.Write(body)
+				expectedSig := hex.EncodeToString(mac.Sum(nil))
+				if hmac.Equal([]byte(sig), []byte(expectedSig)) {
+					return next(c)
+				}
+			}
+
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid or missing Pydio authentication")
+		}
+	}
+}
