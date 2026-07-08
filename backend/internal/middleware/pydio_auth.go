@@ -13,13 +13,11 @@ import (
 )
 
 // PydioAPIAuth vérifie X-Pydio-Token ou X-Pydio-Signature pour les appels Cells → ArchiFlow.
+// PYDIO_DEV_INSECURE=1 désactive l'auth (dev uniquement) — voir SecurityWarnings() au démarrage.
 func PydioAPIAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if config.PydioSignatureCheckSkipped() {
-				if config.IsProduction() {
-					return echo.NewHTTPError(http.StatusInternalServerError, "pydio signature check disabled in production")
-				}
+			if config.PydioDevInsecure() {
 				return next(c)
 			}
 

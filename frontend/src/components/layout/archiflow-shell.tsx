@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Bell, SignOut } from "@phosphor-icons/react";
 import { ArchiFlowSidebar } from "./archiflow-sidebar";
 import { useAuthStore } from "@/store/auth-store";
@@ -28,16 +27,11 @@ function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
   const { unread } = useNotifications();
 
   return (
-    <motion.div className="flex min-h-[100dvh] w-full bg-[#f9fafb]">
+    <div className="flex min-h-[100dvh] w-full bg-[#f9fafb]">
       <ArchiFlowSidebar />
-      <motion.div className="relative flex min-w-0 flex-1 flex-col">
+      <div className="relative flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-slate-200/70 glass-panel px-4 py-4 sm:px-8">
-          <motion.div
-            className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-          >
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-600">
                 Espace connecte
@@ -59,14 +53,14 @@ function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
                   </span>
                 )}
               </Link>
-              <motion.div className="hidden items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 sm:flex">
+              <div className="hidden items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 sm:flex">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 text-xs font-semibold text-emerald-300">
                   {userInitials(user?.email)}
                 </div>
                 <span className="max-w-[220px] truncate text-sm text-zinc-600">
                   {user?.email}
                 </span>
-              </motion.div>
+              </div>
               <button
                 type="button"
                 onClick={() => logout()}
@@ -76,7 +70,7 @@ function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
                 <span className="hidden sm:inline">Deconnexion</span>
               </button>
             </div>
-          </motion.div>
+          </div>
         </header>
 
         <main className="relative z-10 flex-1 overflow-x-hidden px-4 py-6 sm:px-8 sm:py-8">
@@ -86,8 +80,8 @@ function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
         <footer className="border-t border-slate-200/70 bg-white/70 px-4 py-4 text-center text-xs text-zinc-500 backdrop-blur-sm">
           2026 ArchiFlow — Gestion electronique de documents
         </footer>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 

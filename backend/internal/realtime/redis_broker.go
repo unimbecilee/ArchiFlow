@@ -3,26 +3,30 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
 const redisRealtimeChannel = "archiflow:realtime:v1"
 
 type redisWireMessage struct {
-	UserID uint     `json:"user_id"`
-	Env    Envelope `json:"env"`
+	UserID   uint     `json:"user_id"`
+	Env      Envelope `json:"env"`
+	OriginID string   `json:"origin_id,omitempty"`
 }
 
 // RedisBroker distribue les événements entre replicas (pub/sub) ; livraison locale via Hub.
 type RedisBroker struct {
-	hub    *Hub
-	client *redis.Client
-	pubsub *redis.PubSub
-	done   chan struct{}
-	wg     sync.WaitGroup
+	hub      *Hub
+	client   *redis.Client
+	pubsub   *redis.PubSub
+	done     chan struct{}
+	wg       sync.WaitGroup
+	originID string
 }
 
 func NewRedisBroker(hub *Hub, redisURL string) (*RedisBroker, error) {
@@ -39,9 +43,10 @@ func NewRedisBroker(hub *Hub, redisURL string) (*RedisBroker, error) {
 	}
 
 	b := &RedisBroker{
-		hub:    hub,
-		client: client,
-		done:   make(chan struct{}),
+		hub:      hub,
+		client:   client,
+		done:     make(chan struct{}),
+		originID: os.Getenv("HOSTNAME") + "-" + uuid.NewString(),
 	}
 	b.pubsub = client.Subscribe(context.Background(), redisRealtimeChannel)
 
@@ -66,6 +71,9 @@ func (b *RedisBroker) listen() {
 			if err := json.Unmarshal([]byte(msg.Payload), &wire); err != nil {
 				continue
 			}
+			if wire.OriginID == b.originID {
+				continue
+			}
 			if wire.UserID == 0 {
 				continue
 			}
@@ -82,7 +90,7 @@ func (b *RedisBroker) listen() {
 }
 
 func (b *RedisBroker) PublishToUser(userID uint, env Envelope) {
-	if b == nil || b.client == nil || userID == 0 {
+	if b == nil || userID == 0 {
 		return
 	}
 	if env.V == 0 {
@@ -91,7 +99,14 @@ func (b *RedisBroker) PublishToUser(userID uint, env Envelope) {
 	if env.TS == 0 {
 		env.TS = time.Now().Unix()
 	}
-	payload, err := json.Marshal(redisWireMessage{UserID: userID, Env: env})
+	// Deliver locally first; Redis pub/sub for other replicas.
+	if b.hub != nil {
+		b.hub.PublishToUser(userID, env)
+	}
+	if b.client == nil {
+		return
+	}
+	payload, err := json.Marshal(redisWireMessage{UserID: userID, Env: env, OriginID: b.originID})
 	if err != nil {
 		return
 	}

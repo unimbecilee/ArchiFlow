@@ -292,6 +292,12 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 	}
 
 	if c.QueryParam("url") == "1" {
+		if !config.PresignedPreviewURLAllowed() {
+			return c.JSON(http.StatusForbidden, map[string]any{
+				"success": false,
+				"error":   "presigned preview URLs disabled in production",
+			})
+		}
 		doc, err := h.documentService.GetByID(uint(id))
 		if err != nil {
 			return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": "not found"})
@@ -310,6 +316,7 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 	defer reader.Close()
 
 	c.Response().Header().Set("Content-Type", mime)
+	utils.ApplyPreviewSecurityHeaders(c.Response().Header(), mime)
 	if services.IsPreviewableMime(mime) {
 		if cd := utils.ContentDispositionInline(filename); cd != "" {
 			c.Response().Header().Set("Content-Disposition", cd)

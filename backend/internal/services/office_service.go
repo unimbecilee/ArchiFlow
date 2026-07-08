@@ -32,6 +32,9 @@ func NewOfficeService(collab *CollaborationService, userRepo repository.UserRepo
 	if secret == "" && config.IsDevelopment() {
 		secret = os.Getenv("JWT_SECRET")
 	}
+	if config.IsProduction() && OfficeEnabled() && (secret == "" || secret == os.Getenv("JWT_SECRET")) {
+		secret = "" // GetEditorConfig will fail closed via signOfficeToken
+	}
 	return &OfficeService{collab: collab, userRepo: userRepo, secret: secret}
 }
 
@@ -105,11 +108,11 @@ func (s *OfficeService) GetEditorConfig(
 		mode = "view"
 	}
 
-	dlToken, err := signOfficeToken(s.secret, docID, userID, "download", officeTokenTTL)
+	dlToken, err := signOfficeToken(s.secret, docID, userID, "download", officeTokenTTL())
 	if err != nil {
 		return &OfficeEditorConfig{Enabled: false, Reason: "configuration office incomplete"}, nil
 	}
-	cbToken, err := signOfficeToken(s.secret, docID, userID, "callback", officeTokenTTL)
+	cbToken, err := signOfficeToken(s.secret, docID, userID, "callback", officeTokenTTL())
 	if err != nil {
 		return &OfficeEditorConfig{Enabled: false, Reason: "configuration office incomplete"}, nil
 	}

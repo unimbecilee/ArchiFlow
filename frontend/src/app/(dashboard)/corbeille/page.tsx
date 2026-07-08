@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Trash, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/document-list";
@@ -8,26 +8,15 @@ import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
-import type { Document } from "@/types/documents";
+import { ErrorBanner } from "@/components/layout/error-banner";
+import { useDocumentListPage } from "@/hooks/use-document-list-page";
 import { getTrashDocuments, restoreDocument } from "@/services/documents.service";
 import { buildTrashDocumentActions } from "@/lib/document-crud-actions";
 
 export default function CorbeillePage() {
-  const [docs, setDocs] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setDocs(await getTrashDocuments());
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { items: docs, loading, load, error } = useDocumentListPage({
+    loadFn: getTrashDocuments,
+  });
 
   const handleRestore = useCallback(async (id: number) => {
     await restoreDocument(id);
@@ -53,6 +42,7 @@ export default function CorbeillePage() {
           </Button>
         }
       />
+      {error ? <ErrorBanner message={error} /> : null}
       <PagePanel
         title="Elements supprimes"
         subtitle={loading ? "Chargement..." : `${docs.length} element(s)`}

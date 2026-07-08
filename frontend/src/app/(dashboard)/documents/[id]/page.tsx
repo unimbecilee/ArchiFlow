@@ -79,6 +79,7 @@ export default function DocumentDetailPage() {
   const [tagName, setTagName] = useState("");
   const [shareEmail, setShareEmail] = useState("");
   const [shareMessage, setShareMessage] = useState("");
+  const [shareError, setShareError] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [versionFile, setVersionFile] = useState<File | null>(null);
   const [versionComment, setVersionComment] = useState("");
@@ -145,15 +146,23 @@ export default function DocumentDetailPage() {
 
   const handleShare = async () => {
     if (!shareEmail.trim()) return;
-    await shareDocument(docId, {
-      email: shareEmail.trim(),
-      message: shareMessage,
-      permissions: ["lecture", "download", "commentaire"],
-    });
-    setShareEmail("");
-    setShareMessage("");
-    setShowShare(false);
-    alert("Document partage");
+    setShareError(null);
+    try {
+      await shareDocument(docId, {
+        email: shareEmail.trim(),
+        message: shareMessage,
+        permissions: ["lecture", "download", "commentaire"],
+      });
+      setShareEmail("");
+      setShareMessage("");
+      setShowShare(false);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } };
+      setShareError(
+        err.response?.data?.error ??
+          "Partage impossible. Vérifiez que le destinataire a un compte ArchiFlow."
+      );
+    }
   };
 
   const handleAddTag = async () => {
@@ -299,13 +308,14 @@ export default function DocumentDetailPage() {
       )}
 
       {showShare && (
-        <PagePanel title="Partage" subtitle="Invitation par e-mail">
+        <PagePanel title="Partage" subtitle="Le destinataire doit déjà avoir un compte ArchiFlow">
           <div className="space-y-4">
+            {shareError && <ErrorBanner message={shareError} />}
             <div className="flex flex-col gap-2">
               <Label htmlFor="shareEmail">E-mail du destinataire</Label>
               <Input
                 id="shareEmail"
-                placeholder="collegue@votre-organisation.fr"
+                placeholder="manager@archiflow.local"
                 value={shareEmail}
                 onChange={(e) => setShareEmail(e.target.value)}
               />

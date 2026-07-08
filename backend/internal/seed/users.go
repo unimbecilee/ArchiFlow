@@ -46,12 +46,13 @@ func DefaultAdmin(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	}
 
 	u := &models.User{
-		Email:        email,
-		PasswordHash: hash,
-		FirstName:    "Admin",
-		LastName:     "ArchiFlow",
-		Role:         "admin",
-		IsActive:     true,
+		Email:              email,
+		PasswordHash:       hash,
+		FirstName:          "Admin",
+		LastName:           "ArchiFlow",
+		Role:               "admin",
+		IsActive:           true,
+		MustChangePassword: isDefaultSeedPassword(password, "Admin1234!"),
 	}
 	if err := db.Create(u).Error; err != nil {
 		log.Printf("seed admin: %v", err)
@@ -90,12 +91,13 @@ func DefaultManager(db *gorm.DB, pydioSync *services.UserPydioSync) {
 		return
 	}
 	u := &models.User{
-		Email:        email,
-		PasswordHash: hash,
-		FirstName:    "Manager",
-		LastName:     "ArchiFlow",
-		Role:         "manager",
-		IsActive:     true,
+		Email:              email,
+		PasswordHash:       hash,
+		FirstName:          "Manager",
+		LastName:           "ArchiFlow",
+		Role:               "manager",
+		IsActive:           true,
+		MustChangePassword: isDefaultSeedPassword(password, "Manager1234!"),
 	}
 	if err := db.Create(u).Error; err != nil {
 		return
@@ -110,7 +112,7 @@ func DefaultManager(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	log.Printf("✅ Default manager seeded: %s", email)
 }
 
-func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, password, firstName, lastName, role string) {
+func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, password, firstName, lastName, role, documentedDefault string) {
 	if email == "" || password == "" {
 		return
 	}
@@ -127,12 +129,13 @@ func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, passwor
 		return
 	}
 	u := &models.User{
-		Email:        email,
-		PasswordHash: hash,
-		FirstName:    firstName,
-		LastName:     "ArchiFlow",
-		Role:         role,
-		IsActive:     true,
+		Email:              email,
+		PasswordHash:       hash,
+		FirstName:          firstName,
+		LastName:           "ArchiFlow",
+		Role:               role,
+		IsActive:           true,
+		MustChangePassword: isDefaultSeedPassword(password, documentedDefault),
 	}
 	if err := db.Create(u).Error; err != nil {
 		return
@@ -157,7 +160,7 @@ func DefaultValidator(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	if password == "" {
 		password = "Validator1234!"
 	}
-	seedRoleUser(db, pydioSync, email, password, "Validateur", "", models.RoleValidator)
+	seedRoleUser(db, pydioSync, email, password, "Validateur", "", models.RoleValidator, "Validator1234!")
 }
 
 // DefaultArchivist compte archiviste (lecture org + workflows termines).
@@ -170,7 +173,7 @@ func DefaultArchivist(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	if password == "" {
 		password = "Archivist1234!"
 	}
-	seedRoleUser(db, pydioSync, email, password, "Archiviste", "", models.RoleArchivist)
+	seedRoleUser(db, pydioSync, email, password, "Archiviste", "", models.RoleArchivist, "Archivist1234!")
 }
 
 func provisionExistingIfNeeded(ctx context.Context, pydioSync *services.UserPydioSync, u *models.User, password string) {
@@ -180,4 +183,8 @@ func provisionExistingIfNeeded(ctx context.Context, pydioSync *services.UserPydi
 	if err := pydioSync.ProvisionOnCreate(ctx, u, password); err != nil {
 		log.Printf("seed pydio provision %s: %v", u.Email, err)
 	}
+}
+
+func isDefaultSeedPassword(actual, documentedDefault string) bool {
+	return documentedDefault != "" && actual == documentedDefault
 }

@@ -2,6 +2,7 @@
 
 import { refreshAccessToken } from "@/lib/auth-session";
 import { getNotificationWebSocketUrl, getRealtimeMode } from "@/lib/realtime-config";
+import { fetchWsTicket } from "@/services/ws-ticket.service";
 import { getAccessToken } from "@/lib/session-tokens";
 
 export type RealtimeEnvelope = {
@@ -61,8 +62,20 @@ async function connect() {
     return;
   }
 
+  let ticket: string;
   try {
-    socket = new WebSocket(getNotificationWebSocketUrl(token));
+    ticket = await fetchWsTicket();
+  } catch {
+    scheduleReconnect();
+    return;
+  }
+  if (cancelled || gen !== connectGeneration) {
+    scheduleReconnect();
+    return;
+  }
+
+  try {
+    socket = new WebSocket(getNotificationWebSocketUrl(ticket));
   } catch {
     scheduleReconnect();
     return;

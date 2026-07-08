@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,9 +56,22 @@ func PresignedGetURL(ctx context.Context, bucket, objectName string) (string, er
 	if MinioClient == nil {
 		return "", fmt.Errorf("minio client not initialized")
 	}
-	u, err := MinioClient.PresignedGetObject(ctx, bucket, objectName, 24*time.Hour, nil)
+	ttl := presignedURLTTL()
+	u, err := MinioClient.PresignedGetObject(ctx, bucket, objectName, ttl, nil)
 	if err != nil {
 		return "", err
 	}
 	return u.String(), nil
+}
+
+func presignedURLTTL() time.Duration {
+	if raw := strings.TrimSpace(os.Getenv("PRESIGNED_URL_TTL_MINUTES")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			return time.Duration(n) * time.Minute
+		}
+	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENVIRONMENT")), "production") {
+		return 15 * time.Minute
+	}
+	return 60 * time.Minute
 }

@@ -7,28 +7,45 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"strings"
 
 	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 )
 
+var (
+	ErrShareForbidden    = errors.New("share_forbidden")
+	ErrShareUserNotFound = errors.New("share_user_not_found")
+	ErrShareSelf         = errors.New("share_self")
+	ErrShareNoTarget     = errors.New("share_no_target")
+)
+
 type CollaborationService struct {
-	collab   *repository.CollaborationRepository
-	docRepo  *repository.DocumentRepository
-	userRepo repository.UserRepository
-	bucket   string
-	realtime *NotificationRealtime
+	collab       *repository.CollaborationRepository
+	docRepo      *repository.DocumentRepository
+	userRepo     repository.UserRepository
+	workflowRepo *repository.WorkflowRepository
+	bucket       string
+	realtime     *NotificationRealtime
 }
 
 func NewCollaborationService(
 	collab *repository.CollaborationRepository,
 	docRepo *repository.DocumentRepository,
 	userRepo repository.UserRepository,
+	workflowRepo *repository.WorkflowRepository,
 	bucket string,
 	rt *NotificationRealtime,
 ) *CollaborationService {
-	return &CollaborationService{collab: collab, docRepo: docRepo, userRepo: userRepo, bucket: bucket, realtime: rt}
+	return &CollaborationService{
+		collab:       collab,
+		docRepo:      docRepo,
+		userRepo:     userRepo,
+		workflowRepo: workflowRepo,
+		bucket:       bucket,
+		realtime:     rt,
+	}
 }
 
 func encodePerms(perms []string) string {
@@ -56,8 +73,19 @@ func (s *CollaborationService) CanAccess(docID, userID uint, role string) (bool,
 	if role == models.RoleArchivist {
 		return true, []string{models.PermRead, models.PermDownload}, nil
 	}
-	if role == models.RoleValidator && doc.Status == models.DocumentStatusValidation {
-		return true, []string{models.PermRead, models.PermDownload}, nil
+	if doc.Status == models.DocumentStatusValidation {
+		if role == models.RoleValidator || role == models.RoleManager {
+			return true, []string{models.PermRead, models.PermDownload}, nil
+		}
+		if s.workflowRepo != nil {
+			ok, err := s.workflowRepo.UserMayAccessDocumentForWorkflow(docID, userID, role)
+			if err != nil {
+				return false, nil, err
+			}
+			if ok {
+				return true, []string{models.PermRead, models.PermDownload}, nil
+			}
+		}
 	}
 	share, err := s.collab.FindShare(docID, userID)
 	if err != nil {
@@ -76,14 +104,22 @@ func (s *CollaborationService) requirePerm(perms []string, need string) bool {
 }
 
 func (s *CollaborationService) ShareDocument(docID, sharedByID uint, sharerRole string, targetEmail string, targetUserID uint, perms []string, message string) error {
+	targetEmail = strings.TrimSpace(targetEmail)
+	if targetUserID == 0 && targetEmail == "" {
+		return ErrShareNoTarget
+	}
+
 	doc, err := s.docRepo.FindByID(docID)
 	if err != nil {
 		return err
 	}
 	if doc.OwnerID != sharedByID {
-		ok, existing, _ := s.CanAccess(docID, sharedByID, sharerRole)
-		if !ok || !s.requirePerm(existing, models.PermShare) {
-			return errors.New("forbidden")
+		share, shareErr := s.collab.FindShare(docID, sharedByID)
+		if shareErr != nil {
+			return ErrShareForbidden
+		}
+		if !s.requirePerm(decodePerms(share.Permissions), models.PermShare) {
+			return ErrShareForbidden
 		}
 	}
 	var target *models.User
@@ -93,10 +129,10 @@ func (s *CollaborationService) ShareDocument(docID, sharedByID uint, sharerRole 
 		target, err = s.userRepo.GetByEmail(targetEmail)
 	}
 	if err != nil {
-		return fmt.Errorf("user not found")
+		return ErrShareUserNotFound
 	}
 	if target.ID == sharedByID {
-		return errors.New("cannot share with yourself")
+		return ErrShareSelf
 	}
 	if len(perms) == 0 {
 		perms = []string{models.PermRead, models.PermDownload}
@@ -109,7 +145,7 @@ func (s *CollaborationService) ShareDocument(docID, sharedByID uint, sharerRole 
 		Active:       true,
 		Message:      message,
 	}
-	if err := s.collab.CreateShare(share); err != nil {
+	if err := s.collab.UpsertShare(share); err != nil {
 		return err
 	}
 	_ = s.notifyUser(target.ID, "SHARE", "Document partagé", fmt.Sprintf("« %s » partagé avec vous", doc.Title), fmt.Sprintf("/documents/%d", docID))
@@ -123,8 +159,8 @@ func (s *CollaborationService) ListSharedWithMe(userID uint) ([]map[string]any, 
 	}
 	out := make([]map[string]any, 0, len(shares))
 	for _, sh := range shares {
-		doc, err := s.docRepo.FindByID(sh.DocumentID)
-		if err != nil {
+		doc := sh.Document
+		if doc == nil {
 			continue
 		}
 		out = append(out, map[string]any{

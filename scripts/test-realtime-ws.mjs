@@ -46,12 +46,27 @@ function waitWs(url, timeoutMs = 15000) {
   });
 }
 
+async function fetchWsTicket(token) {
+  const res = await fetch(`${API}/api/ws/ticket`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(`ws ticket ${res.status}: ${await res.text()}`);
+  }
+  const body = await res.json();
+  const ticket = body?.data?.ticket;
+  if (!ticket) throw new Error("no ticket in ws/ticket response");
+  return ticket;
+}
+
 async function main() {
   console.log("API:", API);
   const token = await login();
   console.log("login ok");
 
-  const wsUrl = `${WS_BASE}/api/ws?token=${encodeURIComponent(token)}`;
+  const ticket = await fetchWsTicket(token);
+  const wsUrl = `${WS_BASE}/api/ws?ticket=${encodeURIComponent(ticket)}`;
   const ws = await waitWs(wsUrl);
   console.log("WS connected");
 

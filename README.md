@@ -193,7 +193,8 @@ API : `POST /api/workflows/validation/start`, `POST /api/workflows/instances/:id
 
 | Canal | Usage |
 |-------|--------|
-| `GET /api/ws?token=…` | Notifications + compteurs workflow (push) |
+| `POST /api/ws/ticket` | Ticket WS court (60 s) |
+| `GET /api/ws?ticket=…` | Notifications + compteurs workflow (push) |
 | `GET /api/notifications/stream` | Legacy SSE (poll DB) si `NEXT_PUBLIC_REALTIME_MODE=sse` |
 
 Redis synchronise les événements entre plusieurs replicas backend.
@@ -232,12 +233,48 @@ archiflow_v3/
 # Backend
 cd backend && go test ./...
 
-# Frontend (build)
+# Frontend
+cd frontend && npm test
 cd frontend && npm run build
 
-# Smoke E2E (stack Docker requise)
-./scripts/smoke_e2e.sh
+# Smoke E2E (stack Docker requise, mot de passe seed Admin1234!)
+SMOKE_PASSWORD=Admin1234! ./scripts/smoke_e2e.sh
+
+# WebSocket ticket + push
+node scripts/test-realtime-ws.mjs
+
+# Validation env production
+./scripts/check-prod-env.sh
+
+# Retest sécurité PT1–PT4 (API locale)
+./scripts/pentest-retest.sh
 ```
+
+---
+
+## Production — checklist sécurité
+
+Avant `ENVIRONMENT=production` :
+
+| Variable | Exigence |
+|----------|----------|
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | ≥ 32 car., pas valeur `.env.example` |
+| `PYDIO_API_TOKEN` | Token fort unique |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Pas `minioadmin` / `minioadmin123` |
+| `COOKIE_SECURE` | `true` ou non défini (auto prod) |
+| `AUTH_ALLOW_PUBLIC_REGISTER` | `false` (défaut prod) |
+| `DATABASE_URL` | `sslmode=require` ou `verify-full` |
+| `PYDIO_DEV_INSECURE` | **Non défini** (jamais en prod) |
+| `NEXT_PUBLIC_REALTIME_MODE` | `ws` (pas `sse` en prod) |
+| `PRESIGNED_URL_TTL_MINUTES` | `15` recommandé |
+
+Script : `./scripts/check-prod-env.sh` (exécute les règles Go `ValidateSecurityForEnv`).
+
+**WebSocket** : le client obtient un ticket court via `POST /api/ws/ticket` (auth JWT), puis `GET /api/ws?ticket=…`. Le JWT long n’apparaît plus dans l’URL.
+
+**Pydio dev** : bypass auth API uniquement si `PYDIO_DEV_INSECURE=1` **et** `ENVIRONMENT≠production`. Remplacer l’ancien `PYDIO_SKIP_SIGNATURE_CHECK`.
+
+**`pydio_cells/`** : dépôt vendored (~1 Go) pour le profil Docker `cells` ; en prod préférer l’image Cells officielle.
 
 ---
 
@@ -245,7 +282,7 @@ cd frontend && npm run build
 
 **Backend** — Go 1.22, Echo, GORM, PostgreSQL, MinIO, Redis, gorilla/websocket, JWT, Zap
 
-**Frontend** — Next.js 14, TypeScript, Tailwind CSS, Radix UI, Zustand, Axios, Framer Motion, Geist
+**Frontend** — Next.js 14, TypeScript, Tailwind CSS, Radix UI, Zustand, Axios, Geist
 
 ---
 

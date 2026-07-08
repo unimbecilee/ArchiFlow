@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -54,6 +55,14 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// PresignedPreviewURLAllowed gates JSON presigned URLs (?url=1) — disabled in production unless explicit.
+func PresignedPreviewURLAllowed() bool {
+	if !IsProduction() {
+		return true
+	}
+	return strings.TrimSpace(os.Getenv("ALLOW_PRESIGNED_PREVIEW_URL")) == "1"
 }
 
 func (c *Config) validate() error {

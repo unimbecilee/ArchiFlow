@@ -157,7 +157,7 @@ func (r *WorkflowRepository) UpdateInstanceCancelled(instanceID uint, finishedAt
 
 func (r *WorkflowRepository) GetInstance(id uint) (*models.WorkflowInstance, error) {
 	var inst models.WorkflowInstance
-	err := r.db.Preload("Workflow").Preload("Document").Preload("CurrentStep").
+	err := r.db.Preload("Workflow").Preload("Document").Preload("CurrentStep.Approvers").
 		First(&inst, id).Error
 	return &inst, err
 }
@@ -366,4 +366,30 @@ func (r *WorkflowRepository) ArchiveDocument(docID uint) error {
 		"is_archived": true,
 		"archived_at": &now,
 	}).Error
+}
+
+// UserMayAccessDocumentForWorkflow true si user est approbateur de l'étape courante sur une instance en cours.
+func (r *WorkflowRepository) UserMayAccessDocumentForWorkflow(docID, userID uint, role string) (bool, error) {
+	var inst models.WorkflowInstance
+	err := r.db.Preload("CurrentStep.Approvers").
+		Where("document_id = ? AND status = ?", docID, models.WorkflowInstanceInProgress).
+		First(&inst).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if inst.CurrentStep == nil {
+		return false, nil
+	}
+	for _, a := range inst.CurrentStep.Approvers {
+		if a.UserID != nil && *a.UserID == userID {
+			return true, nil
+		}
+		if a.RoleName != "" && models.RoleMatchesStepApprover(a.RoleName, role) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

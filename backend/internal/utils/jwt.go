@@ -98,6 +98,44 @@ func (j *JWTUtil) ValidateAccessToken(tokenString string) (*JWTClaims, error) {
 	return nil, fmt.Errorf("invalid token claims")
 }
 
+const wsTicketExpiry = 60 * time.Second
+
+// GenerateWSTicket short-lived token for WebSocket upgrade (avoids JWT in query logs).
+func (j *JWTUtil) GenerateWSTicket(
+	userID uint,
+	email, role string,
+	tokenVersion uint,
+	sessionID string,
+) (string, error) {
+	claims := JWTClaims{
+		UserID:       userID,
+		Email:        email,
+		Role:         role,
+		TokenVersion: tokenVersion,
+		SessionID:    sessionID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   "ws_ticket",
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(wsTicketExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(j.secret)
+}
+
+// ValidateWSTicket validates a WebSocket ticket (not a general access token).
+func (j *JWTUtil) ValidateWSTicket(tokenString string) (*JWTClaims, error) {
+	claims, err := j.ValidateAccessToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	if claims.Subject != "ws_ticket" {
+		return nil, fmt.Errorf("not a ws ticket")
+	}
+	return claims, nil
+}
+
 type TokenPair struct {
 	AccessToken  string
 	RefreshToken string

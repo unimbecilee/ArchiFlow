@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,19 +44,13 @@ func (s *ArchiveService) CreateFromMultipart(ctx context.Context, in CreateArchi
 		return nil, fmt.Errorf("file is required")
 	}
 
-	file, err := in.File.Open()
+	contentType, raw, err := ValidateUploadFile(in.File)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
-	contentType := in.File.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
 
 	objectName := config.NewArchiveObjectName(in.File.Filename)
-	filePath, err := config.UploadObject(ctx, s.archivesBucket, objectName, file, in.File.Size, contentType)
+	filePath, err := config.UploadObject(ctx, s.archivesBucket, objectName, bytes.NewReader(raw), int64(len(raw)), contentType)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +75,7 @@ func (s *ArchiveService) CreateFromMultipart(ctx context.Context, in CreateArchi
 		Comment:       in.Comment,
 		Status:        status,
 		FilePath:      filePath,
-		FileSize:      in.File.Size,
+		FileSize:      int64(len(raw)),
 		ContentType:   contentType,
 		Data:          dataJSON,
 	}

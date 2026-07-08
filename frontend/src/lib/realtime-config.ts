@@ -12,9 +12,9 @@ function httpToWsBase(url: string): string {
   return url.replace(/^http/i, (m) => (m.toLowerCase() === "https" ? "wss" : "ws"));
 }
 
-/** URL WebSocket notifications (token en query). */
-export function getNotificationWebSocketUrl(token: string): string {
-  const path = `/api/ws?token=${encodeURIComponent(token)}`;
+/** URL WebSocket notifications (ticket court en query). */
+export function getNotificationWebSocketUrl(ticket: string): string {
+  const path = `/api/ws?ticket=${encodeURIComponent(ticket)}`;
   const explicit = process.env.NEXT_PUBLIC_WS_URL?.replace(/\/$/, "");
   if (explicit) {
     return `${httpToWsBase(explicit)}${path}`;

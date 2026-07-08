@@ -31,12 +31,22 @@ func (s *FolderService) List(userID uint, isAdmin bool, parentID *uint) ([]Folde
 		return nil, err
 	}
 	out := make([]FolderWithCounts, 0, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	ids := make([]uint, len(rows))
+	for i, f := range rows {
+		ids[i] = f.ID
+	}
+	sfMap, docMap, err := s.repo.BatchCountChildren(ids, userID, isAdmin)
+	if err != nil {
+		return nil, err
+	}
 	for _, f := range rows {
-		sf, doc, _ := s.repo.CountChildren(f.ID)
 		out = append(out, FolderWithCounts{
 			Folder:          f,
-			SubfoldersCount: sf,
-			DocumentsCount:  doc,
+			SubfoldersCount: sfMap[f.ID],
+			DocumentsCount:  docMap[f.ID],
 		})
 	}
 	return out, nil
@@ -104,7 +114,7 @@ func (s *FolderService) Delete(id, ownerID uint, isAdmin bool) error {
 	if !isAdmin && f.OwnerID != ownerID {
 		return errors.New("forbidden")
 	}
-	sf, doc, _ := s.repo.CountChildren(id)
+	sf, doc, _ := s.repo.CountChildren(id, ownerID, isAdmin)
 	if sf > 0 || doc > 0 {
 		return fmt.Errorf("folder not empty")
 	}

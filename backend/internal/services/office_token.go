@@ -7,12 +7,25 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"archiflow/backend/internal/config"
 )
 
-const officeTokenTTL = 2 * time.Hour
+func officeTokenTTL() time.Duration {
+	if raw := strings.TrimSpace(os.Getenv("OFFICE_FILE_TOKEN_TTL_MINUTES")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			return time.Duration(n) * time.Minute
+		}
+	}
+	if config.IsProduction() {
+		return 30 * time.Minute
+	}
+	return 2 * time.Hour
+}
 
 // officeToken: base64url(docID|userID|expUnix|purpose|hmac)
 func signOfficeToken(secret string, docID, userID uint, purpose string, ttl time.Duration) (string, error) {

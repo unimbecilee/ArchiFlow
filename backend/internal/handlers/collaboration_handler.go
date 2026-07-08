@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,12 +37,28 @@ func (h *CollaborationHandler) Share(c echo.Context) error {
 		Perms     []string `json:"permissions"`
 	}
 	if err := bindJSONStrict(c, &body); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
+		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "corps JSON invalide"})
 	}
 	if err := h.collab.ShareDocument(uint(docID), userID, roleFromContext(c), body.Email, body.UserID, body.Perms, body.Message); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+		status, msg := shareErrorResponse(err)
+		return c.JSON(status, map[string]any{"success": false, "error": msg})
 	}
-	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document shared"})
+	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document partagé"})
+}
+
+func shareErrorResponse(err error) (int, string) {
+	switch {
+	case errors.Is(err, services.ErrShareNoTarget):
+		return http.StatusBadRequest, "e-mail ou user_id requis"
+	case errors.Is(err, services.ErrShareUserNotFound):
+		return http.StatusNotFound, "aucun utilisateur ArchiFlow avec cet e-mail"
+	case errors.Is(err, services.ErrShareSelf):
+		return http.StatusBadRequest, "impossible de partager avec vous-même"
+	case errors.Is(err, services.ErrShareForbidden):
+		return http.StatusForbidden, "vous n'avez pas le droit de partager ce document"
+	default:
+		return http.StatusBadRequest, err.Error()
+	}
 }
 
 // SharedWithMe GET /api/documents/shared-with-me
@@ -217,6 +234,7 @@ func (h *CollaborationHandler) PreviewVersion(c echo.Context) error {
 	}
 	defer reader.Close()
 	c.Response().Header().Set("Content-Type", mime)
+	utils.ApplyPreviewSecurityHeaders(c.Response().Header(), mime)
 	if services.IsPreviewableMime(mime) {
 		if cd := utils.ContentDispositionInline(filename); cd != "" {
 			c.Response().Header().Set("Content-Disposition", cd)

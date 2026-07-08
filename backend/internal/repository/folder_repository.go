@@ -62,11 +62,61 @@ func (r *FolderRepository) ListAllByOwner(ownerID uint, admin bool) ([]models.Fo
 	return rows, err
 }
 
-func (r *FolderRepository) CountChildren(folderID uint) (subfolders int64, documents int64, err error) {
-	err = r.db.Model(&models.Folder{}).Where("parent_id = ?", folderID).Count(&subfolders).Error
+func (r *FolderRepository) BatchCountChildren(folderIDs []uint, ownerID uint, admin bool) (subfolders map[uint]int64, documents map[uint]int64, err error) {
+	subfolders = make(map[uint]int64, len(folderIDs))
+	documents = make(map[uint]int64, len(folderIDs))
+	if len(folderIDs) == 0 {
+		return subfolders, documents, nil
+	}
+	type countRow struct {
+		ParentID uint
+		Cnt      int64
+	}
+	var sfRows []countRow
+	sfQ := r.db.Model(&models.Folder{}).
+		Select("parent_id as parent_id, count(*) as cnt").
+		Where("parent_id IN ?", folderIDs)
+	if !admin {
+		sfQ = sfQ.Where("owner_id = ?", ownerID)
+	}
+	if err = sfQ.Group("parent_id").Scan(&sfRows).Error; err != nil {
+		return nil, nil, err
+	}
+	for _, row := range sfRows {
+		subfolders[row.ParentID] = row.Cnt
+	}
+	// Docs comptés seulement si owner_id = owner du dossier (évite docs orphelins d'autres users).
+	var docRows []countRow
+	if err = r.db.Model(&models.Document{}).
+		Select("documents.folder_id as parent_id, count(*) as cnt").
+		Joins("INNER JOIN folders ON folders.id = documents.folder_id").
+		Where("documents.folder_id IN ? AND documents.is_deleted = ? AND documents.owner_id = folders.owner_id", folderIDs, false).
+		Group("documents.folder_id").
+		Scan(&docRows).Error; err != nil {
+		return nil, nil, err
+	}
+	for _, row := range docRows {
+		documents[row.ParentID] = row.Cnt
+	}
+	return subfolders, documents, nil
+}
+
+func (r *FolderRepository) CountChildren(folderID uint, ownerID uint, admin bool) (subfolders int64, documents int64, err error) {
+	sfQ := r.db.Model(&models.Folder{}).Where("parent_id = ?", folderID)
+	if !admin {
+		sfQ = sfQ.Where("owner_id = ?", ownerID)
+	}
+	err = sfQ.Count(&subfolders).Error
 	if err != nil {
 		return
 	}
-	err = r.db.Model(&models.Document{}).Where("folder_id = ? AND is_deleted = ?", folderID, false).Count(&documents).Error
+	folder, ferr := r.FindByID(folderID)
+	if ferr != nil {
+		err = ferr
+		return
+	}
+	err = r.db.Model(&models.Document{}).
+		Where("folder_id = ? AND is_deleted = ? AND owner_id = ?", folderID, false, folder.OwnerID).
+		Count(&documents).Error
 	return
 }

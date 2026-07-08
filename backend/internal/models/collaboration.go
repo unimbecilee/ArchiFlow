@@ -22,7 +22,8 @@ type DocumentShare struct {
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 
-	SharedWith *User `gorm:"foreignKey:SharedWithID" json:"shared_with,omitempty"`
+	SharedWith *User     `gorm:"foreignKey:SharedWithID" json:"shared_with,omitempty"`
+	Document   *Document `gorm:"foreignKey:DocumentID" json:"document,omitempty"`
 }
 
 func (DocumentShare) TableName() string { return "document_shares" }

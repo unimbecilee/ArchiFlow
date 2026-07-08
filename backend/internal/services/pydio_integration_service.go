@@ -107,7 +107,9 @@ func (s *PydioIntegrationService) putUser(ctx context.Context, email, password, 
 	var userResp struct {
 		Uuid string `json:"Uuid"`
 	}
-	_ = json.Unmarshal(respBody, &userResp)
+	if err := json.Unmarshal(respBody, &userResp); err != nil {
+		return "", fmt.Errorf("pydio put user response: %w", err)
+	}
 	if userResp.Uuid != "" {
 		return userResp.Uuid, nil
 	}

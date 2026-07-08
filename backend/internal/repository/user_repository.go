@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"time"
 
 	"archiflow/backend/internal/models"
@@ -48,7 +49,8 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 
 func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("email = ?", email).First(&user).Error
+	email = strings.TrimSpace(email)
+	err := r.db.Where("LOWER(email) = LOWER(?)", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

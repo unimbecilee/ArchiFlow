@@ -31,8 +31,6 @@ func CORS() echo.MiddlewareFunc {
 		}
 	}
 
-	dev := strings.EqualFold(os.Getenv("ENVIRONMENT"), "development")
-
 	return middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowCredentials: true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
@@ -44,10 +42,6 @@ func CORS() echo.MiddlewareFunc {
 			}
 			origin = strings.TrimRight(origin, "/")
 			if _, ok := allowed[origin]; ok {
-				return true, nil
-			}
-			// Dev local : localhost / 127.0.0.1 sur tout port
-			if dev && (strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "http://127.0.0.1:")) {
 				return true, nil
 			}
 			return false, nil

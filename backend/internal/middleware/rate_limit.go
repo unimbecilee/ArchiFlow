@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -10,43 +11,93 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// AuthRateLimit limits brute-force on login/register/refresh (per IP).
-func AuthRateLimit() echo.MiddlewareFunc {
-	perMinute := 10
-	if raw := os.Getenv("AUTH_RATE_LIMIT_PER_MINUTE"); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			perMinute = n
-		}
+func rateLimitStore(perMinute, burst int, expires time.Duration) *middleware.RateLimiterMemoryStore {
+	if perMinute < 1 {
+		perMinute = 60
 	}
-	burst := 5
-	if raw := os.Getenv("AUTH_RATE_LIMIT_BURST"); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			burst = n
-		}
+	if burst < 1 {
+		burst = 10
 	}
-	expires := 3 * time.Minute
-	if raw := os.Getenv("AUTH_RATE_LIMIT_EXPIRES_SECONDS"); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
-			expires = time.Duration(n) * time.Second
-		}
+	if expires < time.Minute {
+		expires = 3 * time.Minute
 	}
-	store := middleware.NewRateLimiterMemoryStoreWithConfig(
+	return middleware.NewRateLimiterMemoryStoreWithConfig(
 		middleware.RateLimiterMemoryStoreConfig{
 			Rate:      rate.Every(time.Minute / time.Duration(perMinute)),
 			Burst:     burst,
 			ExpiresIn: expires,
 		},
 	)
+}
+
+func rateLimitMiddleware(store *middleware.RateLimiterMemoryStore, idFn func(echo.Context) (string, error)) echo.MiddlewareFunc {
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
-		Store: store,
-		IdentifierExtractor: func(c echo.Context) (string, error) {
-			return c.RealIP(), nil
-		},
+		Store:               store,
+		IdentifierExtractor: idFn,
 		ErrorHandler: func(c echo.Context, err error) error {
 			return c.JSON(429, map[string]any{
 				"success": false,
 				"message": "too many requests, try again later",
 			})
 		},
+	})
+}
+
+func envInt(key string, def int) int {
+	if raw := os.Getenv(key); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			return n
+		}
+	}
+	return def
+}
+
+// AuthRateLimit limits brute-force on login/register/refresh (per IP).
+func AuthRateLimit() echo.MiddlewareFunc {
+	perMinute := envInt("AUTH_RATE_LIMIT_PER_MINUTE", 10)
+	burst := envInt("AUTH_RATE_LIMIT_BURST", 5)
+	expires := time.Duration(envInt("AUTH_RATE_LIMIT_EXPIRES_SECONDS", 180)) * time.Second
+	store := rateLimitStore(perMinute, burst, expires)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		return c.RealIP(), nil
+	})
+}
+
+// ProtectedRateLimit applies to all authenticated API routes (per IP + user).
+func ProtectedRateLimit() echo.MiddlewareFunc {
+	perMinute := envInt("PROTECTED_RATE_LIMIT_PER_MINUTE", 120)
+	burst := envInt("PROTECTED_RATE_LIMIT_BURST", 40)
+	store := rateLimitStore(perMinute, burst, 3*time.Minute)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		uid, _ := c.Get("userID").(uint)
+		return fmt.Sprintf("%s:%d", c.RealIP(), uid), nil
+	})
+}
+
+// UploadRateLimit stricter cap on multipart uploads (per user + IP).
+func UploadRateLimit() echo.MiddlewareFunc {
+	perMinute := envInt("UPLOAD_RATE_LIMIT_PER_MINUTE", 20)
+	store := rateLimitStore(perMinute, 5, 3*time.Minute)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		uid, _ := c.Get("userID").(uint)
+		return fmt.Sprintf("upload:%s:%d", c.RealIP(), uid), nil
+	})
+}
+
+// PydioAPIRateLimit limits abuse on Cells → ArchiFlow bridge (per IP).
+func PydioAPIRateLimit() echo.MiddlewareFunc {
+	perMinute := envInt("PYDIO_API_RATE_LIMIT_PER_MINUTE", 60)
+	store := rateLimitStore(perMinute, 15, 3*time.Minute)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		return "pydio:" + c.RealIP(), nil
+	})
+}
+
+// APIRateLimit kept for backward compatibility (search-heavy routes).
+func APIRateLimit() echo.MiddlewareFunc {
+	perMinute := envInt("API_RATE_LIMIT_PER_MINUTE", 60)
+	store := rateLimitStore(perMinute, 20, 3*time.Minute)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		return c.RealIP(), nil
 	})
 }

@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -91,7 +92,9 @@ func (s *WorkflowService) StartInstance(workflowID, documentID, initiatorID uint
 	if err := s.repo.CreateInstance(inst); err != nil {
 		return nil, err
 	}
-	_ = s.repo.UpdateDocumentStatus(documentID, models.DocumentStatusValidation)
+	if err := s.repo.UpdateDocumentStatus(documentID, models.DocumentStatusValidation); err != nil {
+		log.Printf("workflow: update document status validation: %v", err)
+	}
 
 	full, err := s.repo.GetInstance(inst.ID)
 	if err != nil {
@@ -127,7 +130,9 @@ func (s *WorkflowService) RestartValidation(documentID, initiatorID uint, commen
 		return nil, errors.New("importez une nouvelle version avant de relancer la validation")
 	}
 	if doc.Status == models.DocumentStatusRejected {
-		_ = s.repo.UpdateDocumentStatus(documentID, models.DocumentStatusDraft)
+		if err := s.repo.UpdateDocumentStatus(documentID, models.DocumentStatusDraft); err != nil {
+			log.Printf("workflow: reset document status draft: %v", err)
+		}
 	}
 	return s.StartValidation(documentID, initiatorID, comment)
 }
@@ -208,7 +213,7 @@ func (s *WorkflowService) PendingApprovals(userID uint, role string) ([]models.W
 		if inst.CurrentStepID == nil {
 			continue
 		}
-		if s.canApprove(*inst.CurrentStepID, userID, role) {
+		if inst.CurrentStep != nil && canApproveFromStep(inst.CurrentStep, userID, role) {
 			out = append(out, inst)
 		}
 	}
@@ -294,12 +299,13 @@ func (s *WorkflowService) decide(instanceID, userID uint, role, comment, decisio
 	if inst.Status != models.WorkflowInstanceInProgress {
 		return errors.New("instance not in progress")
 	}
-	if inst.CurrentStepID == nil {
+	if inst.CurrentStep == nil {
 		return errors.New("no current step")
 	}
-	stepID := *inst.CurrentStepID
+	step := inst.CurrentStep
+	stepID := step.ID
 
-	if !s.canApprove(stepID, userID, role) {
+	if !canApproveFromStep(step, userID, role) {
 		return errors.New("not an approver for this step")
 	}
 
@@ -347,12 +353,15 @@ func (s *WorkflowService) decide(instanceID, userID uint, role, comment, decisio
 }
 
 func (s *WorkflowService) canApprove(stepID, userID uint, role string) bool {
-	return canApproveWorkflowStep(s.repo, stepID, userID, role)
+	step, err := s.repo.GetStep(stepID)
+	if err != nil {
+		return false
+	}
+	return canApproveFromStep(step, userID, role)
 }
 
-func canApproveWorkflowStep(repo *repository.WorkflowRepository, stepID, userID uint, role string) bool {
-	step, err := repo.GetStep(stepID)
-	if err != nil {
+func canApproveFromStep(step *models.WorkflowStep, userID uint, role string) bool {
+	if step == nil {
 		return false
 	}
 	for _, a := range step.Approvers {
@@ -364,6 +373,14 @@ func canApproveWorkflowStep(repo *repository.WorkflowRepository, stepID, userID 
 		}
 	}
 	return false
+}
+
+func canApproveWorkflowStep(repo *repository.WorkflowRepository, stepID, userID uint, role string) bool {
+	step, err := repo.GetStep(stepID)
+	if err != nil {
+		return false
+	}
+	return canApproveFromStep(step, userID, role)
 }
 
 func (s *WorkflowService) isStepComplete(inst *models.WorkflowInstance, stepID uint) (bool, error) {

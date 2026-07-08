@@ -2,6 +2,7 @@ package utils
 
 import (
 	"mime"
+	"net/http"
 	"path"
 	"strings"
 )
@@ -51,4 +52,12 @@ func ContentDispositionAttachment(filename string) string {
 func ContentDispositionInline(filename string) string {
 	fn := SanitizeDisplayFilename(filename)
 	return mime.FormatMediaType("inline", map[string]string{"filename": fn})
+}
+
+// ApplyPreviewSecurityHeaders mitigates XSS when serving HTML/SVG inline previews.
+func ApplyPreviewSecurityHeaders(h http.Header, mime string) {
+	if strings.HasPrefix(mime, "text/html") || mime == "image/svg+xml" {
+		h.Set("Content-Security-Policy", "sandbox")
+		h.Set("X-Content-Type-Options", "nosniff")
+	}
 }

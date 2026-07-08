@@ -50,6 +50,7 @@ func JWTAuth(jwtUtil *utils.JWTUtil, sessions *services.SessionService) echo.Mid
 			c.Set("email", claims.Email)
 			c.Set("role", claims.Role)
 			c.Set("sessionID", claims.SessionID)
+			c.Set("tokenVersion", claims.TokenVersion)
 
 			return next(c)
 		}
@@ -81,6 +82,21 @@ func MustChangePassword(users repository.UserRepository) echo.MiddlewareFunc {
 				Success: false,
 				Message: "password_change_required",
 			})
+		}
+	}
+}
+
+func RequireAdmin() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			role, _ := c.Get("role").(string)
+			if role != "admin" {
+				return c.JSON(http.StatusForbidden, dto.ErrorResponse{
+					Success: false,
+					Message: "admin only",
+				})
+			}
+			return next(c)
 		}
 	}
 }

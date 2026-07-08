@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"archiflow/backend/internal/models"
 
 	"gorm.io/gorm"
@@ -18,6 +20,23 @@ func (r *CollaborationRepository) CreateShare(s *models.DocumentShare) error {
 	return r.db.Create(s).Error
 }
 
+func (r *CollaborationRepository) UpsertShare(s *models.DocumentShare) error {
+	var existing models.DocumentShare
+	err := r.db.Where("document_id = ? AND shared_with_id = ?", s.DocumentID, s.SharedWithID).
+		First(&existing).Error
+	if err == nil {
+		existing.Permissions = s.Permissions
+		existing.Message = s.Message
+		existing.Active = true
+		existing.SharedByID = s.SharedByID
+		return r.db.Save(&existing).Error
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return r.db.Create(s).Error
+	}
+	return err
+}
+
 func (r *CollaborationRepository) FindShare(documentID, sharedWithID uint) (*models.DocumentShare, error) {
 	var s models.DocumentShare
 	err := r.db.Where("document_id = ? AND shared_with_id = ? AND active = ?", documentID, sharedWithID, true).
@@ -28,8 +47,15 @@ func (r *CollaborationRepository) FindShare(documentID, sharedWithID uint) (*mod
 func (r *CollaborationRepository) ListSharesForUser(userID uint) ([]models.DocumentShare, error) {
 	var rows []models.DocumentShare
 	err := r.db.Where("shared_with_id = ? AND active = ?", userID, true).
-		Preload("SharedWith").Find(&rows).Error
+		Preload("Document").Preload("SharedWith").Find(&rows).Error
 	return rows, err
+}
+
+func (r *CollaborationRepository) CountSharesForUser(userID uint) (int64, error) {
+	var n int64
+	err := r.db.Model(&models.DocumentShare{}).
+		Where("shared_with_id = ? AND active = ?", userID, true).Count(&n).Error
+	return n, err
 }
 
 func (r *CollaborationRepository) ListSharesForDocument(documentID uint) ([]models.DocumentShare, error) {

@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Clock, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/document-list";
@@ -9,26 +8,14 @@ import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
-import type { Document } from "@/types/documents";
+import { ErrorBanner } from "@/components/layout/error-banner";
+import { useDocumentListPage } from "@/hooks/use-document-list-page";
 import { getRecentDocuments } from "@/services/documents.service";
 
 export default function DocumentsRecentsPage() {
-  const [docs, setDocs] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setDocs(await getRecentDocuments());
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
+  const { items: docs, loading, load, error } = useDocumentListPage({
+    loadFn: getRecentDocuments,
+  });
   const openAction = useDocumentOpenAction();
 
   return (
@@ -45,6 +32,7 @@ export default function DocumentsRecentsPage() {
           </Button>
         }
       />
+      {error ? <ErrorBanner message={error} /> : null}
       <PagePanel
         title="Historique"
         subtitle={loading ? "Chargement..." : `${docs.length} document(s)`}

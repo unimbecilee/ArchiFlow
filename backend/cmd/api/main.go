@@ -31,6 +31,9 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to load configuration", zap.Error(err))
 	}
+	for _, w := range config.SecurityWarnings() {
+		logger.Warn("security warning", zap.String("detail", w))
+	}
 
 	db, err := config.InitDatabase(cfg.DatabaseURL)
 	if err != nil {
@@ -68,8 +71,12 @@ func main() {
 		if err != nil {
 			logger.Warn("Failed to initialize MinIO", zap.Error(err))
 		} else {
-			_ = config.EnsureBucket(cfg.MinioDocumentsBucket)
-			_ = config.EnsureBucket(cfg.MinioArchivesBucket)
+			if err := config.EnsureBucket(cfg.MinioDocumentsBucket); err != nil {
+				logger.Warn("EnsureBucket documents failed", zap.Error(err))
+			}
+			if err := config.EnsureBucket(cfg.MinioArchivesBucket); err != nil {
+				logger.Warn("EnsureBucket archives failed", zap.Error(err))
+			}
 		}
 	}
 
@@ -116,7 +123,7 @@ func main() {
 	if n := workflowService.NotifyStalePendingApprovals(); n > 0 {
 		logger.Info("Sent stale workflow reminders", zap.Int("count", n))
 	}
-	collaborationService := services.NewCollaborationService(collabRepo, documentRepo, userRepo, cfg.MinioDocumentsBucket, notificationRealtime)
+	collaborationService := services.NewCollaborationService(collabRepo, documentRepo, userRepo, workflowRepo, cfg.MinioDocumentsBucket, notificationRealtime)
 	officeService := services.NewOfficeService(collaborationService, userRepo)
 	favoriteService := services.NewFavoriteService(favRepo, documentRepo, collaborationService)
 	adminService := services.NewAdminService(userRepo, userPydioSync, emailService, sessionService)
@@ -153,7 +160,7 @@ func main() {
 	authPublic.POST("/refresh", authHandler.RefreshToken)
 	authPublic.POST("/logout", authHandler.ClearSession)
 
-	// WebSocket : auth JWT dans ws_handler (token query ou Authorization)
+	// WebSocket : ticket court dans ws_handler (POST /api/ws/ticket pour obtenir le ticket)
 	api.GET("/ws", wsHandler.Connect)
 
 	// OnlyOffice Document Server (auth par token HMAC, pas JWT utilisateur)
@@ -162,6 +169,7 @@ func main() {
 
 	protected := api.Group("")
 	protected.Use(middleware.JWTAuth(jwtUtil, sessionService))
+	protected.Use(middleware.ProtectedRateLimit())
 	protected.Use(middleware.MustChangePassword(userRepo))
 	protected.POST("/auth/logout", authHandler.Logout)
 	protected.GET("/auth/me", authHandler.GetMe)
@@ -182,10 +190,10 @@ func main() {
 	protected.GET("/dashboard/stats", dashboardHandler.Stats)
 
 	protected.GET("/documents/my", documentHandler.ListMy)
-	protected.GET("/documents/search", documentHandler.Search)
+	protected.GET("/documents/search", documentHandler.Search, middleware.APIRateLimit())
 	protected.GET("/documents/recent", documentHandler.ListRecent)
 	protected.GET("/documents/trash", documentHandler.ListTrash)
-	protected.POST("/documents/upload", documentHandler.Upload)
+	protected.POST("/documents/upload", documentHandler.Upload, middleware.UploadRateLimit())
 	protected.POST("/documents/:id/restore", documentHandler.Restore)
 	protected.POST("/documents/:id/lock", documentHandler.Lock)
 	protected.DELETE("/documents/:id/lock", documentHandler.Unlock)
@@ -234,22 +242,27 @@ func main() {
 	protected.PUT("/notifications/read-all", collaborationHandler.MarkAllRead)
 
 	protected.GET("/favorites", favoriteHandler.List)
-	protected.GET("/admin/users", adminHandler.ListUsers)
-	protected.POST("/admin/users", adminHandler.CreateUser)
-	protected.GET("/admin/users/:id", adminHandler.GetUser)
-	protected.PUT("/admin/users/:id", adminHandler.PutUser)
-	protected.PATCH("/admin/users/:id", adminHandler.PatchUser)
-	protected.POST("/admin/users/:id/resend-credentials", adminHandler.ResendCredentials)
-	protected.POST("/admin/users/:id/sync-pydio", adminHandler.SyncPydio)
-	protected.DELETE("/admin/users/:id", adminHandler.DeleteUser)
 
-	protected.GET("/admin/workflows", adminWorkflowHandler.List)
-	protected.GET("/admin/workflows/:id", adminWorkflowHandler.Get)
-	protected.POST("/admin/workflows", adminWorkflowHandler.Create)
-	protected.PUT("/admin/workflows/:id", adminWorkflowHandler.Put)
-	protected.DELETE("/admin/workflows/:id", adminWorkflowHandler.Delete)
+	protected.POST("/ws/ticket", wsHandler.IssueTicket)
+
+	admin := protected.Group("/admin", middleware.RequireAdmin())
+	admin.GET("/users", adminHandler.ListUsers)
+	admin.POST("/users", adminHandler.CreateUser)
+	admin.GET("/users/:id", adminHandler.GetUser)
+	admin.PUT("/users/:id", adminHandler.PutUser)
+	admin.PATCH("/users/:id", adminHandler.PatchUser)
+	admin.POST("/users/:id/resend-credentials", adminHandler.ResendCredentials)
+	admin.POST("/users/:id/sync-pydio", adminHandler.SyncPydio)
+	admin.DELETE("/users/:id", adminHandler.DeleteUser)
+
+	admin.GET("/workflows", adminWorkflowHandler.List)
+	admin.GET("/workflows/:id", adminWorkflowHandler.Get)
+	admin.POST("/workflows", adminWorkflowHandler.Create)
+	admin.PUT("/workflows/:id", adminWorkflowHandler.Put)
+	admin.DELETE("/workflows/:id", adminWorkflowHandler.Delete)
 
 	pydioAPI := e.Group("/api/v1")
+	pydioAPI.Use(middleware.PydioAPIRateLimit())
 	pydioAPI.Use(middleware.PydioAPIAuth())
 	pydioAPI.POST("/archives-requests", archivesHandler.Create)
 	pydioAPI.GET("/archives-requests", archivesHandler.List)

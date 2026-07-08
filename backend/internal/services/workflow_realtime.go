@@ -29,7 +29,7 @@ func (p *WorkflowRealtime) Publish(userID uint, role string) {
 	if rows, err := p.repo.ListPendingCandidates(userID); err == nil {
 		for i := range rows {
 			inst := rows[i]
-			if inst.CurrentStepID != nil && canApproveWorkflowStep(p.repo, *inst.CurrentStepID, userID, role) {
+			if inst.CurrentStep != nil && canApproveFromStep(inst.CurrentStep, userID, role) {
 				pending++
 			}
 		}

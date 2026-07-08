@@ -11,7 +11,8 @@ func TestUploadMimeAllowed(t *testing.T) {
 		{mime: "image/png", ok: true},
 		{mime: "text/plain", ok: true},
 		{mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ok: true},
-		{mime: "application/x-msdownload", ok: false},
+		{mime: "text/html", ok: false},
+		{mime: "image/svg+xml", ok: false},
 		{mime: "application/x-sh", ok: false},
 		{mime: "", ok: false},
 	}

@@ -3,7 +3,7 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5010}"
 EMAIL="${SMOKE_EMAIL:-admin@archiflow.local}"
-PASSWORD="${SMOKE_PASSWORD:-Admin123!}"
+PASSWORD="${SMOKE_PASSWORD:-Admin1234!}"
 FOLDER_ID="${SMOKE_FOLDER_ID:-1}"
 
 tmp_dir="$(mktemp -d)"
