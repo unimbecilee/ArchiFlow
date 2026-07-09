@@ -12,11 +12,12 @@ import (
 )
 
 type FolderService struct {
-	repo *repository.FolderRepository
+	repo    *repository.FolderRepository
+	docRepo *repository.DocumentRepository
 }
 
-func NewFolderService(repo *repository.FolderRepository) *FolderService {
-	return &FolderService{repo: repo}
+func NewFolderService(repo *repository.FolderRepository, docRepo *repository.DocumentRepository) *FolderService {
+	return &FolderService{repo: repo, docRepo: docRepo}
 }
 
 type FolderWithCounts struct {
@@ -63,29 +64,54 @@ type CreateFolderInput struct {
 	OwnerID     uint
 }
 
-func (s *FolderService) Create(in CreateFolderInput) (*models.Folder, error) {
-	if in.Name == "" {
-		return nil, fmt.Errorf("name is required")
+func (s *FolderService) Create(in CreateFolderInput, isAdmin bool) (*models.Folder, error) {
+	name, err := sanitizeFolderName(in.Name)
+	if err != nil {
+		return nil, err
 	}
+	ownerID := in.OwnerID
 	if in.ParentID != nil {
+		if err := s.CanAccess(*in.ParentID, in.OwnerID, isAdmin); err != nil {
+			return nil, fmt.Errorf("forbidden parent folder")
+		}
 		parent, err := s.repo.FindByID(*in.ParentID)
 		if err != nil {
 			return nil, fmt.Errorf("parent folder not found")
 		}
-		if parent.OwnerID != in.OwnerID {
-			return nil, fmt.Errorf("forbidden parent folder")
-		}
+		ownerID = parent.OwnerID
 	}
 	f := &models.Folder{
-		Name:        in.Name,
+		Name:        name,
 		Description: in.Description,
-		OwnerID:     in.OwnerID,
+		OwnerID:     ownerID,
 		ParentID:    in.ParentID,
 	}
 	if err := s.repo.Create(f); err != nil {
 		return nil, err
 	}
 	return f, nil
+}
+
+func sanitizeFolderName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return "", fmt.Errorf("name is required")
+	}
+	var b strings.Builder
+	for _, r := range name {
+		if r == '/' || r == '\\' || r == 0 {
+			continue
+		}
+		b.WriteRune(r)
+	}
+	name = strings.TrimSpace(b.String())
+	if name == "" {
+		return "", fmt.Errorf("name is required")
+	}
+	if len(name) > 255 {
+		name = name[:255]
+	}
+	return name, nil
 }
 
 func (s *FolderService) Update(id, ownerID uint, isAdmin bool, name, description string) (*models.Folder, error) {
@@ -97,7 +123,11 @@ func (s *FolderService) Update(id, ownerID uint, isAdmin bool, name, description
 		return nil, errors.New("forbidden")
 	}
 	if name != "" {
-		f.Name = name
+		sanitized, err := sanitizeFolderName(name)
+		if err != nil {
+			return nil, err
+		}
+		f.Name = sanitized
 	}
 	f.Description = description
 	if err := s.repo.Update(f); err != nil {
@@ -106,7 +136,7 @@ func (s *FolderService) Update(id, ownerID uint, isAdmin bool, name, description
 	return f, nil
 }
 
-func (s *FolderService) Delete(id, ownerID uint, isAdmin bool) error {
+func (s *FolderService) Delete(id, ownerID uint, isAdmin bool, recursive bool) error {
 	f, err := s.repo.FindByID(id)
 	if err != nil {
 		return err
@@ -116,9 +146,36 @@ func (s *FolderService) Delete(id, ownerID uint, isAdmin bool) error {
 	}
 	sf, doc, _ := s.repo.CountChildren(id, ownerID, isAdmin)
 	if sf > 0 || doc > 0 {
-		return fmt.Errorf("folder not empty")
+		if !recursive {
+			return fmt.Errorf("folder not empty")
+		}
+		return s.deleteRecursive(id, ownerID, isAdmin)
 	}
 	return s.repo.Delete(id, ownerID, isAdmin)
+}
+
+func (s *FolderService) deleteRecursive(id, ownerID uint, isAdmin bool) error {
+	ids, err := s.repo.CollectSubtreeIDs(id)
+	if err != nil {
+		return err
+	}
+	ordered, err := s.repo.OrderSubtreeByDepthDesc(ids)
+	if err != nil {
+		return err
+	}
+	return s.repo.GetDB().Transaction(func(tx *gorm.DB) error {
+		fr := repository.NewFolderRepository(tx)
+		dr := repository.NewDocumentRepository(tx)
+		if _, err := dr.SoftDeleteByFolderIDs(ids, ownerID, isAdmin); err != nil {
+			return err
+		}
+		for _, fid := range ordered {
+			if err := fr.Delete(fid, ownerID, isAdmin); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 type FolderBreadcrumbItem struct {

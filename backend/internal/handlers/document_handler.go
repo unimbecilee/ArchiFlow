@@ -14,12 +14,24 @@ import (
 )
 
 type DocumentHandler struct {
-	documentService    *services.DocumentService
+	documentService      *services.DocumentService
 	collaborationService *services.CollaborationService
+	policyService        *services.PolicyService
+	auditService         *services.AuditService
 }
 
-func NewDocumentHandler(documentService *services.DocumentService, collaborationService *services.CollaborationService) *DocumentHandler {
-	return &DocumentHandler{documentService: documentService, collaborationService: collaborationService}
+func NewDocumentHandler(
+	documentService *services.DocumentService,
+	collaborationService *services.CollaborationService,
+	policyService *services.PolicyService,
+	auditService *services.AuditService,
+) *DocumentHandler {
+	return &DocumentHandler{
+		documentService:      documentService,
+		collaborationService: collaborationService,
+		policyService:        policyService,
+		auditService:         auditService,
+	}
 }
 
 func (h *DocumentHandler) ensureDocAccess(c echo.Context, docID uint) error {
@@ -27,10 +39,21 @@ func (h *DocumentHandler) ensureDocAccess(c echo.Context, docID uint) error {
 	if err != nil {
 		return err
 	}
+	role := roleFromContext(c)
+	if h.policyService != nil {
+		ok, _, err := h.policyService.Can(userID, role, docID, services.ActionRead)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusNotFound, "document not found")
+		}
+		if !ok {
+			return echo.NewHTTPError(http.StatusForbidden, "forbidden")
+		}
+		return nil
+	}
 	if h.collaborationService == nil {
 		return nil
 	}
-	ok, _, err := h.collaborationService.CanAccess(docID, userID, roleFromContext(c))
+	ok, _, err := h.collaborationService.CanAccess(docID, userID, role)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "document not found")
 	}
@@ -76,6 +99,8 @@ func documentToView(d models.Document) map[string]any {
 		"previewable":             services.IsPreviewableMime(d.MimeType),
 		"editable":                services.IsEditableDocument(d.MimeType, d.FileName),
 		"office_editable":         services.IsOfficeDocument(d.MimeType, d.FileName),
+		"classification":          d.Classification,
+		"department":              d.Department,
 		"locked_by_id":          d.LockedByID,
 		"locked_at":             d.LockedAt,
 		"is_locked":             d.LockedByID != nil,
@@ -252,10 +277,34 @@ func (h *DocumentHandler) Upload(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	if h.auditService != nil {
+		uid := userID
+		_ = h.auditService.Log(models.AuditEvent{
+			Source: "api", ActorID: &uid, Action: "document.upload",
+			ResourceType: "document", ResourceID: strconv.FormatUint(uint64(doc.ID), 10),
+			IP: c.RealIP(), CorrelationID: services.NewCorrelationID(),
+		})
+	}
 	return c.JSON(http.StatusCreated, map[string]any{
 		"success": true,
 		"message": "document uploaded",
 		"data":    documentToView(*doc),
+	})
+}
+
+func (h *DocumentHandler) auditDoc(c echo.Context, action string, docID uint) {
+	if h.auditService == nil {
+		return
+	}
+	uid, _ := userIDFromContext(c)
+	var actor *uint
+	if uid > 0 {
+		actor = &uid
+	}
+	_ = h.auditService.Log(models.AuditEvent{
+		Source: "api", ActorID: actor, Action: action,
+		ResourceType: "document", ResourceID: strconv.FormatUint(uint64(docID), 10),
+		IP: c.RealIP(), CorrelationID: services.NewCorrelationID(),
 	})
 }
 
@@ -273,6 +322,7 @@ func (h *DocumentHandler) Download(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
 	}
 	defer reader.Close()
+	h.auditDoc(c, "document.download", uint(id))
 
 	c.Response().Header().Set("Content-Type", mime)
 	if cd := utils.ContentDispositionAttachment(filename); cd != "" {
@@ -361,5 +411,6 @@ func (h *DocumentHandler) Delete(c echo.Context) error {
 	if err := h.documentService.Delete(uint(id), userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	h.auditDoc(c, "document.delete", uint(id))
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document deleted"})
 }

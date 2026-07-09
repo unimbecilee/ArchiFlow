@@ -8,6 +8,7 @@ import {
   UploadSimple,
   ArrowLeft,
   FileText,
+  FolderOpen,
   X,
   CheckCircle,
   WarningCircle,
@@ -21,37 +22,47 @@ import { PagePanel } from "@/components/layout/page-panel";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { FolderPicker } from "@/components/documents/folder-picker";
 import {
-  IMPORT_ACCEPT,
+  displayPath,
+  fileRelativePath,
   MAX_IMPORT_FILES,
   MAX_IMPORT_FILE_MB,
 } from "@/lib/upload-accept";
+import { filesFromDataTransfer, resolveFolderTargets } from "@/lib/folder-upload";
+import { MAX_RESUMABLE_FILE_GB } from "@/lib/upload-limits";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { uploadDocuments } from "@/services/documents.service";
 
 type QueuedFile = {
   id: string;
   file: File;
   titre: string;
+  relativePath: string | null;
 };
 
 function formatBytes(size: number): string {
+  if (size >= 1024 ** 3) return `${(size / 1024 ** 3).toFixed(2)} GB`;
   const kb = size / 1024;
   if (kb < 1024) return `${Math.round(kb)} KB`;
   return `${(kb / 1024).toFixed(2)} MB`;
 }
 
 function queueId(file: File): string {
-  return `${file.name}-${file.size}-${file.lastModified}`;
+  const rel = fileRelativePath(file);
+  return rel ? `${rel}-${file.size}-${file.lastModified}` : `${file.name}-${file.size}-${file.lastModified}`;
 }
 
-function mergeFiles(existing: QueuedFile[], incoming: FileList | File[]): QueuedFile[] {
+function mergeFiles(existing: QueuedFile[], incoming: File[]): QueuedFile[] {
   const map = new Map(existing.map((q) => [q.id, q]));
-  for (const file of Array.from(incoming)) {
+  for (const file of incoming) {
     const id = queueId(file);
     if (!map.has(id)) {
+      const rel = fileRelativePath(file);
+      const baseName = file.name.replace(/\.[^.]+$/, "") || file.name;
       map.set(id, {
         id,
         file,
-        titre: file.name.replace(/\.[^.]+$/, "") || file.name,
+        titre: baseName,
+        relativePath: rel,
       });
     }
   }
@@ -70,11 +81,18 @@ function ImporterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [progress, setProgress] = useState({ done: 0, total: 0, name: "" });
+  const [progress, setProgress] = useState({
+    done: 0,
+    total: 0,
+    name: "",
+    bytesUploaded: 0,
+    bytesTotal: 0,
+  });
   const [lastResults, setLastResults] = useState<
     Array<{ name: string; ok: boolean; error?: string }>
   >([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
 
   const totalSize = useMemo(
     () => queue.reduce((sum, q) => sum + q.file.size, 0),
@@ -86,7 +104,8 @@ function ImporterForm() {
       ? `/mes-documents?folder=${folderId}`
       : "/mes-documents";
 
-  const addFiles = (files: FileList | File[]) => {
+  const addFiles = (files: File[]) => {
+    if (files.length === 0) return;
     setError(null);
     setLastResults([]);
     setQueue((prev) => {
@@ -96,6 +115,17 @@ function ImporterForm() {
       }
       return merged;
     });
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    try {
+      const files = await filesFromDataTransfer(e.dataTransfer);
+      addFiles(files);
+    } catch {
+      setError("Impossible de lire le depot.");
+    }
   };
 
   const removeFile = (id: string) => {
@@ -115,17 +145,34 @@ function ImporterForm() {
     setLoading(true);
     setError(null);
     setLastResults([]);
-    setProgress({ done: 0, total: queue.length, name: "" });
+    setProgress({ done: 0, total: queue.length, name: "", bytesUploaded: 0, bytesTotal: 0 });
 
     try {
+      const baseFolderId = folderId ? Number(folderId) : null;
+      const folderMap = await resolveFolderTargets(
+        queue.map((q) => q.file),
+        baseFolderId
+      );
+
       const results = await uploadDocuments(
-        queue.map((q) => ({ file: q.file, titre: q.titre })),
+        queue.map((q) => ({
+          file: q.file,
+          titre: q.titre,
+          folder_id: folderMap.get(q.file) ?? baseFolderId,
+        })),
         {
           description,
           type_document: typeDocument,
           folder_id: folderId ? Number(folderId) : null,
         },
-        (done, total, currentName) => setProgress({ done, total, name: currentName })
+        (p) =>
+          setProgress({
+            done: p.done,
+            total: p.total,
+            name: p.currentName,
+            bytesUploaded: p.bytesUploaded ?? 0,
+            bytesTotal: p.bytesTotal ?? 0,
+          })
       );
 
       const summary = results.map((r) => ({
@@ -155,21 +202,25 @@ function ImporterForm() {
         setError("Aucun fichier importe. Verifiez formats et taille.");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Echec import");
+      setError(getApiErrorMessage(err, "Echec import"));
     } finally {
       setLoading(false);
     }
   };
 
   const progressPct =
-    progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+    progress.bytesTotal > 0
+      ? Math.round((progress.bytesUploaded / progress.bytesTotal) * 100)
+      : progress.total > 0
+        ? Math.round((progress.done / progress.total) * 100)
+        : 0;
 
   return (
     <PageFrame className="max-w-4xl">
       <PageHeader
         eyebrow="Documents"
         title="Importer"
-        description="Depot multiple : PDF, Office, images, texte. Metadonnees communes, titres par fichier."
+        description="Depot de fichiers ou dossiers entiers — tous formats (video, audio, archives…)."
         icon={<UploadSimple className="h-6 w-6" weight="duotone" />}
         actions={
           <Button variant="outline" size="sm" asChild className="gap-1.5">
@@ -183,7 +234,7 @@ function ImporterForm() {
 
       <PagePanel
         title="Import par lot"
-        subtitle={`Jusqu'a ${MAX_IMPORT_FILES} fichiers, ${MAX_IMPORT_FILE_MB} Mo chacun, types mixtes.`}
+        subtitle={`Jusqu'a ${MAX_IMPORT_FILES} fichiers · tous types · ${MAX_IMPORT_FILE_MB} Mo (HTTP) ou ${MAX_RESUMABLE_FILE_GB} Go (MPU).`}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <motion.div
@@ -192,11 +243,7 @@ function ImporterForm() {
               setDragOver(true);
             }}
             onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
-            }}
+            onDrop={(e) => void handleDrop(e)}
             className={`rounded-3xl border-2 border-dashed p-6 transition-colors ${
               dragOver
                 ? "border-emerald-500 bg-emerald-50/70"
@@ -209,10 +256,10 @@ function ImporterForm() {
               </div>
               <div>
                 <p className="text-sm font-medium text-zinc-900">
-                  Glissez plusieurs fichiers ou parcourez le dossier
+                  Glissez fichiers ou dossiers, ou parcourez
                 </p>
                 <p className="mt-1 text-xs text-zinc-600">
-                  PDF, Word, Excel, PowerPoint, OpenDocument, images, ZIP, texte.
+                  Video, audio, images, archives, Office — structure des dossiers preservee.
                 </p>
               </div>
               <input
@@ -220,16 +267,38 @@ function ImporterForm() {
                 id="files"
                 type="file"
                 multiple
-                accept={IMPORT_ACCEPT}
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files?.length) addFiles(e.target.files);
+                  if (e.target.files?.length) addFiles(Array.from(e.target.files));
                   e.target.value = "";
                 }}
               />
-              <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
-                Choisir fichiers
-              </Button>
+              <input
+                ref={folderInputRef}
+                id="folders"
+                type="file"
+                multiple
+                className="hidden"
+                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                onChange={(e) => {
+                  if (e.target.files?.length) addFiles(Array.from(e.target.files));
+                  e.target.value = "";
+                }}
+              />
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+                  Choisir fichiers
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => folderInputRef.current?.click()}
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  Choisir dossier
+                </Button>
+              </div>
             </div>
           </motion.div>
 
@@ -250,7 +319,12 @@ function ImporterForm() {
                 />
               </div>
               {progress.name && (
-                <p className="truncate text-xs text-zinc-600">{progress.name}</p>
+                <p className="truncate text-xs text-zinc-600">
+                  {progress.name}
+                  {progress.bytesTotal > 0
+                    ? ` · ${formatBytes(progress.bytesUploaded)} / ${formatBytes(progress.bytesTotal)}`
+                    : ""}
+                </p>
               )}
             </div>
           )}
@@ -278,7 +352,7 @@ function ImporterForm() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-zinc-900">
-                          {item.file.name}
+                          {displayPath(item.file)}
                         </p>
                         <p className="text-xs text-zinc-500">{formatBytes(item.file.size)}</p>
                       </div>

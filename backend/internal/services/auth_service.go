@@ -23,10 +23,11 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo    repository.UserRepository
-	jwtUtil     *utils.JWTUtil
-	sessions    *SessionService
-	pydioSync   *UserPydioSync
+	userRepo  repository.UserRepository
+	jwtUtil   *utils.JWTUtil
+	sessions  *SessionService
+	pydioSync *UserPydioSync
+	sftpSync  *UserSftpGoSync
 }
 
 func NewAuthService(
@@ -34,12 +35,14 @@ func NewAuthService(
 	jwtUtil *utils.JWTUtil,
 	sessions *SessionService,
 	pydioSync *UserPydioSync,
+	sftpSync *UserSftpGoSync,
 ) AuthService {
 	return &authService{
 		userRepo:  userRepo,
 		jwtUtil:   jwtUtil,
 		sessions:  sessions,
 		pydioSync: pydioSync,
+		sftpSync:  sftpSync,
 	}
 }
 
@@ -74,6 +77,9 @@ func (s *authService) Register(req dto.RegisterRequest, meta SessionMeta) (*dto.
 			s.pydioSync.RollbackCreate(context.Background(), user.Email, user.ID)
 			return nil, errors.New("failed to create collaboration account")
 		}
+	}
+	if s.sftpSync != nil {
+		_ = s.sftpSync.ProvisionOnCreate(context.Background(), user, req.Password)
 	}
 
 	user, _ = s.userRepo.GetByID(user.ID)
@@ -217,6 +223,10 @@ func toUserResponse(user *models.User) dto.UserResponse {
 		LastName:           user.LastName,
 		Role:               user.Role,
 		AvatarURL:          user.AvatarURL,
+		Department:         user.Department,
+		ClearanceLevel:     user.ClearanceLevel,
+		SftpEnabled:        user.SftpEnabled,
+		SftpMode:           user.SftpMode,
 		IsActive:           user.IsActive,
 		MustChangePassword: user.MustChangePassword,
 		PydioLinked:        user.PydioPasswordEnc != "",

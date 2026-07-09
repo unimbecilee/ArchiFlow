@@ -1,0 +1,195 @@
+package services
+
+import (
+	"fmt"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+	"time"
+
+	"archiflow/backend/internal/config"
+	"archiflow/backend/internal/models"
+	"archiflow/backend/internal/repository"
+	"archiflow/backend/internal/utils"
+)
+
+// SftpGoAuthService — external auth hook SFTPGo.
+type SftpGoAuthService struct {
+	userRepo repository.UserRepository
+	sftpRepo *repository.SftpRepository
+	audit    *AuditService
+}
+
+func NewSftpGoAuthService(
+	userRepo repository.UserRepository,
+	sftpRepo *repository.SftpRepository,
+	audit *AuditService,
+) *SftpGoAuthService {
+	return &SftpGoAuthService{userRepo: userRepo, sftpRepo: sftpRepo, audit: audit}
+}
+
+type SftpGoAuthRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	IP       string `json:"ip"`
+	Protocol string `json:"protocol"`
+}
+
+// SftpGoAuthResponse format attendu par SFTPGo external auth hook.
+type SftpGoAuthResponse struct {
+	Status      int                 `json:"status"`
+	Username    string              `json:"username,omitempty"`
+	HomeDir     string              `json:"home_dir,omitempty"`
+	Permissions map[string][]string `json:"permissions,omitempty"`
+	UID         int                 `json:"uid,omitempty"`
+	GID         int                 `json:"gid,omitempty"`
+	Filesystem  map[string]any      `json:"filesystem,omitempty"`
+}
+
+func (s *SftpGoAuthService) Authenticate(req SftpGoAuthRequest) (*SftpGoAuthResponse, error) {
+	username := strings.ToLower(strings.TrimSpace(req.Username))
+	if username == "" || req.Password == "" {
+		return &SftpGoAuthResponse{Status: 0}, nil
+	}
+
+	var ownerID uint
+	var actorEmail string
+	var sftpMode string
+
+	// 1) Service account M2M
+	if sa, err := s.sftpRepo.FindServiceAccountBySftpUser(username); err == nil && sa != nil {
+		if !sa.IsActive || !utils.VerifyPassword(req.Password, sa.PasswordHash) {
+			s.logLogin(nil, username, req.IP, req.Protocol, false)
+			return &SftpGoAuthResponse{Status: 0}, nil
+		}
+		u, err := s.userRepo.GetByID(sa.ArchiflowUserID)
+		if err != nil || !u.IsActive {
+			s.logLogin(nil, username, req.IP, req.Protocol, false)
+			return &SftpGoAuthResponse{Status: 0}, nil
+		}
+		ownerID = u.ID
+		actorEmail = username
+		sftpMode = serviceAccountSftpMode(sa)
+		now := time.Now()
+		sa.LastUsedAt = &now
+		_ = s.sftpRepo.UpdateServiceAccount(sa)
+	} else {
+		// 2) Humain ArchiFlow (email + bcrypt)
+		u, err := s.userRepo.GetByEmail(username)
+		if err != nil || !u.IsActive {
+			s.logLogin(nil, username, req.IP, req.Protocol, false)
+			return &SftpGoAuthResponse{Status: 0}, nil
+		}
+		if !utils.VerifyPassword(req.Password, u.PasswordHash) {
+			s.logLogin(&u.ID, username, req.IP, req.Protocol, false)
+			return &SftpGoAuthResponse{Status: 0}, nil
+		}
+		ok, mode := humanSftpAccess(u)
+		if !ok {
+			s.logLogin(&u.ID, u.Email, req.IP, req.Protocol, false)
+			return &SftpGoAuthResponse{Status: 0}, nil
+		}
+		ownerID = u.ID
+		actorEmail = u.Email
+		sftpMode = mode
+	}
+
+	perms := sftpPermissionsForMode(sftpMode)
+	if perms == nil {
+		s.logLogin(&ownerID, actorEmail, req.IP, req.Protocol, false)
+		return &SftpGoAuthResponse{Status: 0}, nil
+	}
+
+	home := path.Join("/users", strconv.FormatUint(uint64(ownerID), 10))
+	s.logLogin(&ownerID, actorEmail, req.IP, req.Protocol, true)
+
+	return &SftpGoAuthResponse{
+		Status:      1,
+		Username:    username,
+		HomeDir:     home,
+		UID:         0,
+		GID:         0,
+		Permissions: perms,
+		Filesystem:  s3FilesystemConfig(ownerID),
+	}, nil
+}
+
+func (s *SftpGoAuthService) logLogin(actorID *uint, email, ip, protocol string, ok bool) {
+	if s.audit == nil {
+		return
+	}
+	action := "sftp.login.failed"
+	if ok {
+		action = "sftp.login.ok"
+	}
+	_ = s.audit.Log(models.AuditEvent{
+		Source:        "sftpgo",
+		ActorID:       actorID,
+		ActorEmail:    email,
+		Action:        action,
+		IP:            ip,
+		ResourceType:  "user",
+		ResourceID:    email,
+		CorrelationID: NewCorrelationID(),
+		Metadata:      fmt.Sprintf(`{"protocol":%q}`, protocol),
+	})
+}
+
+func s3FilesystemConfig(userID uint) map[string]any {
+	endpoint := os.Getenv("MINIO_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "minio:9000"
+	}
+	access := os.Getenv("MINIO_SFTP_ACCESS_KEY")
+	secret := os.Getenv("MINIO_SFTP_SECRET_KEY")
+	if access == "" {
+		access = os.Getenv("MINIO_ACCESS_KEY")
+	}
+	if secret == "" {
+		secret = os.Getenv("MINIO_SECRET_KEY")
+	}
+	if access == "" {
+		access = "minioadmin"
+	}
+	if secret == "" {
+		secret = "minioadmin123"
+	}
+	bucket := config.SFTPInboxBucket()
+	keyPrefix := path.Join("users", strconv.FormatUint(uint64(userID), 10))
+	useSSL := strings.EqualFold(os.Getenv("MINIO_USE_SSL"), "true")
+	return map[string]any{
+		"provider": 1,
+		"s3config": map[string]any{
+			"bucket":             bucket,
+			"region":             "us-east-1",
+			"access_key":         access,
+			"access_secret":      secret,
+			"endpoint":           endpoint,
+			"force_path_style":   true,
+			"key_prefix":         keyPrefix + "/",
+			"storage_class":      "",
+			"upload_part_size":   sftpUploadPartSizeMB(),
+			"upload_concurrency": sftpUploadConcurrency(),
+			"skip_tls_verify":    !useSSL,
+		},
+	}
+}
+
+func sftpUploadPartSizeMB() int {
+	if raw := strings.TrimSpace(os.Getenv("SFTP_UPLOAD_PART_SIZE_MB")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n >= 5 {
+			return n
+		}
+	}
+	return 64
+}
+
+func sftpUploadConcurrency() int {
+	if raw := strings.TrimSpace(os.Getenv("SFTP_UPLOAD_CONCURRENCY")); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n >= 1 {
+			return n
+		}
+	}
+	return 8
+}

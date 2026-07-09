@@ -101,3 +101,24 @@ func APIRateLimit() echo.MiddlewareFunc {
 		return c.RealIP(), nil
 	})
 }
+
+// UploadInitRateLimit limits MPU session creation (per user + IP).
+func UploadInitRateLimit() echo.MiddlewareFunc {
+	perHour := envInt("UPLOAD_INIT_RATE_LIMIT_PER_HOUR", 200)
+	burst := envInt("UPLOAD_INIT_RATE_LIMIT_BURST", 50)
+	if perHour < 1 {
+		perHour = 200
+	}
+	if burst < 1 {
+		burst = 50
+	}
+	perMinute := perHour / 60
+	if perMinute < 1 {
+		perMinute = 1
+	}
+	store := rateLimitStore(perMinute, burst, time.Hour)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		uid, _ := c.Get("userID").(uint)
+		return fmt.Sprintf("upload-init:%s:%d", c.RealIP(), uid), nil
+	})
+}

@@ -1,0 +1,23 @@
+# Optional reverse proxy for production (profile: proxy)
+# Browser PUT parts go direct to MinIO — do not proxy object bodies through Caddy.
+:80 {
+  handle /api/upload/* {
+    reverse_proxy backend:5000 {
+      transport http {
+        read_timeout 0
+        write_timeout 0
+      }
+    }
+  }
+  handle /api/* {
+    reverse_proxy backend:5000
+  }
+  handle {
+    reverse_proxy frontend:3000
+  }
+}
+
+# Direct MinIO uploads (separate host) — example:
+# uploads.localhost {
+#   reverse_proxy minio:9000
+# }

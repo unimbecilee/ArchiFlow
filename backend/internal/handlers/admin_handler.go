@@ -174,3 +174,49 @@ func (h *AdminHandler) DeleteUser(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true})
 }
+
+// CreateServiceAccount POST /api/admin/users/:id/service-accounts
+func (h *AdminHandler) CreateServiceAccount(c echo.Context) error {
+	if err := requireAdmin(c); err != nil {
+		return err
+	}
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var body struct {
+		Name        string `json:"name"`
+		Username    string `json:"username"`
+		Password    string `json:"password"`
+		Description string `json:"description"`
+		SftpMode    string `json:"sftp_mode"`
+	}
+	if err := c.Bind(&body); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
+	}
+	sa, err := h.admin.CreateServiceAccount(c.Request().Context(), uint(id), body.Name, body.Username, body.Password, body.Description, body.SftpMode)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+	}
+	return c.JSON(http.StatusCreated, map[string]any{
+		"success": true,
+		"data": map[string]any{
+			"id":                sa.ID,
+			"name":              sa.Name,
+			"sftpgo_username":   sa.SftpGoUsername,
+			"archiflow_user_id": sa.ArchiflowUserID,
+			"sftp_mode":         sa.SftpMode,
+			"is_active":         sa.IsActive,
+		},
+	})
+}
+
+// ListServiceAccounts GET /api/admin/users/:id/service-accounts
+func (h *AdminHandler) ListServiceAccounts(c echo.Context) error {
+	if err := requireAdmin(c); err != nil {
+		return err
+	}
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	rows, err := h.admin.ListServiceAccounts(uint(id))
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": rows})
+}

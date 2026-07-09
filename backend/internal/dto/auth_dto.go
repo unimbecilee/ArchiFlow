@@ -67,6 +67,10 @@ type UserResponse struct {
 	LastName    string     `json:"last_name"`
 	Role        string     `json:"role"`
 	AvatarURL   string     `json:"avatar_url"`
+	Department     string     `json:"department,omitempty"`
+	ClearanceLevel string     `json:"clearance_level,omitempty"`
+	SftpEnabled        bool       `json:"sftp_enabled"`
+	SftpMode           string     `json:"sftp_mode"`
 	IsActive           bool       `json:"is_active"`
 	MustChangePassword bool       `json:"must_change_password"`
 	PydioLinked        bool       `json:"pydio_linked,omitempty"`

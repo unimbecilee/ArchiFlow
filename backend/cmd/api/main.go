@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/handlers"
@@ -61,6 +63,12 @@ func main() {
 		&models.DocumentTagLink{},
 		&models.Notification{},
 		&models.DocumentFavorite{},
+		&models.SftpIngestEvent{},
+		&models.ServiceAccount{},
+		&models.AuditEvent{},
+		&models.AccessPolicy{},
+		&models.UploadSession{},
+		&models.UploadPart{},
 	); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
@@ -77,6 +85,17 @@ func main() {
 			if err := config.EnsureBucket(cfg.MinioArchivesBucket); err != nil {
 				logger.Warn("EnsureBucket archives failed", zap.Error(err))
 			}
+			if err := config.EnsureBucket(cfg.MinioSFTPInboxBucket); err != nil {
+				logger.Warn("EnsureBucket sftp inbox failed", zap.Error(err))
+			}
+			publicEndpoint := os.Getenv("MINIO_PUBLIC_ENDPOINT")
+			if publicEndpoint == "" {
+				publicEndpoint = cfg.MinioEndpoint
+			}
+			publicSSL := os.Getenv("MINIO_PUBLIC_USE_SSL") == "true"
+			if err := config.InitMinioPublicURL(publicEndpoint, publicSSL, cfg.MinioAccessKey, cfg.MinioSecretKey); err != nil {
+				logger.Warn("MinIO public presign client init failed", zap.Error(err))
+			}
 		}
 	}
 
@@ -86,6 +105,7 @@ func main() {
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	folderRepo := repository.NewFolderRepository(db)
 	documentRepo := repository.NewDocumentRepository(db)
+	uploadRepo := repository.NewUploadRepository(db)
 	archiveRepo := repository.NewArchiveRepository(db)
 	workflowRepo := repository.NewWorkflowRepository(db)
 	collabRepo := repository.NewCollaborationRepository(db)
@@ -94,15 +114,20 @@ func main() {
 	emailService := services.NewEmailService()
 	pydioIntegration := services.NewPydioIntegrationService()
 	userPydioSync := services.NewUserPydioSync(pydioIntegration, userRepo)
+	sftpRepo := repository.NewSftpRepository(db)
+	sftpGoAdmin := services.NewSftpGoAdminClient()
+	userSftpGoSync := services.NewUserSftpGoSync(sftpGoAdmin, userRepo, sftpRepo)
+	auditService := services.NewAuditService(sftpRepo)
 	seed.DefaultWorkflows(db)
 	seed.EnsureValidationWorkflowApprovers(db)
 	seed.DefaultAdmin(db, userPydioSync)
 	seed.DefaultManager(db, userPydioSync)
 	seed.DefaultValidator(db, userPydioSync)
 	seed.DefaultArchivist(db, userPydioSync)
+	seed.BackfillSftpDefaults(db)
 	sessionService := services.NewSessionService(userRepo, refreshTokenRepo, jwtUtil)
-	authService := services.NewAuthService(userRepo, jwtUtil, sessionService, userPydioSync)
-	folderService := services.NewFolderService(folderRepo)
+	authService := services.NewAuthService(userRepo, jwtUtil, sessionService, userPydioSync, userSftpGoSync)
+	folderService := services.NewFolderService(folderRepo, documentRepo)
 	documentService := services.NewDocumentService(documentRepo, folderRepo, cfg.MinioDocumentsBucket)
 	archiveService := services.NewArchiveService(archiveRepo, cfg.MinioArchivesBucket)
 	rtHub := realtime.NewHub()
@@ -115,6 +140,8 @@ func main() {
 	defer closeBroker()
 	notificationRealtime := services.NewNotificationRealtime(collabRepo, rtBroker)
 	workflowRealtime := services.NewWorkflowRealtime(workflowRepo, userRepo, rtBroker)
+	uploadQuotaService := services.NewUploadQuotaService(documentRepo, uploadRepo)
+	uploadService := services.NewUploadService(uploadRepo, documentRepo, folderRepo, uploadQuotaService, notificationRealtime, cfg.MinioDocumentsBucket)
 	notificationService := services.NewNotificationService(collabRepo, emailService, userRepo, notificationRealtime)
 	workflowService := services.NewWorkflowService(workflowRepo, documentRepo, collabRepo, userRepo, notificationService, workflowRealtime)
 	if n := workflowService.RepairStuckInstances(); n > 0 {
@@ -124,19 +151,27 @@ func main() {
 		logger.Info("Sent stale workflow reminders", zap.Int("count", n))
 	}
 	collaborationService := services.NewCollaborationService(collabRepo, documentRepo, userRepo, workflowRepo, cfg.MinioDocumentsBucket, notificationRealtime)
+	policyService := services.NewPolicyService(collaborationService, documentRepo, userRepo, sftpRepo)
 	officeService := services.NewOfficeService(collaborationService, userRepo)
 	favoriteService := services.NewFavoriteService(favRepo, documentRepo, collaborationService)
-	adminService := services.NewAdminService(userRepo, userPydioSync, emailService, sessionService)
+	adminService := services.NewAdminService(userRepo, userPydioSync, userSftpGoSync, emailService, sessionService)
+	sftpAuthService := services.NewSftpGoAuthService(userRepo, sftpRepo, auditService)
+	sftpIngestService := services.NewSFTPIngestService(
+		sftpRepo, documentRepo, userRepo, auditService, notificationRealtime,
+		cfg.MinioDocumentsBucket, cfg.MinioSFTPInboxBucket, collaborationService,
+	)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	folderHandler := handlers.NewFolderHandler(folderService)
-	documentHandler := handlers.NewDocumentHandler(documentService, collaborationService)
-	collaborationHandler := handlers.NewCollaborationHandler(collaborationService)
+	documentHandler := handlers.NewDocumentHandler(documentService, collaborationService, policyService, auditService)
+	uploadHandler := handlers.NewUploadHandler(uploadService)
+	collaborationHandler := handlers.NewCollaborationHandler(collaborationService, auditService, policyService)
 	favoriteHandler := handlers.NewFavoriteHandler(favoriteService, documentHandler)
 	adminHandler := handlers.NewAdminHandler(adminService)
 	archivesHandler := handlers.NewArchivesRequestsHandler(archiveService)
 	pydioHandler := handlers.NewPydioHandler(archiveService, documentService)
 	integrationsHandler := handlers.NewIntegrationsHandler(pydioIntegration, userPydioSync)
+	sftpGoHandler := handlers.NewSftpGoHandler(sftpAuthService, sftpIngestService, auditService)
 	workflowHandler := handlers.NewWorkflowHandler(workflowService)
 	adminWorkflowHandler := handlers.NewAdminWorkflowHandler(workflowService)
 	officeHandler := handlers.NewOfficeHandler(officeService)
@@ -167,6 +202,11 @@ func main() {
 	api.GET("/office/files/:id/:token", officeHandler.DownloadFile)
 	api.POST("/office/callback/:id/:token", officeHandler.Callback)
 
+	// SFTPGo MFT — external auth + webhooks (pas de JWT utilisateur)
+	sftpgoAPI := api.Group("/integrations/sftpgo")
+	sftpgoAPI.POST("/auth", sftpGoHandler.Auth, middleware.AuthRateLimit())
+	sftpgoAPI.POST("/hooks", sftpGoHandler.Hooks, middleware.SftpGoWebhookAuth())
+
 	protected := api.Group("")
 	protected.Use(middleware.JWTAuth(jwtUtil, sessionService))
 	protected.Use(middleware.ProtectedRateLimit())
@@ -194,6 +234,13 @@ func main() {
 	protected.GET("/documents/recent", documentHandler.ListRecent)
 	protected.GET("/documents/trash", documentHandler.ListTrash)
 	protected.POST("/documents/upload", documentHandler.Upload, middleware.UploadRateLimit())
+
+	protected.POST("/upload/sessions", uploadHandler.InitSession, middleware.UploadInitRateLimit())
+	protected.GET("/upload/sessions/:id", uploadHandler.GetStatus)
+	protected.GET("/upload/sessions/:id/parts/:n/url", uploadHandler.PresignPart)
+	protected.POST("/upload/sessions/:id/complete", uploadHandler.Complete)
+	protected.DELETE("/upload/sessions/:id", uploadHandler.Abort)
+
 	protected.POST("/documents/:id/restore", documentHandler.Restore)
 	protected.POST("/documents/:id/lock", documentHandler.Lock)
 	protected.DELETE("/documents/:id/lock", documentHandler.Unlock)
@@ -253,6 +300,8 @@ func main() {
 	admin.PATCH("/users/:id", adminHandler.PatchUser)
 	admin.POST("/users/:id/resend-credentials", adminHandler.ResendCredentials)
 	admin.POST("/users/:id/sync-pydio", adminHandler.SyncPydio)
+	admin.POST("/users/:id/service-accounts", adminHandler.CreateServiceAccount)
+	admin.GET("/users/:id/service-accounts", adminHandler.ListServiceAccounts)
 	admin.DELETE("/users/:id", adminHandler.DeleteUser)
 
 	admin.GET("/workflows", adminWorkflowHandler.List)
@@ -278,8 +327,23 @@ func main() {
 	pydioAPI.POST("/pydio/webhooks/node-deleted", pydioHandler.WebhookNodeDeleted)
 
 	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "healthy"})
+		return c.JSON(http.StatusOK, map[string]any{
+			"status":         "healthy",
+			"upload_metrics": services.UploadMetricsSnapshot(),
+		})
 	})
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if n, err := uploadService.CleanupExpired(context.Background()); err != nil {
+				logger.Warn("upload cleanup failed", zap.Error(err))
+			} else if n > 0 {
+				logger.Info("aborted expired upload sessions", zap.Int("count", n))
+			}
+		}
+	}()
 
 	logger.Info("Starting server", zap.String("port", cfg.ServerPort))
 	if err := e.Start(":" + cfg.ServerPort); err != nil {

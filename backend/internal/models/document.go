@@ -28,6 +28,8 @@ type Document struct {
 	Status               string `gorm:"size:32;default:BROUILLON" json:"status"`
 	CurrentVersionNumber int    `gorm:"default:1" json:"current_version_number"`
 	RejectedAtVersion    *int   `json:"rejected_at_version,omitempty"`
+	Classification       string `gorm:"size:32;default:INTERNE;index" json:"classification"`
+	Department           string `gorm:"size:100;index" json:"department"`
 	IsArchived           bool   `gorm:"default:false" json:"is_archived"`
 	ArchivedAt      *time.Time `json:"archived_at,omitempty"`
 	IsDeleted       bool      `gorm:"default:false;index;index:idx_documents_owner_folder_deleted,priority:3" json:"is_deleted"`

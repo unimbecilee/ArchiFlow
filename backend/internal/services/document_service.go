@@ -100,6 +100,9 @@ func (s *DocumentService) Upload(ctx context.Context, in UploadDocumentInput) (*
 		ModifiedByID:    in.OwnerID,
 		Status:          models.DocumentStatusDraft,
 	}
+	if doc.Classification == "" {
+		doc.Classification = models.ClassificationInternal
+	}
 	if err := s.repo.Create(doc); err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ GED et workflows d'approbation pour l'entreprise — backend **Go**, frontend **
 | **Admin** | Utilisateurs, workflows, rôles (`admin`, `manager`, `validator`, `archivist`, `user`) |
 | **ArchiFlow +** | Intégration Pydio Cells (profil Docker `cells`) — collaboration avancée, SSO |
 | **Bureautique** | OnlyOffice (profil Docker `office`) — édition Word/Excel/PPT |
+| **MFT** | SFTPGo (profil Docker `sftp`) — dépôt SFTP/FTPS → ingestion GED |
 
 ---
 
@@ -90,6 +91,12 @@ docker compose --profile cells up -d
 
 # Édition bureautique OnlyOffice
 docker compose --profile office up -d
+
+# MFT SFTPGo (inbox SFTP → documents ArchiFlow)
+docker compose --profile sftp up -d
+# SFTP : localhost:2022 — Admin UI : http://localhost:8082
+# Auth : email/password ArchiFlow via external auth hook
+# Activer : SFTPGO_INTEGRATION_ENABLED=true dans .env
 ```
 
 Cells : http://localhost:4001 — configurer `pydio_cells/.env` (voir commentaires en bas de `.env.example`).

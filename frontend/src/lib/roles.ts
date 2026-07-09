@@ -37,6 +37,23 @@ export const ASSIGNABLE_ROLES: PlatformRole[] = [
   "admin",
 ];
 
+export type SftpMode = "none" | "drop" | "inbox" | "full";
+
+export const SFTP_MODE_LABELS: Record<SftpMode, string> = {
+  none: "Aucun",
+  drop: "Depot seul (upload)",
+  inbox: "Inbox (list + upload + download)",
+  full: "Complet",
+};
+
+/** Defauts canal SFTP alignes backend DefaultSftpForRole. */
+export function defaultSftpForRole(role: string): { enabled: boolean; mode: SftpMode } {
+  if (role === "user" || role === "manager") {
+    return { enabled: true, mode: "drop" };
+  }
+  return { enabled: false, mode: "none" };
+}
+
 export function canViewOrgWorkflows(role?: string, caps?: RoleCapabilities): boolean {
   return caps?.view_org_workflows ?? (role === "admin" || role === "archivist");
 }

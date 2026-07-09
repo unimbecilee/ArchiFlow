@@ -10,11 +10,16 @@ func TestUploadMimeAllowed(t *testing.T) {
 		{mime: "application/pdf", ok: true},
 		{mime: "image/png", ok: true},
 		{mime: "text/plain", ok: true},
+		{mime: "video/mp4", ok: true},
+		{mime: "video/x-matroska", ok: true},
+		{mime: "audio/mpeg", ok: true},
+		{mime: "application/zip", ok: true},
+		{mime: "application/octet-stream", ok: true},
 		{mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ok: true},
 		{mime: "text/html", ok: false},
 		{mime: "image/svg+xml", ok: false},
+		{mime: "application/javascript", ok: false},
 		{mime: "application/x-sh", ok: false},
-		{mime: "", ok: false},
 	}
 	for _, tc := range tests {
 		got := uploadMimeAllowed(tc.mime)
@@ -25,13 +30,13 @@ func TestUploadMimeAllowed(t *testing.T) {
 }
 
 func TestBlockedUploadExtensions(t *testing.T) {
-	blocked := []string{".exe", ".sh", ".ps1", ".js", ".dll"}
+	blocked := []string{".exe", ".msi", ".vbs", ".dll", ".html"}
 	for _, ext := range blocked {
 		if _, ok := blockedUploadExt[ext]; !ok {
 			t.Fatalf("expected blocked extension %s", ext)
 		}
 	}
-	allowed := []string{".pdf", ".docx", ".xlsx", ".png", ".txt"}
+	allowed := []string{".pdf", ".mp4", ".mkv", ".mov", ".avi", ".zip", ".7z", ".png"}
 	for _, ext := range allowed {
 		if _, ok := blockedUploadExt[ext]; ok {
 			t.Fatalf("unexpected blocked extension %s", ext)

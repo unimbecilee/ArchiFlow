@@ -15,6 +15,7 @@ import (
 type AdminService struct {
 	users     repository.UserRepository
 	pydioSync *UserPydioSync
+	sftpSync  *UserSftpGoSync
 	email     *EmailService
 	sessions  *SessionService
 }
@@ -22,10 +23,11 @@ type AdminService struct {
 func NewAdminService(
 	users repository.UserRepository,
 	pydioSync *UserPydioSync,
+	sftpSync *UserSftpGoSync,
 	email *EmailService,
 	sessions *SessionService,
 ) *AdminService {
-	return &AdminService{users: users, pydioSync: pydioSync, email: email, sessions: sessions}
+	return &AdminService{users: users, pydioSync: pydioSync, sftpSync: sftpSync, email: email, sessions: sessions}
 }
 
 func (s *AdminService) ListUsers(limit, offset int) ([]models.User, error) {
@@ -72,6 +74,7 @@ func (s *AdminService) CreateUser(req dto.AdminCreateUserRequest) (*dto.AdminCre
 		IsActive:           true,
 		MustChangePassword: true,
 	}
+	models.ApplyDefaultSftpIfUnset(user, role, nil, nil)
 
 	if err := s.users.Create(user); err != nil {
 		return nil, errors.New("failed to create user")
@@ -83,6 +86,9 @@ func (s *AdminService) CreateUser(req dto.AdminCreateUserRequest) (*dto.AdminCre
 			s.pydioSync.RollbackCreate(ctx, user.Email, user.ID)
 			return nil, errors.New("failed to create pydio account: " + err.Error())
 		}
+	}
+	if s.sftpSync != nil && user.SftpEnabled {
+		_ = s.sftpSync.ProvisionOnCreate(ctx, user, tempPassword)
 	}
 
 	loginURL := os.Getenv("FRONTEND_URL")
@@ -144,6 +150,10 @@ func (s *AdminService) UpdateUser(id uint, req dto.AdminUpdateUserRequest) (*dto
 			}
 		}
 	}
+	// SFTP policy pilotée uniquement par le rôle.
+	en, mode := models.DefaultSftpForRole(u.Role)
+	u.SftpEnabled = en
+	u.SftpMode = mode
 	if err := s.users.Update(u); err != nil {
 		return nil, errors.New("failed to update user")
 	}
@@ -239,6 +249,33 @@ func (s *AdminService) DeleteUser(id uint) error {
 			return err
 		}
 	}
+	if s.sftpSync != nil {
+		_ = s.sftpSync.DeleteExternal(context.Background(), u.Email)
+	}
 	_ = s.sessions.RevokeAllUserSessions(id)
 	return s.users.Delete(id)
+}
+
+func (s *AdminService) CreateServiceAccount(
+	ctx context.Context,
+	userID uint,
+	name, username, password, description, sftpMode string,
+) (*models.ServiceAccount, error) {
+	if _, err := s.users.GetByID(userID); err != nil {
+		return nil, errors.New("user not found")
+	}
+	if s.sftpSync == nil {
+		return nil, errors.New("sftp sync not configured")
+	}
+	if name == "" {
+		name = username
+	}
+	return s.sftpSync.CreateServiceAccount(ctx, userID, name, username, password, description, sftpMode)
+}
+
+func (s *AdminService) ListServiceAccounts(userID uint) ([]models.ServiceAccount, error) {
+	if s.sftpSync == nil {
+		return nil, errors.New("sftp sync not configured")
+	}
+	return s.sftpSync.ListServiceAccounts(userID)
 }

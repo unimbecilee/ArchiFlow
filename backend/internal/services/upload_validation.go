@@ -7,61 +7,51 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"archiflow/backend/internal/config"
 )
 
 const MaxUploadBytes = 20 * 1024 * 1024
 
+// Extensions dangereuses (executables, scripts actifs) — tout le reste est autorise.
 var blockedUploadExt = map[string]struct{}{
 	".exe": {}, ".bat": {}, ".cmd": {}, ".com": {},
-	".sh": {}, ".ps1": {}, ".msi": {}, ".dll": {},
-	".scr": {}, ".jar": {}, ".vbs": {}, ".js": {},
+	".msi": {}, ".dll": {}, ".scr": {},
+	".vbs": {}, ".jar": {},
 	".html": {}, ".htm": {}, ".svg": {},
+	".php": {}, ".phtml": {}, ".asp": {}, ".aspx": {},
 }
 
 var blockedUploadMime = map[string]struct{}{
-	"text/html":     {},
-	"image/svg+xml": {},
+	"text/html":               {},
+	"image/svg+xml":           {},
+	"application/javascript":  {},
+	"text/javascript":         {},
+	"application/x-php":     {},
+	"application/x-httpd-php": {},
 }
 
-var allowedUploadMimePrefix = []string{
-	"image/",
-	"text/",
-}
-
-var allowedUploadMimeExact = map[string]struct{}{
-	"application/pdf": {},
-	"application/json": {},
-	"application/xml": {},
-	"application/zip": {},
-	"application/x-zip-compressed": {},
-	"application/vnd.ms-excel": {},
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {},
-	"application/vnd.ms-powerpoint": {},
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation": {},
-	"application/msword": {},
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {},
-	"application/vnd.oasis.opendocument.text":         {},
-	"application/vnd.oasis.opendocument.spreadsheet":    {},
-	"application/vnd.oasis.opendocument.presentation":   {},
+var blockedUploadMimePrefix = []string{
+	"application/x-msdownload",
+	"application/x-executable",
+	"application/x-sh",
+	"application/x-csh",
 }
 
 func uploadMimeAllowed(m string) bool {
 	m = strings.ToLower(strings.TrimSpace(m))
-	if m == "" {
-		return false
+	if m == "" || m == "application/octet-stream" {
+		return true
 	}
 	if _, blocked := blockedUploadMime[m]; blocked {
 		return false
 	}
-	if _, ok := allowedUploadMimeExact[m]; ok {
-		return true
-	}
-	for _, p := range allowedUploadMimePrefix {
+	for _, p := range blockedUploadMimePrefix {
 		if strings.HasPrefix(m, p) {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 // ValidateUploadFile checks extension, size, and MIME for multipart uploads.
@@ -103,4 +93,30 @@ func ValidateUploadFile(fh *multipart.FileHeader) (contentType string, raw []byt
 		return "", nil, fmt.Errorf("type de fichier non autorise: %s", contentType)
 	}
 	return contentType, raw, nil
+}
+
+// ValidateResumableUploadMeta checks filename extension and declared MIME without reading file bytes.
+func ValidateResumableUploadMeta(fileName, contentType string, fileSize int64) error {
+	if strings.TrimSpace(fileName) == "" {
+		return fmt.Errorf("file name is required")
+	}
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if _, blocked := blockedUploadExt[ext]; blocked {
+		return fmt.Errorf("type de fichier interdit pour securite")
+	}
+	if fileSize <= 0 {
+		return fmt.Errorf("fichier vide")
+	}
+	max := config.MaxResumableUploadBytes()
+	if fileSize > max {
+		return fmt.Errorf("fichier trop volumineux (max %d Go)", max/(1<<30))
+	}
+	ct := strings.TrimSpace(contentType)
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	if !uploadMimeAllowed(ct) {
+		return fmt.Errorf("type de fichier non autorise: %s", ct)
+	}
+	return nil
 }

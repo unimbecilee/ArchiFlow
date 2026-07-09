@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/services"
 	"archiflow/backend/internal/utils"
 
@@ -17,10 +18,16 @@ import (
 
 type CollaborationHandler struct {
 	collab *services.CollaborationService
+	audit  *services.AuditService
+	policy *services.PolicyService
 }
 
-func NewCollaborationHandler(collab *services.CollaborationService) *CollaborationHandler {
-	return &CollaborationHandler{collab: collab}
+func NewCollaborationHandler(
+	collab *services.CollaborationService,
+	audit *services.AuditService,
+	policy *services.PolicyService,
+) *CollaborationHandler {
+	return &CollaborationHandler{collab: collab, audit: audit, policy: policy}
 }
 
 // Share POST /api/documents/:id/share
@@ -39,9 +46,26 @@ func (h *CollaborationHandler) Share(c echo.Context) error {
 	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "corps JSON invalide"})
 	}
+	if h.policy != nil {
+		if err := h.policy.EnsureCan(userID, roleFromContext(c), uint(docID), services.ActionShare); err != nil {
+			return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": "vous n'avez pas le droit de partager ce document"})
+		}
+	}
 	if err := h.collab.ShareDocument(uint(docID), userID, roleFromContext(c), body.Email, body.UserID, body.Perms, body.Message); err != nil {
 		status, msg := shareErrorResponse(err)
 		return c.JSON(status, map[string]any{"success": false, "error": msg})
+	}
+	if h.policy != nil {
+		h.policy.InvalidateCache(userID, uint(docID))
+	}
+	if h.audit != nil {
+		uid := userID
+		_ = h.audit.Log(models.AuditEvent{
+			Source: "api", ActorID: &uid, Action: "document.share",
+			ResourceType: "document", ResourceID: strconv.FormatUint(docID, 10),
+			IP: c.RealIP(), CorrelationID: services.NewCorrelationID(),
+			Metadata: fmt.Sprintf(`{"email":%q}`, body.Email),
+		})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document partagé"})
 }

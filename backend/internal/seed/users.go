@@ -54,6 +54,7 @@ func DefaultAdmin(db *gorm.DB, pydioSync *services.UserPydioSync) {
 		IsActive:           true,
 		MustChangePassword: isDefaultSeedPassword(password, "Admin1234!"),
 	}
+	models.ApplyDefaultSftpIfUnset(u, models.RoleAdmin, nil, nil)
 	if err := db.Create(u).Error; err != nil {
 		log.Printf("seed admin: %v", err)
 		return
@@ -99,6 +100,7 @@ func DefaultManager(db *gorm.DB, pydioSync *services.UserPydioSync) {
 		IsActive:           true,
 		MustChangePassword: isDefaultSeedPassword(password, "Manager1234!"),
 	}
+	models.ApplyDefaultSftpIfUnset(u, models.RoleManager, nil, nil)
 	if err := db.Create(u).Error; err != nil {
 		return
 	}
@@ -137,6 +139,7 @@ func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, passwor
 		IsActive:           true,
 		MustChangePassword: isDefaultSeedPassword(password, documentedDefault),
 	}
+	models.ApplyDefaultSftpIfUnset(u, role, nil, nil)
 	if err := db.Create(u).Error; err != nil {
 		return
 	}
@@ -187,4 +190,22 @@ func provisionExistingIfNeeded(ctx context.Context, pydioSync *services.UserPydi
 
 func isDefaultSeedPassword(actual, documentedDefault string) bool {
 	return documentedDefault != "" && actual == documentedDefault
+}
+
+// BackfillSftpDefaults active SFTP drop pour user/manager encore au zero-value post-migration.
+// Ne touche pas : admin/validator/archivist, ni comptes déjà configurés (enabled OU mode ≠ none).
+// Ainsi une désactivation admin (enabled=false + mode=drop conservé) n'est pas écrasée.
+func BackfillSftpDefaults(db *gorm.DB) {
+	_ = db.Model(&models.User{}).
+		Where("role IN ? AND sftp_enabled = ? AND (sftp_mode = ? OR sftp_mode = ? OR sftp_mode IS NULL)",
+			[]string{models.RoleUser, models.RoleManager}, false, models.SftpModeNone, "").
+		Updates(map[string]any{
+			"sftp_enabled": true,
+			"sftp_mode":    models.SftpModeDrop,
+		}).Error
+
+	_ = db.Model(&models.User{}).
+		Where("role IN ? AND (sftp_mode = ? OR sftp_mode IS NULL)",
+			[]string{models.RoleAdmin, models.RoleValidator, models.RoleArchivist}, "").
+		Update("sftp_mode", models.SftpModeNone).Error
 }

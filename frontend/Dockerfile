@@ -32,5 +32,7 @@ COPY --from=builder /app/public ./public
 EXPOSE 3000
 
 ENV PORT=3000
+# Docker sets HOSTNAME to the container id; Next standalone binds that name and crashes (EAI_AGAIN).
+ENV HOSTNAME=0.0.0.0
 
 CMD ["node", "server.js"]

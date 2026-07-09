@@ -30,7 +30,11 @@ import {
 } from "@/services/admin.service";
 
 import { ARCHIFLOW_PLUS } from "@/lib/branding";
-import { ASSIGNABLE_ROLES, ROLE_LABELS, type PlatformRole } from "@/lib/roles";
+import {
+  ASSIGNABLE_ROLES,
+  ROLE_LABELS,
+  type PlatformRole,
+} from "@/lib/roles";
 
 export default function AdminUserDetailPage() {
   const params = useParams();
@@ -233,6 +237,7 @@ export default function AdminUserDetailPage() {
                   </label>
                 </div>
               </div>
+
               <dl className="grid gap-2 rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">
                 <div className="flex justify-between gap-4">
                   <dt>Role affiche</dt>

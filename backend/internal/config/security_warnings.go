@@ -27,6 +27,11 @@ func SecurityWarnings() []string {
 	if OfficeEnabled() && weakOfficeSecret() {
 		out = append(out, "ONLYOFFICE enabled but OFFICE_FILE_TOKEN_SECRET is weak, missing, or equals JWT_SECRET")
 	}
+	if wh := os.Getenv("SFTPGO_WEBHOOK_SECRET"); wh == "" || wh == "archiflow_sftpgo_webhook_secret_2024" {
+		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") {
+			out = append(out, "SFTPGO_WEBHOOK_SECRET is default or empty while SFTPGO_INTEGRATION_ENABLED=true")
+		}
+	}
 	return out
 }
 
@@ -91,6 +96,22 @@ func validatePresignedTTLProduction() error {
 	// parsed in minio_upload; reject overly long presigned URLs in prod
 	if n, err := parsePositiveInt(raw); err == nil && n > 60 {
 		return fmt.Errorf("PRESIGNED_URL_TTL_MINUTES must be <= 60 in production")
+	}
+	return nil
+}
+
+func validateSftpGoProduction() error {
+	if !IsProduction() {
+		return nil
+	}
+	enabled := strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") ||
+		os.Getenv("SFTPGO_INTEGRATION_ENABLED") == "1"
+	if !enabled {
+		return nil
+	}
+	wh := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET"))
+	if wh == "" || wh == "archiflow_sftpgo_webhook_secret_2024" || weakSecret(wh) {
+		return fmt.Errorf("set a strong SFTPGO_WEBHOOK_SECRET when SFTPGO_INTEGRATION_ENABLED=true in production")
 	}
 	return nil
 }

@@ -3,16 +3,37 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   FolderOpen,
   FileText,
   UploadSimple,
-  CaretRight,
   FolderPlus,
   ArrowsClockwise,
+  PencilSimple,
+  Trash,
 } from "@phosphor-icons/react";
 import { DocumentList } from "@/components/documents/document-list";
+import { FolderBreadcrumb } from "@/components/documents/folder-breadcrumb";
+import { FolderCard } from "@/components/documents/folder-card";
+import { FolderEditDialog, mapFolderError } from "@/components/documents/folder-edit-dialog";
+import type { Document, Folder, FolderBreadcrumbItem } from "@/types/documents";
+import {
+  createFolder,
+  deleteDocument,
+  deleteFolder,
+  downloadUrl,
+  getFolder,
+  getFolderBreadcrumb,
+  getFolders,
+  getFoldersFlat,
+  getMyDocuments,
+  moveDocument,
+  previewUrl,
+  updateFolder,
+} from "@/services/documents.service";
+import { startValidation } from "@/services/workflows.service";
+import { getAccessToken } from "@/lib/session-tokens";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { buildMesDocumentsActions } from "@/lib/document-crud-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,21 +44,6 @@ import { PagePanel } from "@/components/layout/page-panel";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { EmptyState } from "@/components/layout/empty-state";
-import { FolderBreadcrumb } from "@/components/documents/folder-breadcrumb";
-import type { Document, Folder, FolderBreadcrumbItem } from "@/types/documents";
-import {
-  createFolder,
-  deleteDocument,
-  downloadUrl,
-  getFolderBreadcrumb,
-  getFolders,
-  getFoldersFlat,
-  getMyDocuments,
-  moveDocument,
-  previewUrl,
-} from "@/services/documents.service";
-import { startValidation } from "@/services/workflows.service";
-import { getAccessToken } from "@/lib/session-tokens";
 
 function parseFolderParam(raw: string | null): number | null {
   if (!raw || raw === "null" || raw === "0") return null;
@@ -60,6 +66,11 @@ function MesDocumentsContent() {
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [moveDocId, setMoveDocId] = useState<number | null>(null);
   const [moveTarget, setMoveTarget] = useState("");
+  const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
+  const [editFolder, setEditFolder] = useState<Folder | null>(null);
+  const [editFolderName, setEditFolderName] = useState("");
+  const [editFolderDesc, setEditFolderDesc] = useState("");
+  const [folderSaving, setFolderSaving] = useState(false);
 
   const navigateFolder = (id: number | null) => {
     if (id == null) {
@@ -82,9 +93,15 @@ function MesDocumentsContent() {
       setDocuments(d.documents ?? []);
       setAllFoldersFlat(flat.map((x) => ({ id: x.id, path: x.path })));
       if (folderId != null) {
-        setBreadcrumb(await getFolderBreadcrumb(folderId));
+        const [crumb, folder] = await Promise.all([
+          getFolderBreadcrumb(folderId),
+          getFolder(folderId),
+        ]);
+        setBreadcrumb(crumb);
+        setCurrentFolder(folder);
       } else {
         setBreadcrumb([]);
+        setCurrentFolder(null);
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erreur chargement");
@@ -99,9 +116,71 @@ function MesDocumentsContent() {
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
-    await createFolder({ name: newFolderName.trim(), parent_id: folderId });
-    setNewFolderName("");
-    load();
+    try {
+      await createFolder({ name: newFolderName.trim(), parent_id: folderId });
+      setNewFolderName("");
+      load();
+    } catch (e: unknown) {
+      setError(mapFolderError(getApiErrorMessage(e, "Creation impossible")));
+    }
+  };
+
+  const openEditFolder = (folder: Folder) => {
+    setEditFolder(folder);
+    setEditFolderName(folder.name);
+    setEditFolderDesc(folder.description ?? "");
+  };
+
+  const closeEditFolder = () => {
+    setEditFolder(null);
+    setEditFolderName("");
+    setEditFolderDesc("");
+  };
+
+  const handleSaveFolder = async () => {
+    if (!editFolder || !editFolderName.trim()) return;
+    setFolderSaving(true);
+    setError(null);
+    try {
+      await updateFolder(editFolder.id, {
+        name: editFolderName.trim(),
+        description: editFolderDesc.trim(),
+      });
+      closeEditFolder();
+      load();
+    } catch (e: unknown) {
+      setError(mapFolderError(getApiErrorMessage(e, "Modification impossible")));
+    } finally {
+      setFolderSaving(false);
+    }
+  };
+
+  const folderChildCounts = (folder: Folder) => {
+    const docs = folder.documents_count ?? (folder.id === folderId ? documents.length : 0);
+    const subs = folder.subfolders_count ?? (folder.id === folderId ? folders.length : 0);
+    return { docs, subs };
+  };
+
+  const handleDeleteFolder = async (folder: Folder) => {
+    const { docs, subs } = folderChildCounts(folder);
+    const recursive = docs > 0 || subs > 0;
+    const message = recursive
+      ? `Supprimer « ${folder.name} » et tout son contenu (${subs} sous-dossier(s), ${docs} fichier(s)) ?\n\nLes fichiers seront envoyés à la corbeille.`
+      : `Supprimer le dossier « ${folder.name} » ?`;
+    if (!confirm(message)) return;
+    setError(null);
+    try {
+      await deleteFolder(folder.id, recursive);
+      if (folderId === folder.id) {
+        const parentId =
+          breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2].id : null;
+        navigateFolder(parentId);
+        return;
+      }
+      load();
+    } catch (e: unknown) {
+      setError(mapFolderError(getApiErrorMessage(e, "Suppression impossible")));
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -201,6 +280,34 @@ function MesDocumentsContent() {
 
       <FolderBreadcrumb items={breadcrumb} currentFolderId={folderId} />
 
+      {currentFolder && (
+        <PagePanel
+          title="Dossier actuel"
+          subtitle={currentFolder.description || "Modifier ou supprimer ce dossier"}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => openEditFolder(currentFolder)}
+            >
+              <PencilSimple className="h-4 w-4" />
+              Modifier
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-red-700 hover:bg-red-50 hover:text-red-800"
+              onClick={() => handleDeleteFolder(currentFolder)}
+            >
+              <Trash className="h-4 w-4" />
+              Supprimer
+            </Button>
+          </div>
+        </PagePanel>
+      )}
+
       <PagePanel title="Organisation" subtitle="Creer un sous-dossier dans ce niveau">
         <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
           <div className="flex flex-col gap-2">
@@ -228,26 +335,14 @@ function MesDocumentsContent() {
           {folders.length > 0 && (
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {folders.map((f, index) => (
-                <motion.button
+                <FolderCard
                   key={f.id}
-                  type="button"
-                  onClick={() => navigateFolder(f.id)}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04 }}
-                  className="surface-bento flex items-center gap-3 p-5 text-left transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
-                >
-                  <span className="rounded-xl bg-amber-500/10 p-2.5 text-amber-700">
-                    <FolderOpen className="h-5 w-5" weight="duotone" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-zinc-900">{f.name}</p>
-                    <p className="text-xs text-zinc-500">
-                      {f.documents_count ?? 0} doc · {f.subfolders_count ?? 0} sous-dossiers
-                    </p>
-                  </div>
-                  <CaretRight className="h-4 w-4 text-zinc-400" />
-                </motion.button>
+                  folder={f}
+                  index={index}
+                  onOpen={() => navigateFolder(f.id)}
+                  onEdit={() => openEditFolder(f)}
+                  onDelete={() => handleDeleteFolder(f)}
+                />
               ))}
             </section>
           )}
@@ -274,6 +369,20 @@ function MesDocumentsContent() {
             )}
           </PagePanel>
         </>
+      )}
+
+      {editFolder && (
+        <FolderEditDialog
+          open
+          title={`Modifier « ${editFolder.name} »`}
+          name={editFolderName}
+          description={editFolderDesc}
+          saving={folderSaving}
+          onNameChange={setEditFolderName}
+          onDescriptionChange={setEditFolderDesc}
+          onClose={closeEditFolder}
+          onSave={handleSaveFolder}
+        />
       )}
 
       {moveDocId != null && (

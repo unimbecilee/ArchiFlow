@@ -38,3 +38,19 @@ func (p *NotificationRealtime) Publish(userID uint, newItems ...models.Notificat
 		},
 	})
 }
+
+// PublishDocumentEvent notifie un nouvel événement document (ex. ingest SFTP).
+func (p *NotificationRealtime) PublishDocumentEvent(userID uint, event string, documentID uint, title string) {
+	if p == nil || p.broker == nil || userID == 0 {
+		return
+	}
+	p.broker.PublishToUser(userID, realtime.Envelope{
+		V:    1,
+		Type: realtime.EventDocuments,
+		Payload: map[string]any{
+			"event":       event,
+			"document_id": documentID,
+			"title":       title,
+		},
+	})
+}

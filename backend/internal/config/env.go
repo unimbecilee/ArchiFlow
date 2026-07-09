@@ -112,5 +112,8 @@ func ValidateSecurityForEnv() error {
 	if err := validatePresignedTTLProduction(); err != nil {
 		return err
 	}
+	if err := validateSftpGoProduction(); err != nil {
+		return err
+	}
 	return nil
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"archiflow/backend/internal/models"
+	"sort"
 
 	"gorm.io/gorm"
 )
@@ -42,6 +43,61 @@ func (r *FolderRepository) ListByOwner(ownerID uint, parentID *uint, admin bool)
 
 func (r *FolderRepository) Update(f *models.Folder) error {
 	return r.db.Save(f).Error
+}
+
+func (r *FolderRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
+// CollectSubtreeIDs returns rootID and all descendant folder IDs.
+func (r *FolderRepository) CollectSubtreeIDs(rootID uint) ([]uint, error) {
+	ids := []uint{rootID}
+	frontier := []uint{rootID}
+	for len(frontier) > 0 {
+		var children []models.Folder
+		if err := r.db.Where("parent_id IN ?", frontier).Find(&children).Error; err != nil {
+			return nil, err
+		}
+		frontier = frontier[:0]
+		for _, c := range children {
+			ids = append(ids, c.ID)
+			frontier = append(frontier, c.ID)
+		}
+	}
+	return ids, nil
+}
+
+// OrderSubtreeByDepthDesc sorts folder IDs deepest-first for safe deletion.
+func (r *FolderRepository) OrderSubtreeByDepthDesc(ids []uint) ([]uint, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var rows []models.Folder
+	if err := r.db.Where("id IN ?", ids).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	byID := make(map[uint]models.Folder, len(rows))
+	idSet := make(map[uint]bool, len(ids))
+	for _, id := range ids {
+		idSet[id] = true
+	}
+	for _, f := range rows {
+		byID[f.ID] = f
+	}
+	depth := func(id uint) int {
+		d := 0
+		cur, ok := byID[id]
+		for ok && cur.ParentID != nil && idSet[*cur.ParentID] {
+			d++
+			cur = byID[*cur.ParentID]
+		}
+		return d
+	}
+	ordered := append([]uint{}, ids...)
+	sort.Slice(ordered, func(i, j int) bool {
+		return depth(ordered[i]) > depth(ordered[j])
+	})
+	return ordered, nil
 }
 
 func (r *FolderRepository) Delete(id uint, ownerID uint, admin bool) error {

@@ -1,0 +1,41 @@
+{
+  "data_provider": {
+    "driver": "sqlite",
+    "name": "/var/lib/sftpgo/sftpgo.db",
+    "external_auth_hook": "http://backend:5000/api/integrations/sftpgo/auth",
+    "external_auth_scope": 0,
+    "create_default_admin": true
+  },
+  "httpd": {
+    "bindings": [
+      {
+        "port": 8080,
+        "address": "0.0.0.0",
+        "enable_web_admin": true,
+        "enable_rest_api": true
+      }
+    ]
+  },
+  "sftpd": {
+    "bindings": [
+      {
+        "port": 2022,
+        "address": "0.0.0.0"
+      }
+    ]
+  },
+  "common": {
+    "defender": {
+      "enabled": true,
+      "ban_time": 30,
+      "threshold": 10,
+      "score_invalid": 2,
+      "score_valid": 1
+    },
+    "actions": {
+      "execute_on": ["upload", "pre-upload", "login"],
+      "hook": "http://backend:5000/api/integrations/sftpgo/hooks"
+    },
+    "upload_mode": 1
+  }
+}

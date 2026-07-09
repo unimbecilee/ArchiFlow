@@ -108,7 +108,7 @@ func (h *FolderHandler) Create(c echo.Context) error {
 		Description: body.Description,
 		ParentID:    body.ParentID,
 		OwnerID:     userID,
-	})
+	}, isAdminFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -140,7 +140,8 @@ func (h *FolderHandler) Delete(c echo.Context) error {
 		return err
 	}
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.folderService.Delete(uint(id), userID, isAdminFromContext(c)); err != nil {
+	recursive := c.QueryParam("recursive") == "true"
+	if err := h.folderService.Delete(uint(id), userID, isAdminFromContext(c), recursive); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "folder deleted"})

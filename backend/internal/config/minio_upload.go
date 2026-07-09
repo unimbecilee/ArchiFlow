@@ -75,3 +75,37 @@ func presignedURLTTL() time.Duration {
 	}
 	return 60 * time.Minute
 }
+
+// CopyObject copie un objet MinIO (staging → canonique).
+func CopyObject(ctx context.Context, srcBucket, srcKey, dstBucket, dstKey string) error {
+	if MinioClient == nil {
+		return fmt.Errorf("minio client not initialized")
+	}
+	if err := EnsureBucket(dstBucket); err != nil {
+		return err
+	}
+	src := minio.CopySrcOptions{Bucket: srcBucket, Object: srcKey}
+	dst := minio.CopyDestOptions{Bucket: dstBucket, Object: dstKey}
+	_, err := MinioClient.CopyObject(ctx, dst, src)
+	return err
+}
+
+// StatObject retourne la taille d'un objet MinIO.
+func StatObject(ctx context.Context, bucket, objectName string) (int64, string, error) {
+	if MinioClient == nil {
+		return 0, "", fmt.Errorf("minio client not initialized")
+	}
+	info, err := MinioClient.StatObject(ctx, bucket, objectName, minio.StatObjectOptions{})
+	if err != nil {
+		return 0, "", err
+	}
+	return info.Size, info.ContentType, nil
+}
+
+// SFTPInboxBucket retourne le bucket staging SFTP.
+func SFTPInboxBucket() string {
+	if v := strings.TrimSpace(os.Getenv("MINIO_SFTP_INBOX_BUCKET")); v != "" {
+		return v
+	}
+	return "archiflow-sftp-inbox"
+}

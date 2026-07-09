@@ -3,6 +3,7 @@ package realtime
 const (
 	EventNotifications = "notifications"
 	EventWorkflows     = "workflows"
+	EventDocuments     = "documents"
 	EventPing          = "ping"
 )
 

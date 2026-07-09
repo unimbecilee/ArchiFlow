@@ -2,6 +2,13 @@ import api from "@/lib/api";
 import { apiUrl } from "@/lib/api-base";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { getAccessToken } from "@/lib/session-tokens";
+import { MAX_IMPORT_FILE_BYTES } from "@/lib/upload-accept";
+import { MAX_RESUMABLE_FILE_BYTES } from "@/lib/upload-limits";
+import {
+  isResumableFile,
+  uploadFileResumable,
+  type ResumableProgress,
+} from "@/services/resumable-upload.service";
 import type {
   Document,
   DocumentsResponse,
@@ -37,6 +44,19 @@ export async function createFolder(data: {
 }): Promise<Folder> {
   const res = await api.post<{ success: boolean; data: Folder }>("/api/folders", data);
   return res.data.data;
+}
+
+export async function updateFolder(
+  id: number,
+  data: { name?: string; description?: string }
+): Promise<Folder> {
+  const res = await api.put<{ success: boolean; data: Folder }>(`/api/folders/${id}`, data);
+  return res.data.data;
+}
+
+export async function deleteFolder(id: number, recursive = false): Promise<void> {
+  const params = recursive ? { recursive: "true" } : undefined;
+  await api.delete(`/api/folders/${id}`, { params });
 }
 
 export async function getFolder(id: number): Promise<Folder> {
@@ -101,29 +121,69 @@ export type UploadBatchMeta = {
   folder_id?: number | null;
 };
 
-/** Import sequentiel — un POST /upload par fichier (types mixtes OK). */
+export type UploadBatchProgress = {
+  done: number;
+  total: number;
+  currentName: string;
+  bytesUploaded?: number;
+  bytesTotal?: number;
+  resumable?: ResumableProgress;
+};
+
+/** Import sequentiel — HTTP classique <=20 Mo, MPU resumable au-dela. */
 export async function uploadDocuments(
-  items: Array<{ file: File; titre?: string }>,
+  items: Array<{ file: File; titre?: string; folder_id?: number | null }>,
   meta: UploadBatchMeta,
-  onProgress?: (done: number, total: number, currentName: string) => void
+  onProgress?: (p: UploadBatchProgress) => void
 ): Promise<UploadBatchResult[]> {
   const results: UploadBatchResult[] = [];
   const total = items.length;
   for (let i = 0; i < items.length; i++) {
-    const { file, titre } = items[i];
-    onProgress?.(i, total, file.name);
+    const { file, titre, folder_id } = items[i];
+    const targetFolder = folder_id !== undefined ? folder_id : meta.folder_id;
+    onProgress?.({ done: i, total, currentName: file.name });
+    const title = titre?.trim() || file.name.replace(/\.[^.]+$/, "") || file.name;
     try {
-      const document = await uploadDocument(file, {
-        titre: titre?.trim() || file.name.replace(/\.[^.]+$/, "") || file.name,
+      if (file.size > MAX_RESUMABLE_FILE_BYTES) {
+        throw new Error(`Fichier trop volumineux (max ${MAX_RESUMABLE_FILE_BYTES / (1 << 30)} Go)`);
+      }
+      if (file.size > MAX_IMPORT_FILE_BYTES && !isResumableFile(file)) {
+        throw new Error("Fichier hors plage autorisee");
+      }
+      let document: Document;
+      const uploadMeta = {
+        title,
         description: meta.description,
-        type_document: meta.type_document,
-        folder_id: meta.folder_id,
-      });
+        category: meta.type_document,
+        folder_id: targetFolder,
+      };
+      if (isResumableFile(file)) {
+        document = await uploadFileResumable(
+          file,
+          uploadMeta,
+          (resumable) =>
+            onProgress?.({
+              done: i,
+              total,
+              currentName: file.name,
+              bytesUploaded: resumable.bytesUploaded,
+              bytesTotal: resumable.bytesTotal,
+              resumable,
+            })
+        );
+      } else {
+        document = await uploadDocument(file, {
+          titre: title,
+          description: meta.description,
+          type_document: meta.type_document,
+          folder_id: targetFolder,
+        });
+      }
       results.push({ file, document });
     } catch (err) {
       results.push({ file, error: getApiErrorMessage(err, "Echec upload") });
     }
-    onProgress?.(i + 1, total, file.name);
+    onProgress?.({ done: i + 1, total, currentName: file.name });
   }
   return results;
 }

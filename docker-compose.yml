@@ -25,6 +25,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_API_CORS_ALLOW_ORIGIN: "${MINIO_CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}"
+    mem_limit: 8g
     volumes:
       - minio_data:/data
     ports:
@@ -44,13 +46,12 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
-      mc mb myminio/archiflow-documents --ignore-existing;
-      mc mb myminio/archives-requests --ignore-existing;
-      exit 0;
-      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    entrypoint: ["/bin/sh", "-c", "sh /minio-init.sh"]
+    volumes:
+      - ./deploy/minio-init.sh:/minio-init.sh:ro,z
     networks:
       - archiflow
 
@@ -76,6 +77,9 @@ services:
       - .env
     environment:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
+      MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL:-false}
+    mem_limit: 512m
     ports:
       - "5010:5000"  # 5001 often taken (e.g. documanager-logger-service)
     depends_on:
@@ -102,6 +106,8 @@ services:
       - .env
     environment:
       INTERNAL_API_URL: http://backend:5000
+      # Override Docker-injected HOSTNAME (container id) — Next standalone binds it otherwise.
+      HOSTNAME: "0.0.0.0"
     ports:
       - "3000:3000"
     depends_on:
@@ -182,11 +188,47 @@ services:
     networks:
       - archiflow
 
+  sftpgo:
+    image: drakkan/sftpgo:v2.6.2-alpine
+    container_name: archiflow-sftpgo
+    profiles: ["sftp"]
+    ports:
+      - "2022:2022"
+      - "8082:8080"
+    environment:
+      SFTPGO_DATA_PROVIDER__DRIVER: sqlite
+      SFTPGO_DATA_PROVIDER__NAME: /var/lib/sftpgo/sftpgo.db
+      SFTPGO_HTTPD__BINDINGS__0__PORT: "8080"
+      SFTPGO_HTTPD__BINDINGS__0__ADDRESS: "0.0.0.0"
+      SFTPGO_SFTPD__BINDINGS__0__PORT: "2022"
+      SFTPGO_SFTPD__BINDINGS__0__ADDRESS: "0.0.0.0"
+      SFTPGO_COMMON__DEFENDER__ENABLED: "true"
+      SFTPGO_COMMON__ACTIONS__EXECUTE_ON: "upload,pre-upload,login"
+      SFTPGO_COMMON__ACTIONS__HOOK: http://backend:5000/api/integrations/sftpgo/hooks
+      SFTPGO_COMMON__ACTIONS__HTTP_HEADERS: "X-SFTPGO-Secret:${SFTPGO_WEBHOOK_SECRET:-archiflow_sftpgo_webhook_secret_2024}"
+      SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_HOOK: http://backend:5000/api/integrations/sftpgo/auth
+      SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_SCOPE: 0
+      SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER:-admin}
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:-Admin1234!}
+      SFTPGO_CONFIG_DIR: /etc/sftpgo
+    volumes:
+      - sftpgo_data:/var/lib/sftpgo
+      - ./infra/sftpgo/sftpgo.json:/etc/sftpgo/sftpgo.json:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - archiflow
+
 volumes:
   postgres_data:
   minio_data:
   cells_db_data:
   cells_data:
+  sftpgo_data:
 
 networks:
   archiflow:

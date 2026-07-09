@@ -16,13 +16,14 @@ type Config struct {
 	MinioUseSSL        bool
 	MinioArchivesBucket  string
 	MinioDocumentsBucket string
-	JWTSecret          string
-	JWTRefreshSecret   string
-	ServerPort         string
-	Environment        string
-	PydioCellsURL      string
-	PydioWebdavURL     string
-	PydioAPIToken      string
+	MinioSFTPInboxBucket string
+	JWTSecret            string
+	JWTRefreshSecret     string
+	ServerPort           string
+	Environment          string
+	PydioCellsURL        string
+	PydioWebdavURL       string
+	PydioAPIToken        string
 }
 
 func Load() (*Config, error) {
@@ -38,6 +39,7 @@ func Load() (*Config, error) {
 		MinioUseSSL:         getEnv("MINIO_USE_SSL", "false") == "true",
 		MinioArchivesBucket:  getEnv("MINIO_ARCHIVES_BUCKET", "archives-requests"),
 		MinioDocumentsBucket: getEnv("MINIO_DOCUMENTS_BUCKET", "archiflow-documents"),
+		MinioSFTPInboxBucket: getEnv("MINIO_SFTP_INBOX_BUCKET", "archiflow-sftp-inbox"),
 		JWTSecret:           getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
 		JWTRefreshSecret:    getEnv("JWT_REFRESH_SECRET", "your-super-secret-refresh-key-change-in-production"),
 		ServerPort:          getEnv("SERVER_PORT", "5000"),

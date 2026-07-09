@@ -36,10 +36,22 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
   const [success, setSuccess] = useState<string | null>(null);
 
   const reset = () => {
-    setForm({ email: "", first_name: "", last_name: "", role: "user" });
+    setForm({
+      email: "",
+      first_name: "",
+      last_name: "",
+      role: "user",
+    });
     setError(null);
     setSuccess(null);
     setDone(false);
+  };
+
+  const setRole = (role: string) => {
+    setForm((prev) => ({
+      ...prev,
+      role,
+    }));
   };
 
   const handleClose = () => {
@@ -168,7 +180,7 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
                   id="cu-role"
                   className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  onChange={(e) => setRole(e.target.value)}
                 >
                   {ROLES.map((r) => (
                     <option key={r.value} value={r.value}>

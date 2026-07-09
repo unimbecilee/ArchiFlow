@@ -67,6 +67,29 @@ func (r *DocumentRepository) SoftDelete(id uint, ownerID uint, admin bool) error
 	return q.Update("is_deleted", true).Error
 }
 
+func (r *DocumentRepository) SoftDeleteByFolderIDs(folderIDs []uint, ownerID uint, admin bool) (int64, error) {
+	if len(folderIDs) == 0 {
+		return 0, nil
+	}
+	q := r.db.Model(&models.Document{}).
+		Where("folder_id IN ? AND is_deleted = ?", folderIDs, false)
+	if !admin {
+		q = q.Where("owner_id = ?", ownerID)
+	}
+	res := q.Update("is_deleted", true)
+	return res.RowsAffected, res.Error
+}
+
+// OwnerHasLockedOrValidatingFile true si fichier même nom EN_VALIDATION ou verrouillé.
+func (r *DocumentRepository) OwnerHasLockedOrValidatingFile(ownerID uint, fileName string) (bool, error) {
+	var n int64
+	err := r.db.Model(&models.Document{}).
+		Where("owner_id = ? AND is_deleted = ? AND file_name = ?", ownerID, false, fileName).
+		Where("status = ? OR locked_by_id IS NOT NULL", models.DocumentStatusValidation).
+		Count(&n).Error
+	return n > 0, err
+}
+
 func (r *DocumentRepository) ListTrash(ownerID uint, admin bool, limit int) ([]models.Document, error) {
 	var rows []models.Document
 	q := r.db.Where("is_deleted = ?", true)
@@ -217,4 +240,14 @@ func (r *DocumentRepository) LinkPydioSync(nodeID string, documentID uint) error
 			"archiflow_document_id": documentID,
 			"sync_status":           "synced",
 		}).Error
+}
+
+// SumSizeByOwner returns total bytes stored for a user (non-deleted documents).
+func (r *DocumentRepository) SumSizeByOwner(ownerID uint) (int64, error) {
+	var total int64
+	err := r.db.Model(&models.Document{}).
+		Where("owner_id = ? AND is_deleted = ?", ownerID, false).
+		Select("COALESCE(SUM(size), 0)").
+		Scan(&total).Error
+	return total, err
 }

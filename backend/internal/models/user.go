@@ -14,6 +14,12 @@ type User struct {
 	LastName          string     `json:"last_name"`
 	Role              string     `gorm:"default:user" json:"role"` // admin, user, manager, validator, archivist
 	AvatarURL         string     `json:"avatar_url"`
+	Department        string     `gorm:"size:100;index" json:"department"`
+	ClearanceLevel    string     `gorm:"size:32;default:INTERNE" json:"clearance_level"`
+	SftpGoUsername    string     `gorm:"size:100" json:"-"`
+	// SFTP canal (orthogonal au rôle métier). Defaults appliqués à la création via DefaultSftpForRole.
+	SftpEnabled         bool       `gorm:"default:false" json:"sftp_enabled"`
+	SftpMode            string     `gorm:"size:16;default:none" json:"sftp_mode"` // none|drop|inbox|full
 	IsActive            bool       `gorm:"default:true" json:"is_active"`
 	TokenVersion        uint       `gorm:"default:0;not null" json:"-"`
 	MustChangePassword  bool       `gorm:"default:false" json:"must_change_password"`
