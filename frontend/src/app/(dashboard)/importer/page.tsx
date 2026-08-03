@@ -31,6 +31,8 @@ import { filesFromDataTransfer, resolveFolderTargets } from "@/lib/folder-upload
 import { MAX_RESUMABLE_FILE_GB } from "@/lib/upload-limits";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { uploadDocuments } from "@/services/documents.service";
+import { UploadRouteBanner } from "@/components/upload/upload-route-banner";
+import { toast } from "sonner";
 
 type QueuedFile = {
   id: string;
@@ -93,6 +95,7 @@ function ImporterForm() {
   >([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
 
   const totalSize = useMemo(
     () => queue.reduce((sum, q) => sum + q.file.size, 0),
@@ -136,6 +139,13 @@ function ImporterForm() {
     setQueue((prev) => prev.map((q) => (q.id === id ? { ...q, titre } : q)));
   };
 
+  const cancelUpload = () => {
+    uploadAbortRef.current?.abort();
+    uploadAbortRef.current = null;
+    setLoading(false);
+    toast.message("Import annule");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (queue.length === 0) {
@@ -146,6 +156,8 @@ function ImporterForm() {
     setError(null);
     setLastResults([]);
     setProgress({ done: 0, total: queue.length, name: "", bytesUploaded: 0, bytesTotal: 0 });
+    uploadAbortRef.current = new AbortController();
+    const signal = uploadAbortRef.current.signal;
 
     try {
       const baseFolderId = folderId ? Number(folderId) : null;
@@ -159,6 +171,7 @@ function ImporterForm() {
           file: q.file,
           titre: q.titre,
           folder_id: folderMap.get(q.file) ?? baseFolderId,
+          relative_path: q.relativePath ?? undefined,
         })),
         {
           description,
@@ -172,7 +185,8 @@ function ImporterForm() {
             name: p.currentName,
             bytesUploaded: p.bytesUploaded ?? 0,
             bytesTotal: p.bytesTotal ?? 0,
-          })
+          }),
+        signal
       );
 
       const summary = results.map((r) => ({
@@ -202,8 +216,12 @@ function ImporterForm() {
         setError("Aucun fichier importe. Verifiez formats et taille.");
       }
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
       setError(getApiErrorMessage(err, "Echec import"));
     } finally {
+      uploadAbortRef.current = null;
       setLoading(false);
     }
   };
@@ -220,6 +238,7 @@ function ImporterForm() {
       <PageHeader
         eyebrow="Documents"
         title="Importer"
+        hideTitle
         description="Depot de fichiers ou dossiers entiers — tous formats (video, audio, archives…)."
         icon={<UploadSimple className="h-6 w-6" weight="duotone" />}
         actions={
@@ -237,6 +256,8 @@ function ImporterForm() {
         subtitle={`Jusqu'a ${MAX_IMPORT_FILES} fichiers · tous types · ${MAX_IMPORT_FILE_MB} Mo (HTTP) ou ${MAX_RESUMABLE_FILE_GB} Go (MPU).`}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          <UploadRouteBanner files={queue.map((q) => q.file)} />
+
           <motion.div
             onDragOver={(e) => {
               e.preventDefault();
@@ -304,11 +325,22 @@ function ImporterForm() {
 
           {loading && progress.total > 0 && (
             <div className="space-y-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3">
-              <div className="flex justify-between text-xs font-medium text-zinc-700">
+              <div className="flex justify-between gap-2 text-xs font-medium text-zinc-700">
                 <span>
                   Envoi {progress.done}/{progress.total}
                 </span>
-                <span>{progressPct}%</span>
+                <div className="flex items-center gap-2">
+                  <span>{progressPct}%</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={cancelUpload}
+                  >
+                    Annuler tout
+                  </Button>
+                </div>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white">
                 <motion.div

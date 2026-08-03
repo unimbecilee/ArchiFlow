@@ -141,14 +141,18 @@ func (r *FolderRepository) BatchCountChildren(folderIDs []uint, ownerID uint, ad
 	for _, row := range sfRows {
 		subfolders[row.ParentID] = row.Cnt
 	}
-	// Docs comptés seulement si owner_id = owner du dossier (évite docs orphelins d'autres users).
+	// Document counts must match GET /documents/my (owner-scoped unless org admin list).
 	var docRows []countRow
-	if err = r.db.Model(&models.Document{}).
-		Select("documents.folder_id as parent_id, count(*) as cnt").
-		Joins("INNER JOIN folders ON folders.id = documents.folder_id").
-		Where("documents.folder_id IN ? AND documents.is_deleted = ? AND documents.owner_id = folders.owner_id", folderIDs, false).
-		Group("documents.folder_id").
-		Scan(&docRows).Error; err != nil {
+	docQ := r.db.Model(&models.Document{}).
+		Select("folder_id as parent_id, count(*) as cnt").
+		Where("folder_id IN ? AND is_deleted = ?", folderIDs, false)
+	if !admin {
+		docQ = docQ.Where("owner_id = ?", ownerID)
+	} else {
+		docQ = docQ.Joins("INNER JOIN folders ON folders.id = documents.folder_id").
+			Where("documents.owner_id = folders.owner_id")
+	}
+	if err = docQ.Group("folder_id").Scan(&docRows).Error; err != nil {
 		return nil, nil, err
 	}
 	for _, row := range docRows {
@@ -171,8 +175,13 @@ func (r *FolderRepository) CountChildren(folderID uint, ownerID uint, admin bool
 		err = ferr
 		return
 	}
-	err = r.db.Model(&models.Document{}).
-		Where("folder_id = ? AND is_deleted = ? AND owner_id = ?", folderID, false, folder.OwnerID).
-		Count(&documents).Error
+	docQ := r.db.Model(&models.Document{}).
+		Where("folder_id = ? AND is_deleted = ?", folderID, false)
+	if !admin {
+		docQ = docQ.Where("owner_id = ?", ownerID)
+	} else {
+		docQ = docQ.Where("owner_id = ?", folder.OwnerID)
+	}
+	err = docQ.Count(&documents).Error
 	return
 }

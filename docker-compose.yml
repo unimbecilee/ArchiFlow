@@ -76,9 +76,12 @@ services:
     env_file:
       - .env
     environment:
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
-      MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL:-false}
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-localhost:9000}"
+      MINIO_PUBLIC_USE_SSL: "${MINIO_PUBLIC_USE_SSL:-false}"
+      SFTPGO_INTERNAL_URL: "${SFTPGO_INTERNAL_URL:-http://sftpgo:8080}"
+      SFTPGO_PUBLIC_URL: "${SFTPGO_PUBLIC_URL:-http://localhost:8088}"
+      UPLOAD_SFTPGO_MAX_BYTES: "${UPLOAD_SFTPGO_MAX_BYTES:-0}"
     mem_limit: 512m
     ports:
       - "5010:5000"  # 5001 often taken (e.g. documanager-logger-service)
@@ -200,6 +203,7 @@ services:
       SFTPGO_DATA_PROVIDER__NAME: /var/lib/sftpgo/sftpgo.db
       SFTPGO_HTTPD__BINDINGS__0__PORT: "8080"
       SFTPGO_HTTPD__BINDINGS__0__ADDRESS: "0.0.0.0"
+      SFTPGO_HTTPD__TOKEN_VALIDATION: "1"
       SFTPGO_SFTPD__BINDINGS__0__PORT: "2022"
       SFTPGO_SFTPD__BINDINGS__0__ADDRESS: "0.0.0.0"
       SFTPGO_COMMON__DEFENDER__ENABLED: "true"
@@ -219,6 +223,21 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+    restart: unless-stopped
+    networks:
+      - archiflow
+
+  # Browser → SFTPGo upload proxy (no body buffer, CORS). Host :8088
+  sftpgo-proxy:
+    image: caddy:2-alpine
+    container_name: archiflow-sftpgo-proxy
+    profiles: ["sftp"]
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./deploy/Caddyfile.sftpgo:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - sftpgo
     restart: unless-stopped
     networks:
       - archiflow

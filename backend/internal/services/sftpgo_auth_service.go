@@ -1,6 +1,7 @@
 package services
 
 import (
+	"crypto/hmac"
 	"fmt"
 	"os"
 	"path"
@@ -75,17 +76,32 @@ func (s *SftpGoAuthService) Authenticate(req SftpGoAuthRequest) (*SftpGoAuthResp
 		sa.LastUsedAt = &now
 		_ = s.sftpRepo.UpdateServiceAccount(sa)
 	} else {
-		// 2) Humain ArchiFlow (email + bcrypt)
+		// 2) Humain ArchiFlow (email + bcrypt OR HMAC web-upload password)
 		u, err := s.userRepo.GetByEmail(username)
 		if err != nil || !u.IsActive {
 			s.logLogin(nil, username, req.IP, req.Protocol, false)
 			return &SftpGoAuthResponse{Status: 0}, nil
 		}
-		if !utils.VerifyPassword(req.Password, u.PasswordHash) {
+		pwdOK := utils.VerifyPassword(req.Password, u.PasswordHash)
+		if !pwdOK {
+			uploadClient := NewSFTPGoUploadClient()
+			if uploadClient != nil && hmac.Equal([]byte(req.Password), []byte(uploadClient.UserPassword(username))) {
+				pwdOK = true
+			}
+		}
+		if !pwdOK {
 			s.logLogin(&u.ID, username, req.IP, req.Protocol, false)
 			return &SftpGoAuthResponse{Status: 0}, nil
 		}
 		ok, mode := humanSftpAccess(u)
+		// Web JWT path: HMAC password allows upload even if sftp_enabled false
+		if !ok {
+			uploadClient := NewSFTPGoUploadClient()
+			if uploadClient != nil && hmac.Equal([]byte(req.Password), []byte(uploadClient.UserPassword(username))) {
+				ok = true
+				mode = models.SftpModeFull
+			}
+		}
 		if !ok {
 			s.logLogin(&u.ID, u.Email, req.IP, req.Protocol, false)
 			return &SftpGoAuthResponse{Status: 0}, nil

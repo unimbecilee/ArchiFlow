@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { WorkflowInstance } from "@/types/workflows";
 import { cancelInstance } from "@/services/workflows.service";
 import { WorkflowApprovalCard } from "@/components/workflows/workflow-approval-card";
+import { WorkflowPendingCompactRow } from "@/components/workflows/workflow-pending-compact-row";
 import { EmptyState } from "@/components/layout/empty-state";
 import { GitBranch } from "@phosphor-icons/react";
 
@@ -16,6 +17,8 @@ type Props = {
   mode: "pending" | "progress" | "completed";
   onRefresh: () => void;
   emptyDescription?: string;
+  /** pending: file d'attente compacte vs fiche detaillee */
+  pendingLayout?: "compact" | "detail";
 };
 
 function statusBadge(statut: string) {
@@ -47,6 +50,7 @@ export function WorkflowInstanceList({
   mode,
   onRefresh,
   emptyDescription,
+  pendingLayout = "detail",
 }: Props) {
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
@@ -85,6 +89,19 @@ export function WorkflowInstanceList({
     >
       {items.map((item) => {
         if (mode === "pending") {
+          if (pendingLayout === "compact") {
+            return (
+              <motion.li
+                key={item.id}
+                variants={{
+                  hidden: { opacity: 0, y: 8 },
+                  show: { opacity: 1, y: 0 },
+                }}
+              >
+                <WorkflowPendingCompactRow item={item} onRefresh={onRefresh} />
+              </motion.li>
+            );
+          }
           return (
             <motion.li
               key={item.id}

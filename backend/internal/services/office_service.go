@@ -21,10 +21,11 @@ import (
 type OfficeService struct {
 	collab   *CollaborationService
 	userRepo repository.UserRepository
+	policy   *PolicyService
 	secret   string
 }
 
-func NewOfficeService(collab *CollaborationService, userRepo repository.UserRepository) *OfficeService {
+func NewOfficeService(collab *CollaborationService, userRepo repository.UserRepository, policy *PolicyService) *OfficeService {
 	secret := strings.TrimSpace(os.Getenv("OFFICE_FILE_TOKEN_SECRET"))
 	if secret == "" {
 		secret = strings.TrimSpace(os.Getenv("ONLYOFFICE_JWT_SECRET"))
@@ -35,7 +36,7 @@ func NewOfficeService(collab *CollaborationService, userRepo repository.UserRepo
 	if config.IsProduction() && OfficeEnabled() && (secret == "" || secret == os.Getenv("JWT_SECRET")) {
 		secret = "" // GetEditorConfig will fail closed via signOfficeToken
 	}
-	return &OfficeService{collab: collab, userRepo: userRepo, secret: secret}
+	return &OfficeService{collab: collab, userRepo: userRepo, policy: policy, secret: secret}
 }
 
 func (s *OfficeService) ParseToken(token, purpose string) (docID, userID uint, err error) {
@@ -80,8 +81,16 @@ func (s *OfficeService) GetEditorConfig(
 	if !OfficeEnabled() {
 		return &OfficeEditorConfig{Enabled: false, Reason: "OnlyOffice desactive"}, nil
 	}
-	ok, perms, err := s.collab.CanAccess(docID, userID, role)
-	if !ok || !s.collab.requirePerm(perms, models.PermRead) {
+	if s.policy != nil {
+		if err := s.policy.EnsureCan(userID, role, docID, ActionRead); err != nil {
+			return nil, errors.New("forbidden")
+		}
+	}
+	_, perms, err := s.collab.CanAccess(docID, userID, role)
+	if err != nil {
+		return nil, err
+	}
+	if !s.collab.requirePerm(perms, models.PermRead) {
 		return nil, errors.New("forbidden")
 	}
 	doc, err := s.collab.docRepo.FindByID(docID)
@@ -277,6 +286,11 @@ func (s *OfficeService) ProcessCallback(ctx context.Context, docID, userID uint,
 	ok, perms, _ := s.collab.CanAccess(docID, userID, u.Role)
 	if !ok || !s.collab.requirePerm(perms, models.PermWrite) || !models.CapabilitiesForRole(u.Role).WriteDocuments {
 		return errors.New("forbidden")
+	}
+	if s.policy != nil {
+		if err := s.policy.EnsureCan(userID, u.Role, docID, ActionWrite); err != nil {
+			return errors.New("forbidden")
+		}
 	}
 
 	mime := doc.MimeType

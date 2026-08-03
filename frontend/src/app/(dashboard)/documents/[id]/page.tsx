@@ -12,8 +12,10 @@ import {
   Star,
   Lock,
   LockOpen,
+  FileArchive,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { IconTooltipButton } from "@/components/ui/icon-tooltip-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageFrame } from "@/components/layout/page-frame";
@@ -26,6 +28,7 @@ import type { DocumentComment, DocumentVersion, Tag as DocTag } from "@/types/co
 import type { ValidationContext } from "@/types/workflows";
 import { getAccessToken } from "@/lib/session-tokens";
 import { WorkflowStatusBanner } from "@/components/workflows/workflow-status-banner";
+import { DocumentPreviewPane } from "@/components/documents/document-preview-pane";
 import {
   VersionPreviewPane,
   VersionSwitcher,
@@ -34,6 +37,7 @@ import {
 import { DocumentTextEditor } from "@/components/documents/document-text-editor";
 import { DocumentOfficeEditor } from "@/components/documents/document-office-editor";
 import { isOfficeDocument } from "@/lib/office-document";
+import { toast } from "sonner";
 import {
   addComment,
   addDocumentTag,
@@ -49,7 +53,6 @@ import {
 import {
   downloadUrl,
   lockDocument,
-  previewUrl,
   unlockDocument,
 } from "@/services/documents.service";
 import {
@@ -186,7 +189,7 @@ export default function DocumentDetailPage() {
       await restartValidation(docId, "Relance apres correction");
       router.push("/workflows/en-cours");
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Impossible de relancer");
+      toast.error(e instanceof Error ? e.message : "Impossible de relancer");
     } finally {
       setRestarting(false);
     }
@@ -202,6 +205,17 @@ export default function DocumentDetailPage() {
     doc?.rejected_at_version ?? validationCtx?.rejected_at_version ?? null;
   const showCurrentPreview =
     versionSelection.kind === "current" && (doc?.previewable ?? false);
+  const showOfficeEditor =
+    doc?.office_editable &&
+    isOfficeDocument(doc.mime_type, doc.file_name) &&
+    versionSelection.kind === "current";
+  const showTextEditor =
+    doc?.editable &&
+    versionSelection.kind === "current" &&
+    !isOfficeDocument(doc.mime_type, doc.file_name);
+  const showArchivePreview = versionSelection.kind === "archive";
+  const showPreviewPanel = showCurrentPreview || showArchivePreview;
+  const hasMainWorkspace = showOfficeEditor || showTextEditor || showPreviewPanel;
 
   if (loading) {
     return (
@@ -227,7 +241,7 @@ export default function DocumentDetailPage() {
   }
 
   return (
-    <PageFrame>
+    <PageFrame className="max-w-[min(1680px,100%)]">
       <Link
         href="/mes-documents"
         className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800"
@@ -241,15 +255,12 @@ export default function DocumentDetailPage() {
         title={doc.titre}
         description={`${doc.taille_formatee || doc.taille} · ${doc.mime_type}${doc.status ? ` · ${doc.status}` : ""}`}
         actions={
-          <>
-            <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <IconTooltipButton label="Telecharger" onClick={handleDownload}>
               <DownloadSimple className="h-4 w-4" />
-              Telecharger
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
+            </IconTooltipButton>
+            <IconTooltipButton
+              label={favorited ? "Retirer favori" : "Ajouter aux favoris"}
               onClick={async () => {
                 if (favorited) {
                   await removeFavorite(docId);
@@ -260,41 +271,36 @@ export default function DocumentDetailPage() {
                 }
               }}
             >
-              <Star className={`h-4 w-4 ${favorited ? "text-amber-500" : ""}`} weight={favorited ? "fill" : "regular"} />
-              {favorited ? "Retirer favori" : "Favori"}
-            </Button>
+              <Star
+                className={`h-4 w-4 ${favorited ? "text-amber-500" : ""}`}
+                weight={favorited ? "fill" : "regular"}
+              />
+            </IconTooltipButton>
             {doc.is_locked ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
+              <IconTooltipButton
+                label="Deverrouiller"
                 onClick={async () => {
                   await unlockDocument(docId);
                   load();
                 }}
               >
                 <LockOpen className="h-4 w-4" />
-                Deverrouiller
-              </Button>
+              </IconTooltipButton>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
+              <IconTooltipButton
+                label="Verrouiller"
                 onClick={async () => {
                   await lockDocument(docId);
                   load();
                 }}
               >
                 <Lock className="h-4 w-4" />
-                Verrouiller
-              </Button>
+              </IconTooltipButton>
             )}
-            <Button variant="outline" size="sm" onClick={() => setShowShare(!showShare)} className="gap-1.5">
+            <IconTooltipButton label="Partager" onClick={() => setShowShare(!showShare)}>
               <ShareNetwork className="h-4 w-4" />
-              Partager
-            </Button>
-          </>
+            </IconTooltipButton>
+          </div>
         }
       />
 
@@ -307,227 +313,261 @@ export default function DocumentDetailPage() {
         />
       )}
 
-      {showShare && (
-        <PagePanel title="Partage" subtitle="Le destinataire doit déjà avoir un compte ArchiFlow">
-          <div className="space-y-4">
-            {shareError && <ErrorBanner message={shareError} />}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="shareEmail">E-mail du destinataire</Label>
-              <Input
-                id="shareEmail"
-                placeholder="manager@archiflow.local"
-                value={shareEmail}
-                onChange={(e) => setShareEmail(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="shareMessage">Message</Label>
-              <Input
-                id="shareMessage"
-                placeholder="Message optionnel"
-                value={shareMessage}
-                onChange={(e) => setShareMessage(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleShare}>Envoyer le partage</Button>
-          </div>
-        </PagePanel>
-      )}
-
-      {doc.office_editable &&
-        isOfficeDocument(doc.mime_type, doc.file_name) &&
-        versionSelection.kind === "current" && (
-          <PagePanel
-            title="Edition bureautique"
-            subtitle="Word, Excel, PowerPoint — sauvegarde = nouvelle version"
-          >
-            <DocumentOfficeEditor doc={doc} onSaved={load} />
-          </PagePanel>
-        )}
-
-      {doc.editable &&
-        versionSelection.kind === "current" &&
-        !isOfficeDocument(doc.mime_type, doc.file_name) && (
-          <PagePanel title="Edition" subtitle="Texte, markdown, JSON — sauvegarde = nouvelle version">
-            <DocumentTextEditor doc={doc} validationCtx={validationCtx} onSaved={load} />
-          </PagePanel>
-        )}
-
-      {(showCurrentPreview || versionSelection.kind === "archive") && (
-        <PagePanel
-          title="Apercu"
-          subtitle={
-            versionSelection.kind === "current"
-              ? `Version courante v${currentVersionNumber}`
-              : `Version archivee v${versionSelection.version.version_number}`
-          }
-        >
-          {versionSelection.kind === "current" && doc ? (
-            <DocumentPreview doc={doc} />
-          ) : (
-            <VersionPreviewPane
-              docId={docId}
-              docMime={doc.mime_type}
-              selection={versionSelection}
-            />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {showOfficeEditor && (
+            <PagePanel
+              title="Edition bureautique"
+              subtitle="Word, Excel, PowerPoint — sauvegarde = nouvelle version"
+              delay={0.08}
+            >
+              <DocumentOfficeEditor doc={doc} onSaved={load} />
+            </PagePanel>
           )}
-        </PagePanel>
-      )}
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <PagePanel title="Commentaires" subtitle={`${comments.length} message(s)`}>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Ajouter un commentaire..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-              />
-              <Button size="sm" onClick={handleAddComment}>
-                <PaperPlaneTilt className="h-4 w-4" weight="bold" />
-              </Button>
-            </div>
-            <ul className="max-h-64 space-y-3 overflow-y-auto">
-              {comments.length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucun commentaire.</p>
+          {showTextEditor && (
+            <PagePanel
+              title="Edition"
+              subtitle="Texte, markdown, JSON — sauvegarde = nouvelle version"
+              delay={0.08}
+            >
+              <DocumentTextEditor doc={doc} validationCtx={validationCtx} onSaved={load} />
+            </PagePanel>
+          )}
+
+          {showPreviewPanel && (
+            <PagePanel
+              title="Apercu"
+              subtitle={
+                versionSelection.kind === "current"
+                  ? `Version courante v${currentVersionNumber}`
+                  : `Version archivee v${versionSelection.version.version_number}`
+              }
+              delay={0.1}
+              className="min-h-0 flex-1"
+            >
+              {versionSelection.kind === "current" ? (
+                <DocumentPreviewPane
+                  doc={doc}
+                  expanded
+                  maxHeightClass="min-h-[min(72dvh,720px)] max-h-[min(78dvh,780px)]"
+                />
               ) : (
-                comments.map((c) => (
-                  <li key={c.id} className="rounded-2xl border border-slate-200/70 bg-zinc-50/80 p-3 text-sm">
-                    <p className="text-zinc-800">{c.content}</p>
-                    <p className="mt-2 flex items-center justify-between text-xs text-zinc-500">
-                      <span>
-                        {c.author?.email || `Utilisateur #${c.author_id}`} ·{" "}
-                        {new Date(c.created_at).toLocaleString("fr-FR")}
-                      </span>
-                      <Button variant="ghost" size="sm" onClick={() => deleteComment(docId, c.id).then(load)}>
-                        <Trash className="h-3 w-3" />
-                      </Button>
-                    </p>
-                  </li>
-                ))
+                <VersionPreviewPane
+                  docId={docId}
+                  docMime={doc.mime_type}
+                  selection={versionSelection}
+                />
               )}
-            </ul>
-          </div>
-        </PagePanel>
+            </PagePanel>
+          )}
 
-        <PagePanel title="Etiquettes" subtitle="Classification libre">
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t) => (
-                <span
-                  key={t.id}
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
-                  style={{ backgroundColor: t.color || "#059669" }}
-                >
-                  {t.name}
-                  <button
-                    type="button"
-                    className="opacity-80 hover:opacity-100"
-                    onClick={() => removeDocumentTag(docId, t.id).then(load)}
-                  >
-                    x
-                  </button>
+          {!hasMainWorkspace && (
+            <PagePanel
+              title="Fichier"
+              subtitle={`${doc.file_name || doc.titre} — pas d'apercu inline pour ce format`}
+              delay={0.08}
+            >
+              <div className="flex min-h-[min(52dvh,520px)] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200/80 bg-zinc-50/60 px-6 py-12 text-center">
+                <span className="rounded-2xl bg-emerald-500/10 p-4 text-emerald-700">
+                  <FileArchive className="h-10 w-10" weight="duotone" />
                 </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nouvelle etiquette"
-                value={tagName}
-                onChange={(e) => setTagName(e.target.value)}
-              />
-              <Button size="sm" onClick={handleAddTag}>
-                Ajouter
-              </Button>
-            </div>
-          </div>
-        </PagePanel>
-      </section>
-
-      <PagePanel
-        title="Versions"
-        subtitle={`${versions.length} revision(s) en historique`}
-      >
-        <div ref={versionsRef} className="space-y-4">
-          <VersionSwitcher
-            docId={docId}
-            currentVersionNumber={currentVersionNumber}
-            rejectedAtVersion={rejectedAtVersion}
-            versions={versions}
-            selection={versionSelection}
-            onSelect={setVersionSelection}
-          />
-          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="versionFile">Fichier</Label>
-              <Input id="versionFile" type="file" onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="versionComment">Commentaire</Label>
-              <Input
-                id="versionComment"
-                placeholder="Commentaire version"
-                value={versionComment}
-                onChange={(e) => setVersionComment(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleUploadVersion} disabled={!versionFile} className="sm:mb-0.5">
-              Nouvelle version
-            </Button>
-          </div>
-          {versions.length === 0 ? (
-            <p className="text-sm text-zinc-500">Pas encore d&apos;historique.</p>
-          ) : (
-            <ul className="divide-y divide-slate-100 text-sm">
-              {versions.map((v) => (
-                <li key={v.id} className="flex justify-between gap-2 py-3">
-                  <span className="text-zinc-700">
-                    v{v.version_number} — {v.file_name}
-                    {v.comment && ` (${v.comment})`}
-                  </span>
-                  <span className="shrink-0 font-mono text-xs text-zinc-500">
-                    {new Date(v.created_at).toLocaleDateString("fr-FR")}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                <div className="max-w-md space-y-1">
+                  <p className="text-sm font-medium text-zinc-800">{doc.mime_type || "Type inconnu"}</p>
+                  <p className="text-sm leading-relaxed text-zinc-600">
+                    Utilisez le panneau de droite pour commenter, etiqueter et gerer les versions. Telechargez le
+                    fichier pour l&apos;ouvrir localement.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
+                  <DownloadSimple className="h-4 w-4" />
+                  Telecharger
+                </Button>
+              </div>
+            </PagePanel>
           )}
         </div>
-      </PagePanel>
+
+        <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-0.5">
+          {showShare && (
+            <PagePanel compact title="Partage" subtitle="Compte ArchiFlow requis">
+              <div className="space-y-3">
+                {shareError && <ErrorBanner message={shareError} />}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="shareEmail">E-mail du destinataire</Label>
+                  <Input
+                    id="shareEmail"
+                    placeholder="manager@archiflow.local"
+                    value={shareEmail}
+                    onChange={(e) => setShareEmail(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="shareMessage">Message</Label>
+                  <Input
+                    id="shareMessage"
+                    placeholder="Message optionnel"
+                    value={shareMessage}
+                    onChange={(e) => setShareMessage(e.target.value)}
+                  />
+                </div>
+                <Button size="sm" className="w-full" onClick={handleShare}>
+                  Envoyer le partage
+                </Button>
+              </div>
+            </PagePanel>
+          )}
+
+          <PagePanel compact title="Commentaires" subtitle={`${comments.length} message(s)`} delay={0.12}>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ajouter un commentaire..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                />
+                <Button size="sm" onClick={handleAddComment} aria-label="Envoyer">
+                  <PaperPlaneTilt className="h-4 w-4" weight="bold" />
+                </Button>
+              </div>
+              <ul className="max-h-48 space-y-2 overflow-y-auto lg:max-h-56">
+                {comments.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Aucun commentaire.</p>
+                ) : (
+                  comments.map((c) => (
+                    <li
+                      key={c.id}
+                      className="rounded-xl border border-slate-200/70 bg-zinc-50/80 p-2.5 text-sm"
+                    >
+                      <p className="text-zinc-800">{c.content}</p>
+                      <p className="mt-1.5 flex items-center justify-between gap-2 text-xs text-zinc-500">
+                        <span className="min-w-0 truncate">
+                          {c.author?.email || `#${c.author_id}`} ·{" "}
+                          {new Date(c.created_at).toLocaleString("fr-FR", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 shrink-0 p-0"
+                          onClick={() => deleteComment(docId, c.id).then(load)}
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </p>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </PagePanel>
+
+          <PagePanel compact title="Etiquettes" subtitle="Classification libre" delay={0.14}>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {tags.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Aucune etiquette.</p>
+                ) : (
+                  tags.map((t) => (
+                    <span
+                      key={t.id}
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                      style={{ backgroundColor: t.color || "#059669" }}
+                    >
+                      {t.name}
+                      <button
+                        type="button"
+                        className="opacity-80 hover:opacity-100"
+                        onClick={() => removeDocumentTag(docId, t.id).then(load)}
+                        aria-label={`Retirer ${t.name}`}
+                      >
+                        x
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nouvelle etiquette"
+                  value={tagName}
+                  onChange={(e) => setTagName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                />
+                <Button size="sm" onClick={handleAddTag}>
+                  Ajouter
+                </Button>
+              </div>
+            </div>
+          </PagePanel>
+
+          <PagePanel
+            compact
+            title="Versions"
+            subtitle={`${versions.length} revision(s)`}
+            delay={0.16}
+          >
+            <div ref={versionsRef} className="space-y-3">
+              <VersionSwitcher
+                docId={docId}
+                currentVersionNumber={currentVersionNumber}
+                rejectedAtVersion={rejectedAtVersion}
+                versions={versions}
+                selection={versionSelection}
+                onSelect={setVersionSelection}
+              />
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="versionFile">Nouvelle version</Label>
+                  <Input
+                    id="versionFile"
+                    type="file"
+                    className="text-xs"
+                    onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="versionComment">Commentaire</Label>
+                  <Input
+                    id="versionComment"
+                    placeholder="Optionnel"
+                    value={versionComment}
+                    onChange={(e) => setVersionComment(e.target.value)}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={handleUploadVersion}
+                  disabled={!versionFile}
+                >
+                  Deposer la version
+                </Button>
+              </div>
+              {versions.length === 0 ? (
+                <p className="text-sm text-zinc-500">Pas encore d&apos;historique.</p>
+              ) : (
+                <ul className="max-h-40 divide-y divide-slate-100 overflow-y-auto text-xs">
+                  {versions.map((v) => (
+                    <li key={v.id} className="flex flex-col gap-0.5 py-2">
+                      <span className="font-medium text-zinc-800">
+                        v{v.version_number} — {v.file_name}
+                      </span>
+                      {v.comment && <span className="text-zinc-600">{v.comment}</span>}
+                      <span className="font-mono text-zinc-500">
+                        {new Date(v.created_at).toLocaleDateString("fr-FR")}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </PagePanel>
+        </aside>
+      </div>
     </PageFrame>
   );
-}
-
-function DocumentPreview({ doc }: { doc: Document }) {
-  const [src, setSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    const token = getAccessToken();
-    fetch(previewUrl(doc.id), {
-      credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((r) => r.blob())
-      .then((blob) => setSrc(URL.createObjectURL(blob)))
-      .catch(() => setSrc(null));
-    return () => {
-      if (src) URL.revokeObjectURL(src);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.id]);
-
-  if (!src) {
-    return <p className="text-sm text-zinc-500">Chargement apercu...</p>;
-  }
-  if (doc.mime_type?.startsWith("image/")) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={doc.titre} className="mx-auto max-h-[50vh] max-w-full" />
-    );
-  }
-  if (doc.mime_type === "application/pdf") {
-    return <iframe src={src} title={doc.titre} className="h-[50vh] w-full border-0" />;
-  }
-  return <p className="text-sm text-zinc-600">Apercu non disponible.</p>;
 }

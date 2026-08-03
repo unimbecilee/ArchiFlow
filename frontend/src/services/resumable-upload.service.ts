@@ -71,6 +71,30 @@ async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
+function isRetryableApiStatus(status: number | undefined): boolean {
+  return status === 429 || (status !== undefined && status >= 500);
+}
+
+async function withApiRetry<T>(fn: () => Promise<T>, maxAttempts = 6): Promise<T> {
+  let delay = 1000;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      const status =
+        err && typeof err === "object" && "isAxiosError" in err
+          ? (err as { response?: { status?: number } }).response?.status
+          : undefined;
+      if (!isRetryableApiStatus(status) || attempt === maxAttempts) {
+        throw err;
+      }
+      await sleep(delay);
+      delay = Math.min(delay * 2, 30000);
+    }
+  }
+  throw new Error("Requete echouee");
+}
+
 async function putPartWithRetry(
   url: string,
   blob: Blob,
@@ -187,8 +211,10 @@ export async function uploadFileResumable(
 
   const uploadOne = async (partNumber: number) => {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-    const urlRes = await api.get<{ success: boolean; data: PartURLResponse }>(
-      `/api/upload/sessions/${sessionId}/parts/${partNumber}/url`
+    const urlRes = await withApiRetry(() =>
+      api.get<{ success: boolean; data: PartURLResponse }>(
+        `/api/upload/sessions/${sessionId}/parts/${partNumber}/url`
+      )
     );
     const start = (partNumber - 1) * partSize;
     const end = Math.min(start + partSize, file.size);
@@ -225,9 +251,11 @@ export async function uploadFileResumable(
     .map(([n, p]) => ({ part_number: Number(n), etag: p.etag }))
     .sort((a, b) => a.part_number - b.part_number);
 
-  const completeRes = await api.post<{ success: boolean; data: CompleteResponse }>(
-    `/api/upload/sessions/${sessionId}/complete`,
-    { parts }
+  const completeRes = await withApiRetry(() =>
+    api.post<{ success: boolean; data: CompleteResponse }>(
+      `/api/upload/sessions/${sessionId}/complete`,
+      { parts }
+    )
   );
 
   await clearUploadSession(fingerprint);
@@ -253,7 +281,7 @@ export async function uploadFileResumable(
 }
 
 export async function abortResumableSession(sessionId: string): Promise<void> {
-  await api.delete(`/api/upload/sessions/${sessionId}`);
+  await withApiRetry(() => api.delete(`/api/upload/sessions/${sessionId}`));
 }
 
 export function isResumableFile(file: File): boolean {

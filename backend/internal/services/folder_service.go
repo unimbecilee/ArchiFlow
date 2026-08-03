@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"archiflow/backend/internal/authz"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 
@@ -14,10 +15,15 @@ import (
 type FolderService struct {
 	repo    *repository.FolderRepository
 	docRepo *repository.DocumentRepository
+	access  *authz.FolderAccess
 }
 
 func NewFolderService(repo *repository.FolderRepository, docRepo *repository.DocumentRepository) *FolderService {
-	return &FolderService{repo: repo, docRepo: docRepo}
+	return &FolderService{
+		repo:    repo,
+		docRepo: docRepo,
+		access:  authz.NewFolderAccess(repo),
+	}
 }
 
 type FolderWithCounts struct {
@@ -247,18 +253,12 @@ func (s *FolderService) ListFlat(userID uint, isAdmin bool) ([]FolderFlatOption,
 }
 
 func (s *FolderService) CanAccess(folderID uint, userID uint, isAdmin bool) error {
-	if isAdmin {
-		return nil
-	}
-	f, err := s.repo.FindByID(folderID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("folder not found")
+	orgWide := false
+	if err := s.access.CanAccessLegacy(folderID, userID, isAdmin, orgWide); err != nil {
+		if errors.Is(err, authz.ErrFolderForbidden) {
+			return errors.New("forbidden")
 		}
 		return err
-	}
-	if f.OwnerID != userID {
-		return errors.New("forbidden")
 	}
 	return nil
 }

@@ -21,6 +21,7 @@ import { ErrorBanner } from "@/components/layout/error-banner";
 import { getDocument } from "@/services/collaboration.service";
 import { downloadDocumentFile } from "@/services/documents.service";
 import { approveInstance, rejectInstance } from "@/services/workflows.service";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { Document } from "@/types/documents";
 import type { WorkflowInstance } from "@/types/workflows";
 
@@ -71,7 +72,7 @@ export function WorkflowApprovalCard({ item, onRefresh }: Props) {
       await fn(item.id, comment.trim() || undefined);
       onRefresh();
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Action impossible");
+      setActionError(getApiErrorMessage(e, "Action impossible"));
     } finally {
       setActing(false);
     }

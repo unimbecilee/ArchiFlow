@@ -30,13 +30,18 @@ func parseParentID(c echo.Context) *uint {
 	return &u
 }
 
+// folderListOrgScope: true only when client explicitly asks for org-wide folder trees (admin/manager).
+func folderListOrgScope(c echo.Context) bool {
+	return c.QueryParam("org_scope") == "true" && hasOrgDocReadAccess(c)
+}
+
 // List GET /api/folders
 func (h *FolderHandler) List(c echo.Context) error {
 	userID, err := userIDFromContext(c)
 	if err != nil {
 		return err
 	}
-	rows, err := h.folderService.List(userID, isAdminFromContext(c), parseParentID(c))
+	rows, err := h.folderService.List(userID, folderListOrgScope(c), parseParentID(c))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -49,7 +54,7 @@ func (h *FolderHandler) ListFlat(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.folderService.ListFlat(userID, isAdminFromContext(c))
+	rows, err := h.folderService.ListFlat(userID, folderListOrgScope(c))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}

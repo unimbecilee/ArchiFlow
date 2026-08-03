@@ -4,12 +4,22 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/time/rate"
 )
+
+// isUploadMPUControlRoute matches MPU session status, presign, complete, abort (not session init).
+func isUploadMPUControlRoute(c echo.Context) bool {
+	p := c.Path()
+	if !strings.Contains(p, "/upload/sessions/") {
+		return false
+	}
+	return strings.Contains(p, "/upload/sessions/:id")
+}
 
 func rateLimitStore(perMinute, burst int, expires time.Duration) *middleware.RateLimiterMemoryStore {
 	if perMinute < 1 {
@@ -31,9 +41,18 @@ func rateLimitStore(perMinute, burst int, expires time.Duration) *middleware.Rat
 }
 
 func rateLimitMiddleware(store *middleware.RateLimiterMemoryStore, idFn func(echo.Context) (string, error)) echo.MiddlewareFunc {
+	return rateLimitMiddlewareWithSkipper(store, idFn, nil)
+}
+
+func rateLimitMiddlewareWithSkipper(
+	store *middleware.RateLimiterMemoryStore,
+	idFn func(echo.Context) (string, error),
+	skipper func(echo.Context) bool,
+) echo.MiddlewareFunc {
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store:               store,
 		IdentifierExtractor: idFn,
+		Skipper:             skipper,
 		ErrorHandler: func(c echo.Context, err error) error {
 			return c.JSON(429, map[string]any{
 				"success": false,
@@ -68,9 +87,11 @@ func ProtectedRateLimit() echo.MiddlewareFunc {
 	perMinute := envInt("PROTECTED_RATE_LIMIT_PER_MINUTE", 120)
 	burst := envInt("PROTECTED_RATE_LIMIT_BURST", 40)
 	store := rateLimitStore(perMinute, burst, 3*time.Minute)
-	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+	return rateLimitMiddlewareWithSkipper(store, func(c echo.Context) (string, error) {
 		uid, _ := c.Get("userID").(uint)
 		return fmt.Sprintf("%s:%d", c.RealIP(), uid), nil
+	}, func(c echo.Context) bool {
+		return isUploadMPUControlRoute(c)
 	})
 }
 
@@ -120,5 +141,47 @@ func UploadInitRateLimit() echo.MiddlewareFunc {
 	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
 		uid, _ := c.Get("userID").(uint)
 		return fmt.Sprintf("upload-init:%s:%d", c.RealIP(), uid), nil
+	})
+}
+
+// UploadMPUControlRateLimit covers presign/status/complete/abort for large MPU uploads (per user + IP).
+func UploadMPUControlRateLimit() echo.MiddlewareFunc {
+	perHour := envInt("UPLOAD_MPU_RATE_LIMIT_PER_HOUR", 12000)
+	burst := envInt("UPLOAD_MPU_RATE_LIMIT_BURST", 500)
+	if perHour < 1 {
+		perHour = 12000
+	}
+	if burst < 1 {
+		burst = 500
+	}
+	perMinute := perHour / 60
+	if perMinute < 1 {
+		perMinute = 1
+	}
+	store := rateLimitStore(perMinute, burst, time.Hour)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		uid, _ := c.Get("userID").(uint)
+		return fmt.Sprintf("upload-mpu:%s:%d", c.RealIP(), uid), nil
+	})
+}
+
+// UploadTokenRateLimit limits SFTPGo JWT mint (per user + IP).
+func UploadTokenRateLimit() echo.MiddlewareFunc {
+	perHour := envInt("UPLOAD_TOKEN_RATE_LIMIT_PER_HOUR", 200)
+	burst := envInt("UPLOAD_TOKEN_RATE_LIMIT_BURST", 50)
+	if perHour < 1 {
+		perHour = 200
+	}
+	if burst < 1 {
+		burst = 50
+	}
+	perMinute := perHour / 60
+	if perMinute < 1 {
+		perMinute = 1
+	}
+	store := rateLimitStore(perMinute, burst, time.Hour)
+	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
+		uid, _ := c.Get("userID").(uint)
+		return fmt.Sprintf("upload-token:%s:%d", c.RealIP(), uid), nil
 	})
 }

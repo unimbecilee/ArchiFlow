@@ -26,6 +26,8 @@ import type {
   AdminWorkflowStepInput,
   WorkflowFullDefinition,
 } from "@/types/workflows";
+import { useConfirm } from "@/components/feedback/confirm-provider";
+import { toast } from "sonner";
 
 type FormApprover = { role_name: string; user_id: string };
 type FormStep = {
@@ -90,6 +92,7 @@ function toPayload(steps: FormStep[]): AdminWorkflowStepInput[] {
 export default function AdminWorkflowEditPage() {
   const router = useRouter();
   const params = useParams();
+  const confirm = useConfirm();
   const id = typeof params?.id === "string" ? parseInt(params.id, 10) : NaN;
 
   const { user } = useAuthStore();
@@ -192,13 +195,22 @@ export default function AdminWorkflowEditPage() {
 
   const onDelete = async () => {
     if (Number.isNaN(id) || protectedWf || instanceCount > 0) return;
-    const ok = window.confirm("Supprimer ce workflow ? Operation definitive.");
-    if (!ok) return;
+    if (
+      !(await confirm({
+        title: "Supprimer le workflow",
+        description: "Supprimer ce workflow ? Operation definitive.",
+        confirmLabel: "Supprimer",
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
     try {
       await adminDeleteWorkflow(id);
+      toast.success("Workflow supprime");
       router.replace("/admin/workflows");
     } catch {
-      setErr("Suppression impossible.");
+      toast.error("Suppression impossible");
     }
   };
 

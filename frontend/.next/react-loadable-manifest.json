@@ -1,1 +1,8 @@
-{}
+{
+  "services/documents.service.ts -> @/services/sftpgo-upload.service": {
+    "id": 7003,
+    "files": [
+      "static/chunks/7003.26715d6c92e49b69.js"
+    ]
+  }
+}

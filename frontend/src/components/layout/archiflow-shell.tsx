@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, SignOut } from "@phosphor-icons/react";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { Bell, MagnifyingGlass, SignOut } from "@phosphor-icons/react";
 import { ArchiFlowSidebar } from "./archiflow-sidebar";
+import { ShellBreadcrumb } from "./shell-breadcrumb";
+import { ConfirmProvider } from "@/components/feedback/confirm-provider";
+import {
+  NavCommandPalette,
+  useNavCommandPalette,
+} from "@/components/navigation/nav-command-palette";
+import { MobileNavMenuButton, MobileNavMenuPanel } from "./mobile-nav-drawer";
+import { ImportFab } from "./import-fab";
 import { useAuthStore } from "@/store/auth-store";
 import { useNotifications } from "@/context/notification-context";
 import { NotificationProvider } from "@/context/notification-context";
+import { resolvePageMeta } from "@/lib/page-meta";
 
 type ArchiFlowShellProps = {
   children: React.ReactNode;
@@ -22,25 +33,55 @@ function userInitials(email?: string) {
   return local.slice(0, 2).toUpperCase();
 }
 
-function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
+function ShellInner({ children, title: titleOverride }: ArchiFlowShellProps) {
+  const pathname = usePathname();
+  const pageMeta = resolvePageMeta(pathname);
+  const title = titleOverride ?? pageMeta.title;
   const { user, logout } = useAuthStore();
   const { unread } = useNotifications();
+  const { open: navOpen, setOpen: setNavOpen } = useNavCommandPalette();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex min-h-[100dvh] w-full bg-[#f9fafb]">
       <ArchiFlowSidebar />
+      <NavCommandPalette open={navOpen} onOpenChange={setNavOpen} />
+      <MobileNavMenuPanel open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
       <div className="relative flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 border-b border-slate-200/70 glass-panel px-4 py-4 sm:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-600">
-                Espace connecte
-              </p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
-                {title}
-              </h2>
+            <div className="flex min-w-0 items-start gap-2">
+              <MobileNavMenuButton onClick={() => setMobileMenuOpen(true)} />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-600">
+                  {pageMeta.section}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
+                  {title}
+                </h2>
+                <ShellBreadcrumb crumbs={pageMeta.crumbs} />
+              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => setNavOpen(true)}
+                className="hidden items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm text-zinc-600 transition-all hover:border-emerald-200 hover:text-emerald-800 active:scale-[0.98] sm:inline-flex"
+              >
+                <MagnifyingGlass className="h-4 w-4" weight="regular" />
+                <span>Rechercher</span>
+                <kbd className="rounded-md border border-slate-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">
+                  Ctrl K
+                </kbd>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNavOpen(true)}
+                className="inline-flex rounded-xl border border-slate-200/80 bg-white p-2.5 text-zinc-600 transition-all hover:border-emerald-200 hover:text-emerald-700 active:scale-[0.98] sm:hidden"
+                aria-label="Rechercher"
+              >
+                <MagnifyingGlass className="h-5 w-5" weight="regular" />
+              </button>
               <Link
                 href="/notifications"
                 className="relative rounded-xl border border-slate-200/80 bg-white p-2.5 text-zinc-600 transition-all hover:border-emerald-200 hover:text-emerald-700 active:scale-[0.98]"
@@ -73,9 +114,11 @@ function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
           </div>
         </header>
 
-        <main className="relative z-10 flex-1 overflow-x-hidden px-4 py-6 sm:px-8 sm:py-8">
+        <main className="relative z-10 flex-1 overflow-x-hidden px-4 py-6 pb-24 sm:px-8 sm:py-8 sm:pb-8">
           {children}
         </main>
+
+        <ImportFab />
 
         <footer className="border-t border-slate-200/70 bg-white/70 px-4 py-4 text-center text-xs text-zinc-500 backdrop-blur-sm">
           2026 ArchiFlow — Gestion electronique de documents
@@ -88,7 +131,9 @@ function ShellInner({ children, title = "Dashboard" }: ArchiFlowShellProps) {
 export function ArchiFlowShell(props: ArchiFlowShellProps) {
   return (
     <NotificationProvider>
-      <ShellInner {...props} />
+      <ConfirmProvider>
+        <ShellInner {...props} />
+      </ConfirmProvider>
     </NotificationProvider>
   );
 }

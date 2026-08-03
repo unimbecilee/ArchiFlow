@@ -63,3 +63,29 @@ func (r *SftpRepository) ListAccessPolicies() ([]models.AccessPolicy, error) {
 	err := r.db.Where("active = ?", true).Order("priority ASC").Find(&rows).Error
 	return rows, err
 }
+
+func (r *SftpRepository) ListAllAccessPoliciesAdmin() ([]models.AccessPolicy, error) {
+	var rows []models.AccessPolicy
+	err := r.db.Order("priority ASC, id ASC").Find(&rows).Error
+	return rows, err
+}
+
+func (r *SftpRepository) FindAccessPolicyByID(id uint) (*models.AccessPolicy, error) {
+	var row models.AccessPolicy
+	if err := r.db.First(&row, id).Error; err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+func (r *SftpRepository) CreateAccessPolicy(p *models.AccessPolicy) error {
+	return r.db.Create(p).Error
+}
+
+func (r *SftpRepository) UpdateAccessPolicy(p *models.AccessPolicy) error {
+	return r.db.Save(p).Error
+}
+
+func (r *SftpRepository) DeleteAccessPolicy(id uint) error {
+	return r.db.Delete(&models.AccessPolicy{}, id).Error
+}

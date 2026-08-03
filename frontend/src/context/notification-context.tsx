@@ -22,6 +22,11 @@ import {
   normalizeNotificationLink,
 } from "@/lib/notification-utils";
 import { useNotificationRealtime } from "@/hooks/use-notification-realtime";
+import {
+  useWorkflowApprovalToasts,
+  userCanApproveWorkflows,
+} from "@/hooks/use-workflow-approval-toasts";
+import { useAuthStore } from "@/store/auth-store";
 
 type NotificationContextValue = {
   unread: number;
@@ -34,6 +39,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [unread, setUnread] = useState(0);
   const [unreadShares, setUnreadShares] = useState(0);
   const seenToastIds = useRef<Set<number>>(new Set());
@@ -79,7 +85,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       seenToastIds.current.add(n.id);
 
       const meta = getNotificationMeta(n.type);
-      const href = normalizeNotificationLink(n.link);
+      const href =
+        normalizeNotificationLink(n.link) ??
+        (n.type === "WORKFLOW_PENDING" ? "/workflows/approbations" : null);
 
       toast(meta.label, {
         description: n.message || n.title,
@@ -112,6 +120,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 
   useNotificationRealtime(handleStream);
+
+  useWorkflowApprovalToasts(userCanApproveWorkflows(user));
 
   const value = useMemo(
     () => ({ unread, unreadShares, refresh, openNotification }),

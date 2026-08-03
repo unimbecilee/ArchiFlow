@@ -18,6 +18,7 @@ type AdminService struct {
 	sftpSync  *UserSftpGoSync
 	email     *EmailService
 	sessions  *SessionService
+	policy    *PolicyService
 }
 
 func NewAdminService(
@@ -26,8 +27,9 @@ func NewAdminService(
 	sftpSync *UserSftpGoSync,
 	email *EmailService,
 	sessions *SessionService,
+	policy *PolicyService,
 ) *AdminService {
-	return &AdminService{users: users, pydioSync: pydioSync, sftpSync: sftpSync, email: email, sessions: sessions}
+	return &AdminService{users: users, pydioSync: pydioSync, sftpSync: sftpSync, email: email, sessions: sessions, policy: policy}
 }
 
 func (s *AdminService) ListUsers(limit, offset int) ([]models.User, error) {
@@ -156,6 +158,9 @@ func (s *AdminService) UpdateUser(id uint, req dto.AdminUpdateUserRequest) (*dto
 	u.SftpMode = mode
 	if err := s.users.Update(u); err != nil {
 		return nil, errors.New("failed to update user")
+	}
+	if s.policy != nil {
+		s.policy.InvalidateUser(u.ID)
 	}
 	updated, _ := s.users.GetByID(id)
 	return toAdminUserDetail(updated), nil

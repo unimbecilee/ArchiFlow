@@ -28,9 +28,13 @@ export async function getMyDocuments(
   return res.data;
 }
 
-export async function getFolders(parentId?: number | null): Promise<Folder[]> {
+export async function getFolders(
+  parentId?: number | null,
+  options?: { orgScope?: boolean }
+): Promise<Folder[]> {
   const params: Record<string, string> = {};
   if (parentId != null) params.parent_id = String(parentId);
+  if (options?.orgScope) params.org_scope = "true";
   const res = await api.get<{ success: boolean; data: Folder[] }>("/api/folders", {
     params,
   });
@@ -71,8 +75,12 @@ export async function getFolderBreadcrumb(id: number): Promise<FolderBreadcrumbI
   return res.data.data ?? [];
 }
 
-export async function getFoldersFlat(): Promise<FolderFlatOption[]> {
-  const res = await api.get<{ success: boolean; data: FolderFlatOption[] }>("/api/folders/flat");
+export async function getFoldersFlat(options?: { orgScope?: boolean }): Promise<FolderFlatOption[]> {
+  const params: Record<string, string> = {};
+  if (options?.orgScope) params.org_scope = "true";
+  const res = await api.get<{ success: boolean; data: FolderFlatOption[] }>("/api/folders/flat", {
+    params,
+  });
   return res.data.data ?? [];
 }
 
@@ -130,15 +138,66 @@ export type UploadBatchProgress = {
   resumable?: ResumableProgress;
 };
 
-/** Import sequentiel — HTTP classique <=20 Mo, MPU resumable au-dela. */
+/** Import — hot path Browser→SFTPGo→MinIO ; fallback HTTP/MPU si SFTPGo indisponible. */
 export async function uploadDocuments(
-  items: Array<{ file: File; titre?: string; folder_id?: number | null }>,
+  items: Array<{ file: File; titre?: string; folder_id?: number | null; relative_path?: string }>,
   meta: UploadBatchMeta,
-  onProgress?: (p: UploadBatchProgress) => void
+  onProgress?: (p: UploadBatchProgress) => void,
+  signal?: AbortSignal
 ): Promise<UploadBatchResult[]> {
+  if (items.length === 0) return [];
+
+  try {
+    const { uploadFilesViaSftpGo } = await import("@/services/sftpgo-upload.service");
+    const byFolder = new Map<string, typeof items>();
+    for (const it of items) {
+      const fid = it.folder_id !== undefined ? it.folder_id : meta.folder_id;
+      const key = fid == null ? "root" : String(fid);
+      const list = byFolder.get(key) ?? [];
+      list.push(it);
+      byFolder.set(key, list);
+    }
+
+    const all: UploadBatchResult[] = [];
+    let done = 0;
+    for (const [key, group] of Array.from(byFolder.entries())) {
+      const folder_id = key === "root" ? null : Number(key);
+      const batch = await uploadFilesViaSftpGo(
+        group.map((it) => ({
+          file: it.file,
+          titre: it.titre,
+          relative_path: it.relative_path,
+        })),
+        {
+          folder_id,
+          description: meta.description,
+          category: meta.type_document,
+        },
+        (p) =>
+          onProgress?.({
+            done: done + p.filesDone,
+            total: items.length,
+            currentName: p.fileName,
+            bytesUploaded: p.bytesUploaded,
+            bytesTotal: p.bytesTotal,
+          }),
+        signal
+      );
+      done += group.length;
+      all.push(...batch);
+    }
+    const disabled = all.every(
+      (r) => r.error && /SFTPGo upload hot path disabled|SFTPGo integration disabled/i.test(r.error)
+    );
+    if (!disabled) return all;
+  } catch {
+    // fall through to legacy
+  }
+
   const results: UploadBatchResult[] = [];
   const total = items.length;
   for (let i = 0; i < items.length; i++) {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const { file, titre, folder_id } = items[i];
     const targetFolder = folder_id !== undefined ? folder_id : meta.folder_id;
     onProgress?.({ done: i, total, currentName: file.name });
@@ -169,7 +228,8 @@ export async function uploadDocuments(
               bytesUploaded: resumable.bytesUploaded,
               bytesTotal: resumable.bytesTotal,
               resumable,
-            })
+            }),
+          signal
         );
       } else {
         document = await uploadDocument(file, {

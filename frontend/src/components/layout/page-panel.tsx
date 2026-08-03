@@ -8,6 +8,8 @@ type PagePanelProps = {
   subtitle?: string;
   children: React.ReactNode;
   className?: string;
+  /** Panneau lateral : padding reduit */
+  compact?: boolean;
   delay?: number;
 };
 
@@ -31,6 +33,7 @@ export function PagePanel({
   subtitle,
   children,
   className,
+  compact = false,
   delay = 0.05,
 }: PagePanelProps) {
   return (
@@ -41,7 +44,7 @@ export function PagePanel({
       transition={{ type: "spring", stiffness: 100, damping: 20, delay }}
     >
       <PanelCaption title={title} subtitle={subtitle} />
-      <div className="surface-bento p-6 md:p-8">{children}</div>
+      <div className={cn("surface-bento", compact ? "p-4 md:p-5" : "p-6 md:p-8")}>{children}</div>
     </motion.section>
   );
 }

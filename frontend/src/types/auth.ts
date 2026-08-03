@@ -5,6 +5,8 @@ export interface User {
   last_name: string;
   role: 'admin' | 'user' | 'manager' | 'validator' | 'archivist';
   avatar_url?: string;
+  department?: string;
+  clearance_level?: string;
   sftp_enabled?: boolean;
   sftp_mode?: 'none' | 'drop' | 'inbox' | 'full';
   is_active: boolean;

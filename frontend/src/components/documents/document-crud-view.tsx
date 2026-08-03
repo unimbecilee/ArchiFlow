@@ -14,6 +14,7 @@ type DocumentCrudViewProps = {
   bulkActions?: CrudBulkAction<Document>[];
   storageKey?: string;
   defaultViewMode?: "list" | "grid";
+  onQuickPreview?: (doc: Document) => void;
 };
 
 export function DocumentCrudView({
@@ -24,6 +25,7 @@ export function DocumentCrudView({
   bulkActions,
   storageKey = "archiflow-documents-view",
   defaultViewMode = "list",
+  onQuickPreview,
 }: DocumentCrudViewProps) {
   if (documents.length === 0) {
     return (
@@ -43,6 +45,7 @@ export function DocumentCrudView({
       defaultViewMode={defaultViewMode}
       bulkActions={bulkActions}
       rowActions={rowActions}
+      onRowClick={onQuickPreview}
       columns={[
         {
           id: "doc",

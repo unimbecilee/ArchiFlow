@@ -1,0 +1,41 @@
+# SFTPGo browser upload proxy (no body buffering).
+# Compose service: sftpgo-proxy on host :8088 → sftpgo:8080
+#
+# Browser CORS: Origin from frontend (localhost:3000).
+# Bytes never pass through ArchiFlow backend.
+
+:8088 {
+	# Disable request body size limits for multi-GB streaming uploads
+	request_body {
+		max_size 0
+	}
+
+	# Preflight
+	@options {
+		method OPTIONS
+	}
+	handle @options {
+		header Access-Control-Allow-Origin "{header.Origin}"
+		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, HEAD, OPTIONS"
+		header Access-Control-Allow-Headers "Authorization, Content-Type, X-SFTPGO-API-KEY"
+		header Access-Control-Expose-Headers "ETag, Content-Disposition"
+		header Access-Control-Max-Age "3600"
+		header Vary Origin
+		respond 204
+	}
+
+	handle {
+		header Access-Control-Allow-Origin "{header.Origin}"
+		header Access-Control-Allow-Credentials "true"
+		header Access-Control-Expose-Headers "ETag, Content-Disposition"
+		header Vary Origin
+		reverse_proxy sftpgo:8080 {
+			transport http {
+				read_timeout 0
+				write_timeout 0
+				dial_timeout 30s
+			}
+			flush_interval -1
+		}
+	}
+}

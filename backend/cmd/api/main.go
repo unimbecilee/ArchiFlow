@@ -152,22 +152,27 @@ func main() {
 	}
 	collaborationService := services.NewCollaborationService(collabRepo, documentRepo, userRepo, workflowRepo, cfg.MinioDocumentsBucket, notificationRealtime)
 	policyService := services.NewPolicyService(collaborationService, documentRepo, userRepo, sftpRepo)
-	officeService := services.NewOfficeService(collaborationService, userRepo)
+	officeService := services.NewOfficeService(collaborationService, userRepo, policyService)
 	favoriteService := services.NewFavoriteService(favRepo, documentRepo, collaborationService)
-	adminService := services.NewAdminService(userRepo, userPydioSync, userSftpGoSync, emailService, sessionService)
+	adminService := services.NewAdminService(userRepo, userPydioSync, userSftpGoSync, emailService, sessionService, policyService)
+	accessPolicyService := services.NewAccessPolicyService(sftpRepo, policyService)
 	sftpAuthService := services.NewSftpGoAuthService(userRepo, sftpRepo, auditService)
 	sftpIngestService := services.NewSFTPIngestService(
 		sftpRepo, documentRepo, userRepo, auditService, notificationRealtime,
 		cfg.MinioDocumentsBucket, cfg.MinioSFTPInboxBucket, collaborationService,
 	)
+	sftpgoUploadClient := services.NewSFTPGoUploadClient()
+	uploadTokenService := services.NewUploadTokenService(sftpgoUploadClient, folderService, userRepo, uploadQuotaService)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	folderHandler := handlers.NewFolderHandler(folderService)
 	documentHandler := handlers.NewDocumentHandler(documentService, collaborationService, policyService, auditService)
 	uploadHandler := handlers.NewUploadHandler(uploadService)
+	uploadTokenHandler := handlers.NewUploadTokenHandler(uploadTokenService)
 	collaborationHandler := handlers.NewCollaborationHandler(collaborationService, auditService, policyService)
 	favoriteHandler := handlers.NewFavoriteHandler(favoriteService, documentHandler)
 	adminHandler := handlers.NewAdminHandler(adminService)
+	accessPolicyHandler := handlers.NewAccessPolicyHandler(accessPolicyService)
 	archivesHandler := handlers.NewArchivesRequestsHandler(archiveService)
 	pydioHandler := handlers.NewPydioHandler(archiveService, documentService)
 	integrationsHandler := handlers.NewIntegrationsHandler(pydioIntegration, userPydioSync)
@@ -236,10 +241,14 @@ func main() {
 	protected.POST("/documents/upload", documentHandler.Upload, middleware.UploadRateLimit())
 
 	protected.POST("/upload/sessions", uploadHandler.InitSession, middleware.UploadInitRateLimit())
-	protected.GET("/upload/sessions/:id", uploadHandler.GetStatus)
-	protected.GET("/upload/sessions/:id/parts/:n/url", uploadHandler.PresignPart)
-	protected.POST("/upload/sessions/:id/complete", uploadHandler.Complete)
-	protected.DELETE("/upload/sessions/:id", uploadHandler.Abort)
+	mpuControl := middleware.UploadMPUControlRateLimit()
+	protected.GET("/upload/sessions/:id", uploadHandler.GetStatus, mpuControl)
+	protected.GET("/upload/sessions/:id/parts/:n/url", uploadHandler.PresignPart, mpuControl)
+	protected.POST("/upload/sessions/:id/complete", uploadHandler.Complete, mpuControl)
+	protected.DELETE("/upload/sessions/:id", uploadHandler.Abort, mpuControl)
+
+	protected.POST("/upload/token", uploadTokenHandler.MintToken, middleware.UploadTokenRateLimit())
+	protected.POST("/upload/token/refresh", uploadTokenHandler.RefreshToken, middleware.UploadTokenRateLimit())
 
 	protected.POST("/documents/:id/restore", documentHandler.Restore)
 	protected.POST("/documents/:id/lock", documentHandler.Lock)
@@ -309,6 +318,11 @@ func main() {
 	admin.POST("/workflows", adminWorkflowHandler.Create)
 	admin.PUT("/workflows/:id", adminWorkflowHandler.Put)
 	admin.DELETE("/workflows/:id", adminWorkflowHandler.Delete)
+
+	admin.GET("/access-policies", accessPolicyHandler.List)
+	admin.POST("/access-policies", accessPolicyHandler.Create)
+	admin.PUT("/access-policies/:id", accessPolicyHandler.Update)
+	admin.DELETE("/access-policies/:id", accessPolicyHandler.Delete)
 
 	pydioAPI := e.Group("/api/v1")
 	pydioAPI.Use(middleware.PydioAPIRateLimit())

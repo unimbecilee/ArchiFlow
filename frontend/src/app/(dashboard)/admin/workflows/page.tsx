@@ -13,6 +13,8 @@ import { CrudDataView, type CrudBulkAction, type CrudRowAction } from "@/compone
 import { useAuthStore } from "@/store/auth-store";
 import { adminDeleteWorkflow, adminListWorkflows } from "@/services/admin-workflows.service";
 import type { AdminWorkflowListRow } from "@/types/workflows";
+import { useConfirm } from "@/components/feedback/confirm-provider";
+import { toast } from "sonner";
 
 function canDeleteRow(row: AdminWorkflowListRow) {
   return !row.protected && row.instance_count === 0;
@@ -20,6 +22,7 @@ function canDeleteRow(row: AdminWorkflowListRow) {
 
 export default function AdminWorkflowsPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const { user } = useAuthStore();
   const [rows, setRows] = useState<AdminWorkflowListRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,13 +49,22 @@ export default function AdminWorkflowsPage() {
   const deleteOne = async (row: AdminWorkflowListRow) => {
     const w = row.workflow;
     if (!canDeleteRow(row)) return;
-    const ok = window.confirm(`Supprimer le workflow « ${w.name} » ? Cette operation est definitive.`);
-    if (!ok) return;
+    if (
+      !(await confirm({
+        title: "Supprimer le workflow",
+        description: `Supprimer « ${w.name} » ? Cette operation est definitive.`,
+        confirmLabel: "Supprimer",
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
     try {
       await adminDeleteWorkflow(w.id);
+      toast.success("Workflow supprime");
       await load();
     } catch {
-      alert("Suppression impossible.");
+      toast.error("Suppression impossible");
     }
   };
 
@@ -73,8 +85,7 @@ export default function AdminWorkflowsPage() {
         onClick: (row) => deleteOne(row),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [load, router]
+    [load, router, confirm]
   );
 
   const bulkActions: CrudBulkAction<AdminWorkflowListRow>[] = useMemo(
@@ -88,19 +99,28 @@ export default function AdminWorkflowsPage() {
         onClick: async (items) => {
           const targets = items.filter(canDeleteRow);
           if (targets.length === 0) return;
-          const ok = window.confirm(`Supprimer ${targets.length} workflow(s) ?`);
-          if (!ok) return;
+          if (
+            !(await confirm({
+              title: "Supprimer les workflows",
+              description: `Supprimer ${targets.length} workflow(s) ? Operation definitive.`,
+              confirmLabel: "Supprimer",
+              destructive: true,
+            }))
+          ) {
+            return;
+          }
           try {
             await Promise.all(targets.map((r) => adminDeleteWorkflow(r.workflow.id)));
+            toast.success(`${targets.length} workflow(s) supprime(s)`);
             await load();
           } catch {
-            alert("Suppression impossible pour au moins un element.");
+            toast.error("Suppression impossible pour au moins un element");
             await load();
           }
         },
       },
     ],
-    [load]
+    [load, confirm]
   );
 
   if (user?.role !== "admin") {

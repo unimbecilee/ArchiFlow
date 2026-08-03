@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Clock, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/document-list";
+import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
 import { useDocumentOpenAction } from "@/lib/document-crud-actions";
+import type { Document } from "@/types/documents";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
@@ -13,6 +16,7 @@ import { useDocumentListPage } from "@/hooks/use-document-list-page";
 import { getRecentDocuments } from "@/services/documents.service";
 
 export default function DocumentsRecentsPage() {
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const { items: docs, loading, load, error } = useDocumentListPage({
     loadFn: getRecentDocuments,
   });
@@ -21,8 +25,8 @@ export default function DocumentsRecentsPage() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Documents"
         title="Documents recents"
+        hideTitle
         description="Retrouvez les fichiers modifies recemment dans votre espace."
         icon={<Clock className="h-6 w-6" weight="duotone" />}
         actions={
@@ -35,7 +39,11 @@ export default function DocumentsRecentsPage() {
       {error ? <ErrorBanner message={error} /> : null}
       <PagePanel
         title="Historique"
-        subtitle={loading ? "Chargement..." : `${docs.length} document(s)`}
+        subtitle={
+          loading
+            ? "Chargement..."
+            : `${docs.length} document(s) · clic sur une ligne pour l'apercu`
+        }
       >
         {loading ? (
           <ListSkeleton />
@@ -45,9 +53,11 @@ export default function DocumentsRecentsPage() {
             emptyMessage="Aucun document recent"
             rowActions={[openAction]}
             storageKey="archiflow-recent-view"
+            onQuickPreview={setPreviewDoc}
           />
         )}
       </PagePanel>
+      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }

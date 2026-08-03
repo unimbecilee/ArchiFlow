@@ -11,6 +11,8 @@ type PageHeaderProps = {
   badge?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
+  /** Titre deja affiche dans le shell — n'afficher que description + actions. */
+  hideTitle?: boolean;
 };
 
 export function PageHeader({
@@ -21,6 +23,7 @@ export function PageHeader({
   badge,
   actions,
   className,
+  hideTitle = false,
 }: PageHeaderProps) {
   return (
     <motion.div
@@ -32,23 +35,26 @@ export function PageHeader({
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
     >
-      <motion.div className="space-y-3 lg:pr-8">
-        {eyebrow && (
+      <motion.div className={cn("space-y-3", hideTitle ? "lg:pr-4" : "lg:pr-8")}>
+        {!hideTitle && eyebrow && (
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-700">
             {eyebrow}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-3">
-          {icon && (
-            <span className="inline-flex rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
-              {icon}
-            </span>
-          )}
-          <h1 className="text-3xl font-semibold tracking-tighter text-zinc-900 md:text-4xl">
-            {title}
-          </h1>
-          {badge}
-        </div>
+        {!hideTitle && (
+          <div className="flex flex-wrap items-center gap-3">
+            {icon && (
+              <span className="inline-flex rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
+                {icon}
+              </span>
+            )}
+            <h1 className="text-3xl font-semibold tracking-tighter text-zinc-900 md:text-4xl">
+              {title}
+            </h1>
+            {badge}
+          </div>
+        )}
+        {hideTitle && badge && <div className="flex flex-wrap gap-2">{badge}</div>}
         {description && (
           <p className="max-w-[65ch] text-base leading-relaxed text-zinc-600">
             {description}

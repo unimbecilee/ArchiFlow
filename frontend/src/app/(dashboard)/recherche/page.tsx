@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DocumentList } from "@/components/documents/document-list";
+import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
 import { useDocumentOpenAction } from "@/lib/document-crud-actions";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
@@ -21,6 +22,7 @@ export default function RecherchePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const openAction = useDocumentOpenAction();
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -45,8 +47,8 @@ export default function RecherchePage() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Documents"
         title="Recherche"
+        hideTitle
         description="Titre, description, nom de fichier, categorie et texte OCR indexe."
         icon={<MagnifyingGlass className="h-6 w-6" weight="duotone" />}
       />
@@ -85,9 +87,11 @@ export default function RecherchePage() {
             emptyMessage="Aucun document trouve"
             rowActions={[openAction]}
             storageKey="archiflow-search-view"
+            onQuickPreview={setPreviewDoc}
           />
         )}
       </PagePanel>
+      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }

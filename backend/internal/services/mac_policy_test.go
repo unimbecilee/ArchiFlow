@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"archiflow/backend/internal/authz"
 	"archiflow/backend/internal/models"
 )
 
@@ -71,7 +72,7 @@ func TestMacAndDepartmentDeny(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := macAndDepartmentDeny(tc.doc, tc.uid, tc.role, repo)
+			got := authz.MACDeny(tc.doc, tc.uid, tc.role, repo)
 			if got != tc.deny {
 				t.Fatalf("deny=%v want %v", got, tc.deny)
 			}
@@ -104,13 +105,13 @@ func TestEvalPolicyConditionNeqAndOwner(t *testing.T) {
 	user := &models.User{ID: 7, Department: "IT", ClearanceLevel: models.ClassificationInternal}
 	doc := &models.Document{OwnerID: 7, Department: "RH", Classification: models.ClassificationInternal}
 
-	if !evalPolicyCondition(`{"attr":"doc.department","op":"neq","value":"$user.department"}`, user, doc) {
+	if !authz.EvalPolicyCondition(`{"attr":"doc.department","op":"neq","value":"$user.department"}`, user, doc) {
 		t.Fatal("expected neq match")
 	}
-	if !evalPolicyCondition(`{"attr":"doc.owner_id","op":"eq","value":"$user.id"}`, user, doc) {
+	if !authz.EvalPolicyCondition(`{"attr":"doc.owner_id","op":"eq","value":"$user.id"}`, user, doc) {
 		t.Fatal("expected owner_id match")
 	}
-	if evalPolicyCondition(`{"attr":"unknown","op":"eq","value":"x"}`, user, doc) {
+	if authz.EvalPolicyCondition(`{"attr":"unknown","op":"eq","value":"x"}`, user, doc) {
 		t.Fatal("unknown attr must fail")
 	}
 }

@@ -24,6 +24,8 @@ import { useAuthStore } from "@/store/auth-store";
 import type { User } from "@/types/auth";
 import { deleteUser, listUsers, patchUser } from "@/services/admin.service";
 import { ROLE_LABELS, type PlatformRole } from "@/lib/roles";
+import { useConfirm } from "@/components/feedback/confirm-provider";
+import { toast } from "sonner";
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
@@ -46,6 +48,7 @@ function RoleBadge({ role }: { role: string }) {
 
 export default function AdminUsersPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const { user } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,13 +120,27 @@ export default function AdminUsersPage() {
         destructive: true,
         hidden: (u) => u.id === user?.id,
         onClick: async (u) => {
-          if (!window.confirm(`Supprimer ${u.email} ?`)) return;
-          await deleteUser(u.id);
-          await load();
+          if (
+            !(await confirm({
+              title: "Supprimer l'utilisateur",
+              description: `Supprimer ${u.email} ? Cette action est definitive.`,
+              confirmLabel: "Supprimer",
+              destructive: true,
+            }))
+          ) {
+            return;
+          }
+          try {
+            await deleteUser(u.id);
+            toast.success("Utilisateur supprime");
+            await load();
+          } catch {
+            toast.error("Suppression impossible");
+          }
         },
       },
     ],
-    [load, router, user?.id]
+    [load, router, user?.id, confirm]
   );
 
   const bulkActions: CrudBulkAction<User>[] = useMemo(
@@ -136,8 +153,18 @@ export default function AdminUsersPage() {
         onClick: async (items) => {
           const targets = items.filter((u) => u.is_active && u.id !== user?.id);
           if (targets.length === 0) return;
-          if (!window.confirm(`Desactiver ${targets.length} utilisateur(s) ?`)) return;
+          if (
+            !(await confirm({
+              title: "Desactiver les comptes",
+              description: `Desactiver ${targets.length} utilisateur(s) ?`,
+              confirmLabel: "Desactiver",
+              destructive: true,
+            }))
+          ) {
+            return;
+          }
           await Promise.all(targets.map((u) => patchUser(u.id, { is_active: false })));
+          toast.success(`${targets.length} compte(s) desactive(s)`);
           await load();
         },
       },
@@ -150,13 +177,28 @@ export default function AdminUsersPage() {
         onClick: async (items) => {
           const targets = items.filter((u) => u.id !== user?.id);
           if (targets.length === 0) return;
-          if (!window.confirm(`Supprimer ${targets.length} utilisateur(s) ?`)) return;
-          await Promise.all(targets.map((u) => deleteUser(u.id)));
-          await load();
+          if (
+            !(await confirm({
+              title: "Supprimer les utilisateurs",
+              description: `Supprimer ${targets.length} utilisateur(s) ? Action definitive.`,
+              confirmLabel: "Supprimer",
+              destructive: true,
+            }))
+          ) {
+            return;
+          }
+          try {
+            await Promise.all(targets.map((u) => deleteUser(u.id)));
+            toast.success(`${targets.length} utilisateur(s) supprime(s)`);
+            await load();
+          } catch {
+            toast.error("Suppression impossible pour au moins un compte");
+            await load();
+          }
         },
       },
     ],
-    [load, user?.id]
+    [load, user?.id, confirm]
   );
 
   if (user?.role !== "admin") {

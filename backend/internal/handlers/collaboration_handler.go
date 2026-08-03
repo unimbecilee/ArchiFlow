@@ -30,6 +30,23 @@ func NewCollaborationHandler(
 	return &CollaborationHandler{collab: collab, audit: audit, policy: policy}
 }
 
+func (h *CollaborationHandler) ensurePolicy(c echo.Context, docID uint, action string) error {
+	if h.policy == nil {
+		return nil
+	}
+	userID, err := userIDFromContext(c)
+	if err != nil {
+		return err
+	}
+	if err := h.policy.EnsureCan(userID, roleFromContext(c), docID, action); err != nil {
+		return c.JSON(http.StatusForbidden, map[string]any{
+			"success": false,
+			"error":   "acces refuse (role, partage ou politique de securite)",
+		})
+	}
+	return nil
+}
+
 // Share POST /api/documents/:id/share
 func (h *CollaborationHandler) Share(c echo.Context) error {
 	userID, err := userIDFromContext(c)
@@ -57,6 +74,9 @@ func (h *CollaborationHandler) Share(c echo.Context) error {
 	}
 	if h.policy != nil {
 		h.policy.InvalidateCache(userID, uint(docID))
+		if body.UserID > 0 {
+			h.policy.InvalidateCache(body.UserID, uint(docID))
+		}
 	}
 	if h.audit != nil {
 		uid := userID
@@ -105,6 +125,9 @@ func (h *CollaborationHandler) ListComments(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionRead); err != nil {
+		return err
+	}
 	rows, err := h.collab.ListComments(uint(docID), userID, roleFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": err.Error()})
@@ -119,6 +142,9 @@ func (h *CollaborationHandler) AddComment(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionComment); err != nil {
+		return err
+	}
 	var body struct {
 		Content  string `json:"content"`
 		ParentID *uint  `json:"parent_id"`
@@ -153,6 +179,9 @@ func (h *CollaborationHandler) GetDocumentContent(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionRead); err != nil {
+		return err
+	}
 	out, err := h.collab.GetEditableContent(c.Request().Context(), uint(docID), userID, roleFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": err.Error()})
@@ -167,6 +196,9 @@ func (h *CollaborationHandler) SaveDocumentEdit(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionWrite); err != nil {
+		return err
+	}
 	var body struct {
 		Content     string `json:"content"`
 		Commentaire string `json:"commentaire"`
@@ -195,6 +227,9 @@ func (h *CollaborationHandler) ListVersions(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionRead); err != nil {
+		return err
+	}
 	rows, err := h.collab.ListVersions(uint(docID), userID, roleFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": err.Error()})
@@ -209,6 +244,9 @@ func (h *CollaborationHandler) UploadVersion(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionWrite); err != nil {
+		return err
+	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "file required"})
@@ -228,6 +266,9 @@ func (h *CollaborationHandler) DownloadVersion(c echo.Context) error {
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 	versionID, _ := strconv.ParseUint(c.Param("versionId"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionRead); err != nil {
+		return err
+	}
 	reader, mime, filename, err := h.collab.OpenVersionContent(
 		c.Request().Context(), uint(docID), uint(versionID), userID, roleFromContext(c),
 	)
@@ -250,6 +291,9 @@ func (h *CollaborationHandler) PreviewVersion(c echo.Context) error {
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 	versionID, _ := strconv.ParseUint(c.Param("versionId"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionRead); err != nil {
+		return err
+	}
 	reader, mime, filename, err := h.collab.OpenVersionContent(
 		c.Request().Context(), uint(docID), uint(versionID), userID, roleFromContext(c),
 	)
@@ -286,6 +330,9 @@ func (h *CollaborationHandler) GetDocumentTags(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionRead); err != nil {
+		return err
+	}
 	rows, err := h.collab.GetDocumentTags(uint(docID), userID, roleFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": err.Error()})
@@ -300,6 +347,9 @@ func (h *CollaborationHandler) AddDocumentTag(c echo.Context) error {
 		return err
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionWrite); err != nil {
+		return err
+	}
 	var body struct {
 		Name  string `json:"name"`
 		Color string `json:"color"`
@@ -322,6 +372,9 @@ func (h *CollaborationHandler) RemoveDocumentTag(c echo.Context) error {
 	}
 	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 	tagID, _ := strconv.ParseUint(c.Param("tagId"), 10, 64)
+	if err := h.ensurePolicy(c, uint(docID), services.ActionWrite); err != nil {
+		return err
+	}
 	if err := h.collab.RemoveTag(uint(docID), uint(tagID), userID, roleFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}

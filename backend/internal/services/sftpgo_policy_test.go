@@ -3,6 +3,7 @@ package services
 import (
 	"testing"
 
+	"archiflow/backend/internal/authz"
 	"archiflow/backend/internal/models"
 )
 
@@ -12,28 +13,29 @@ func TestClearanceRank(t *testing.T) {
 	}
 }
 
-func TestPolicyMatchesAction(t *testing.T) {
-	if !policyMatchesAction(`["read","write"]`, ActionRead) {
-		t.Fatal("expected read match")
+func TestPolicyMatchesActionJSON(t *testing.T) {
+	raw := `["read","write"]`
+	if !authz.PolicyMatchesAction(raw, "read") {
+		t.Fatal("read")
 	}
-	if policyMatchesAction(`["write"]`, ActionRead) {
-		t.Fatal("expected no read match")
+	if authz.PolicyMatchesAction(raw, "share") {
+		t.Fatal("no share")
 	}
-	if !policyMatchesAction(`["*"]`, ActionShare) {
-		t.Fatal("expected wildcard")
+	if !authz.PolicyMatchesAction("", "write") {
+		t.Fatal("empty actions = all")
 	}
 }
 
-func TestEvalPolicyConditionEq(t *testing.T) {
-	user := &models.User{ID: 1, Department: "IT", ClearanceLevel: models.ClassificationInternal}
-	doc := &models.Document{OwnerID: 2, Department: "IT", Classification: models.ClassificationInternal}
-	ok := evalPolicyCondition(`{"attr":"doc.department","op":"eq","value":"$user.department"}`, user, doc)
-	if !ok {
-		t.Fatal("expected department match")
+func TestEvalPolicyConditionDepartment(t *testing.T) {
+	user := &models.User{Department: "IT"}
+	doc := &models.Document{Department: "RH"}
+	cond := `{"attr":"doc.department","op":"eq","value":"$user.department"}`
+	if authz.EvalPolicyCondition(cond, user, doc) {
+		t.Fatal("departments differ")
 	}
-	doc.Department = "RH"
-	if evalPolicyCondition(`{"attr":"doc.department","op":"eq","value":"$user.department"}`, user, doc) {
-		t.Fatal("expected department mismatch")
+	user.Department = "RH"
+	if !authz.EvalPolicyCondition(cond, user, doc) {
+		t.Fatal("departments match")
 	}
 }
 

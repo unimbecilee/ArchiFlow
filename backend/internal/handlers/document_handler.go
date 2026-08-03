@@ -35,18 +35,18 @@ func NewDocumentHandler(
 }
 
 func (h *DocumentHandler) ensureDocAccess(c echo.Context, docID uint) error {
+	return h.ensureDocPolicy(c, docID, services.ActionRead)
+}
+
+func (h *DocumentHandler) ensureDocPolicy(c echo.Context, docID uint, action string) error {
 	userID, err := userIDFromContext(c)
 	if err != nil {
 		return err
 	}
 	role := roleFromContext(c)
 	if h.policyService != nil {
-		ok, _, err := h.policyService.Can(userID, role, docID, services.ActionRead)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusNotFound, "document not found")
-		}
-		if !ok {
-			return echo.NewHTTPError(http.StatusForbidden, "forbidden")
+		if err := h.policyService.EnsureCan(userID, role, docID, action); err != nil {
+			return echo.NewHTTPError(http.StatusForbidden, "acces refuse (role, partage ou politique de securite)")
 		}
 		return nil
 	}
@@ -388,6 +388,9 @@ func (h *DocumentHandler) Patch(c echo.Context) error {
 		return err
 	}
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+		return err
+	}
 	var body struct {
 		FolderID *uint `json:"folder_id"`
 	}
@@ -408,6 +411,9 @@ func (h *DocumentHandler) Delete(c echo.Context) error {
 		return err
 	}
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+		return err
+	}
 	if err := h.documentService.Delete(uint(id), userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}

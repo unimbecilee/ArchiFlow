@@ -12,12 +12,16 @@ import { ErrorBanner } from "@/components/layout/error-banner";
 import { EmptyState } from "@/components/layout/empty-state";
 import { CrudDataView, type CrudRowAction } from "@/components/crud";
 import type { SharedDocument } from "@/types/collaboration";
+import type { Document } from "@/types/documents";
+import { sharedDocumentForPreview } from "@/lib/document-quick-preview";
+import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
 import { useNotifications } from "@/context/notification-context";
 import { getSharedWithMe } from "@/services/collaboration.service";
 
 export default function DocumentsPartagesPage() {
   const router = useRouter();
   const { unreadShares } = useNotifications();
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [docs, setDocs] = useState<SharedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +57,8 @@ export default function DocumentsPartagesPage() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Collaboration"
         title="Documents partages"
+        hideTitle
         description="Fichiers que d'autres utilisateurs ont partages avec vous."
         icon={<ShareNetwork className="h-6 w-6" weight="duotone" />}
         badge={
@@ -74,7 +78,11 @@ export default function DocumentsPartagesPage() {
       {error && <ErrorBanner message={error} />}
       <PagePanel
         title="Partages recus"
-        subtitle={loading ? "Chargement..." : `${docs.length} document(s)`}
+        subtitle={
+          loading
+            ? "Chargement..."
+            : `${docs.length} document(s) · clic sur une ligne pour l'apercu`
+        }
       >
         {loading ? (
           <ListSkeleton />
@@ -91,6 +99,7 @@ export default function DocumentsPartagesPage() {
             storageKey="archiflow-shared-view"
             rowActions={rowActions}
             selectable={false}
+            onRowClick={(doc) => setPreviewDoc(sharedDocumentForPreview(doc))}
             columns={[
               {
                 id: "doc",
@@ -138,6 +147,7 @@ export default function DocumentsPartagesPage() {
           />
         )}
       </PagePanel>
+      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }

@@ -12,6 +12,7 @@ type DocumentListProps = {
   bulkActions?: CrudBulkAction<Document>[];
   storageKey?: string;
   defaultViewMode?: "list" | "grid";
+  onQuickPreview?: (doc: Document) => void;
 };
 
 export function DocumentList({
@@ -22,6 +23,7 @@ export function DocumentList({
   bulkActions,
   storageKey,
   defaultViewMode,
+  onQuickPreview,
 }: DocumentListProps) {
   return (
     <DocumentCrudView
@@ -32,6 +34,7 @@ export function DocumentList({
       bulkActions={bulkActions}
       storageKey={storageKey}
       defaultViewMode={defaultViewMode}
+      onQuickPreview={onQuickPreview}
     />
   );
 }

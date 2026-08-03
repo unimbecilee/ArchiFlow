@@ -98,12 +98,20 @@ export function CrudDataView<T>({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((item) => {
+                {items.map((item, rowIndex) => {
                   const id = getItemId(item);
                   const selected = selection.isSelected(id);
                   return (
-                    <tr
+                    <motion.tr
                       key={String(id)}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 120,
+                        damping: 22,
+                        delay: Math.min(rowIndex, 14) * 0.04,
+                      }}
                       className={cn(
                         "text-zinc-700 transition-colors hover:bg-slate-50/80",
                         selected && "bg-emerald-50/40",
@@ -140,7 +148,7 @@ export function CrudDataView<T>({
                           <RowActionsMenu item={item} actions={rowActions} />
                         </td>
                       )}
-                    </tr>
+                    </motion.tr>
                   );
                 })}
               </tbody>

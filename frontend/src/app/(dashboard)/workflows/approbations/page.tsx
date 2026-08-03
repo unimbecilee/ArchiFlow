@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle } from "@phosphor-icons/react";
+import { CheckCircle, ListBullets, SquaresFour } from "@phosphor-icons/react";
 import { WorkflowInstanceList } from "@/components/workflows/workflow-instance-list";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { ErrorBanner } from "@/components/layout/error-banner";
+import { Button } from "@/components/ui/button";
 import { useWorkflowRealtime } from "@/hooks/use-workflow-realtime";
 import { getPendingApprovals } from "@/services/workflows.service";
 import type { WorkflowInstance } from "@/types/workflows";
@@ -15,6 +16,7 @@ export default function ApprobationsPage() {
   const [items, setItems] = useState<WorkflowInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<"compact" | "detail">("compact");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,13 +42,44 @@ export default function ApprobationsPage() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Workflows"
         title="Approbations"
-        description="Consultez l'apercu du document, confirmez la verification, puis approuvez ou rejetez."
+        hideTitle
+        description="File d'attente : approuvez ou rejetez depuis la vue compacte, ou ouvrez la fiche avec apercu."
         icon={<CheckCircle className="h-6 w-6" weight="duotone" />}
+        actions={
+          <div className="flex gap-2">
+            <Button
+              variant={layout === "compact" ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setLayout("compact")}
+            >
+              <ListBullets className="h-4 w-4" />
+              File
+            </Button>
+            <Button
+              variant={layout === "detail" ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setLayout("detail")}
+            >
+              <SquaresFour className="h-4 w-4" />
+              Detail
+            </Button>
+          </div>
+        }
       />
       {error ? <ErrorBanner message={error} /> : null}
-      {loading ? <ListSkeleton rows={3} /> : <WorkflowInstanceList items={items} mode="pending" onRefresh={load} />}
+      {loading ? (
+        <ListSkeleton rows={3} />
+      ) : (
+        <WorkflowInstanceList
+          items={items}
+          mode="pending"
+          pendingLayout={layout}
+          onRefresh={load}
+        />
+      )}
     </PageFrame>
   );
 }

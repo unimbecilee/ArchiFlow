@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
+	"archiflow/backend/internal/authz"
 	"archiflow/backend/internal/config"
-	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 
 	"github.com/redis/go-redis/v9"
@@ -39,12 +37,13 @@ func NewPolicyService(
 	}
 }
 
-const (
-	ActionRead  = "read"
-	ActionWrite = "write"
-	ActionShare = "share"
-	policyTTL   = 30 * time.Second
-)
+const policyTTL = 30 * time.Second
+
+var policyCacheActions = []string{
+	authz.PolicyAction(authz.ActionRead),
+	authz.PolicyAction(authz.ActionWrite),
+	authz.PolicyAction(authz.ActionShare),
+}
 
 // Can évalue CanAccess (RBAC+ACL+MAC) puis policies ABAC optionnelles, avec cache Redis.
 func (p *PolicyService) Can(userID uint, role string, docID uint, action string) (bool, []string, error) {
@@ -58,20 +57,13 @@ func (p *PolicyService) Can(userID uint, role string, docID uint, action string)
 		return false, nil, err
 	}
 
-	need := models.PermRead
-	switch action {
-	case ActionWrite:
-		need = models.PermWrite
-	case ActionShare:
-		need = models.PermShare
-	case ActionRead:
-		need = models.PermRead
+	act := authz.Action(action)
+	switch act {
+	case authz.ActionWrite, authz.ActionShare, authz.ActionComment:
+	default:
+		act = authz.ActionRead
 	}
-	allowed := p.collab.requirePerm(perms, need)
-	if action == ActionRead && !allowed {
-		allowed = p.collab.requirePerm(perms, models.PermDownload) || p.collab.requirePerm(perms, models.PermRead)
-	}
-	if !allowed {
+	if !authz.Satisfies(perms, act) {
 		p.cacheSet(userID, docID, action, false, perms)
 		return false, perms, nil
 	}
@@ -81,21 +73,9 @@ func (p *PolicyService) Can(userID uint, role string, docID uint, action string)
 		doc, derr := p.docRepo.FindByID(docID)
 		if uerr == nil && derr == nil {
 			policies, _ := p.sftpRepo.ListAccessPolicies()
-			for _, pol := range policies {
-				if !policyMatchesAction(pol.Actions, action) {
-					continue
-				}
-				if !evalPolicyCondition(pol.Condition, user, doc) {
-					continue
-				}
-				if strings.EqualFold(pol.Effect, "deny") {
-					p.cacheSet(userID, docID, action, false, perms)
-					return false, perms, nil
-				}
-				if strings.EqualFold(pol.Effect, "allow") {
-					p.cacheSet(userID, docID, action, true, perms)
-					return true, perms, nil
-				}
+			if !authz.ApplyAccessPolicies(policies, action, user, doc) {
+				p.cacheSet(userID, docID, action, false, perms)
+				return false, perms, nil
 			}
 		}
 	}
@@ -115,14 +95,39 @@ func (p *PolicyService) EnsureCan(userID uint, role string, docID uint, action s
 	return nil
 }
 
-// InvalidateCache after share / role change.
+// InvalidateCache clears cached decisions for one user and document.
 func (p *PolicyService) InvalidateCache(userID, docID uint) {
 	if p.rdb == nil {
 		return
 	}
 	ctx := context.Background()
-	for _, a := range []string{ActionRead, ActionWrite, ActionShare} {
+	for _, a := range policyCacheActions {
 		_ = p.rdb.Del(ctx, policyCacheKey(userID, docID, a)).Err()
+	}
+}
+
+// InvalidateUser clears all cached policy entries for a user (role / clearance change).
+func (p *PolicyService) InvalidateUser(userID uint) {
+	if p.rdb == nil {
+		return
+	}
+	ctx := context.Background()
+	pattern := fmt.Sprintf("policy:%d:*", userID)
+	iter := p.rdb.Scan(ctx, 0, pattern, 200).Iterator()
+	for iter.Next(ctx) {
+		_ = p.rdb.Del(ctx, iter.Val()).Err()
+	}
+}
+
+// InvalidateAllPolicyCaches clears every policy cache entry (after access_policies CRUD).
+func (p *PolicyService) InvalidateAllPolicyCaches() {
+	if p.rdb == nil {
+		return
+	}
+	ctx := context.Background()
+	iter := p.rdb.Scan(ctx, 0, "policy:*", 500).Iterator()
+	for iter.Next(ctx) {
+		_ = p.rdb.Del(ctx, iter.Val()).Err()
 	}
 }
 
@@ -156,68 +161,4 @@ func (p *PolicyService) cacheSet(userID, docID uint, action string, ok bool, per
 	}
 	b, _ := json.Marshal(policyCacheVal{OK: ok, Perms: perms})
 	_ = p.rdb.Set(context.Background(), policyCacheKey(userID, docID, action), b, policyTTL).Err()
-}
-
-func policyMatchesAction(raw, action string) bool {
-	if raw == "" {
-		return true
-	}
-	var actions []string
-	if err := json.Unmarshal([]byte(raw), &actions); err != nil {
-		return strings.Contains(raw, action)
-	}
-	for _, a := range actions {
-		if a == action || a == "*" {
-			return true
-		}
-	}
-	return false
-}
-
-func evalPolicyCondition(raw string, user *models.User, doc *models.Document) bool {
-	if strings.TrimSpace(raw) == "" {
-		return true
-	}
-	var cond map[string]any
-	if err := json.Unmarshal([]byte(raw), &cond); err != nil {
-		return false
-	}
-	attr, _ := cond["attr"].(string)
-	op, _ := cond["op"].(string)
-	val, _ := cond["value"].(string)
-
-	left := ""
-	switch attr {
-	case "doc.department":
-		left = doc.Department
-	case "user.department":
-		left = user.Department
-	case "doc.classification":
-		left = doc.Classification
-	case "user.clearance":
-		left = user.ClearanceLevel
-	case "doc.owner_id":
-		left = strconv.FormatUint(uint64(doc.OwnerID), 10)
-	default:
-		return false
-	}
-	right := val
-	if strings.HasPrefix(val, "$user.") {
-		switch val {
-		case "$user.department":
-			right = user.Department
-		case "$user.clearance":
-			right = user.ClearanceLevel
-		case "$user.id":
-			right = strconv.FormatUint(uint64(user.ID), 10)
-		}
-	}
-	switch op {
-	case "eq", "==", "":
-		return strings.EqualFold(left, right)
-	case "neq", "!=":
-		return !strings.EqualFold(left, right)
-	default:
-		return false
-	}
 }

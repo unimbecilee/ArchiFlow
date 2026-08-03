@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"strings"
 
+	"archiflow/backend/internal/authz"
 	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
@@ -66,7 +67,7 @@ func (s *CollaborationService) CanAccess(docID, userID uint, role string) (bool,
 	}
 
 	// MAC / ABAC département (avant RBAC classique)
-	if denied := macAndDepartmentDeny(doc, userID, role, s.userRepo); denied {
+	if authz.MACDeny(doc, userID, role, s.userRepo) {
 		return false, nil, nil
 	}
 
@@ -98,36 +99,6 @@ func (s *CollaborationService) CanAccess(docID, userID uint, role string) (bool,
 		return false, nil, nil
 	}
 	return true, decodePerms(share.Permissions), nil
-}
-
-// macAndDepartmentDeny applique MAC CONFIDENTIEL + filtrage département.
-func macAndDepartmentDeny(doc *models.Document, userID uint, role string, userRepo repository.UserRepository) bool {
-	if models.RoleIsAdmin(role) || doc.OwnerID == userID {
-		return false
-	}
-	user, err := userRepo.GetByID(userID)
-	if err != nil || user == nil {
-		return true
-	}
-	classif := doc.Classification
-	if classif == "" {
-		classif = models.ClassificationInternal
-	}
-	clearance := user.ClearanceLevel
-	if clearance == "" {
-		clearance = models.ClassificationInternal
-	}
-	if classif == models.ClassificationConfidential {
-		return true // non-owner non-admin
-	}
-	if models.ClearanceRank(clearance) < models.ClearanceRank(classif) {
-		return true
-	}
-	if doc.Department != "" && user.Department != "" &&
-		!strings.EqualFold(doc.Department, user.Department) {
-		return true
-	}
-	return false
 }
 
 func (s *CollaborationService) requirePerm(perms []string, need string) bool {

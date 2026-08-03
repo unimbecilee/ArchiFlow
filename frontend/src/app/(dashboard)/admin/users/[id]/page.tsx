@@ -35,10 +35,12 @@ import {
   ROLE_LABELS,
   type PlatformRole,
 } from "@/lib/roles";
+import { useConfirm } from "@/components/feedback/confirm-provider";
 
 export default function AdminUserDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const confirm = useConfirm();
   const { user: currentUser } = useAuthStore();
   const userId = Number(params.id);
 
@@ -133,7 +135,14 @@ export default function AdminUserDetailPage() {
 
   const handleDelete = async () => {
     if (!detail || detail.id === currentUser?.id) return;
-    if (!confirm(`Supprimer ${detail.email} ? Compte ArchiFlow et ${ARCHIFLOW_PLUS} seront retires.`)) {
+    if (
+      !(await confirm({
+        title: "Supprimer l'utilisateur",
+        description: `Supprimer ${detail.email} ? Compte ArchiFlow et ${ARCHIFLOW_PLUS} seront retires.`,
+        confirmLabel: "Supprimer",
+        destructive: true,
+      }))
+    ) {
       return;
     }
     try {

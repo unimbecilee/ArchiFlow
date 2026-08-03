@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Trash, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/document-list";
+import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
+import type { Document } from "@/types/documents";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
@@ -14,6 +16,7 @@ import { getTrashDocuments, restoreDocument } from "@/services/documents.service
 import { buildTrashDocumentActions } from "@/lib/document-crud-actions";
 
 export default function CorbeillePage() {
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const { items: docs, loading, load, error } = useDocumentListPage({
     loadFn: getTrashDocuments,
   });
@@ -31,8 +34,8 @@ export default function CorbeillePage() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Documents"
         title="Corbeille"
+        hideTitle
         description="Documents supprimes recemment, recuperables avant purge definitive."
         icon={<Trash className="h-6 w-6" weight="duotone" />}
         actions={
@@ -57,9 +60,11 @@ export default function CorbeillePage() {
             rowActions={rowActions}
             bulkActions={bulkActions}
             storageKey="archiflow-trash-view"
+            onQuickPreview={setPreviewDoc}
           />
         )}
       </PagePanel>
+      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }

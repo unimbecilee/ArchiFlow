@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Star, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/document-list";
+import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
 import { useFavoriteDocumentActions } from "@/lib/document-crud-actions";
+import type { Document } from "@/types/documents";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
@@ -13,6 +16,7 @@ import { useDocumentListPage } from "@/hooks/use-document-list-page";
 import { getFavorites } from "@/services/favorites.service";
 
 export default function FavorisPage() {
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const { items: docs, loading, load, error } = useDocumentListPage({
     loadFn: getFavorites,
   });
@@ -21,8 +25,8 @@ export default function FavorisPage() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Documents"
         title="Favoris"
+        hideTitle
         description="Acces direct aux dossiers que vous suivez au quotidien."
         icon={<Star className="h-6 w-6" weight="duotone" />}
         actions={
@@ -35,7 +39,9 @@ export default function FavorisPage() {
       {error ? <ErrorBanner message={error} /> : null}
       <PagePanel
         title="Selection"
-        subtitle={loading ? "Chargement..." : `${docs.length} favori(s)`}
+        subtitle={
+          loading ? "Chargement..." : `${docs.length} favori(s) · clic pour apercu rapide`
+        }
       >
         {loading ? (
           <ListSkeleton />
@@ -47,9 +53,11 @@ export default function FavorisPage() {
             rowActions={rowActions}
             bulkActions={bulkActions}
             storageKey="archiflow-favorites-view"
+            onQuickPreview={setPreviewDoc}
           />
         )}
       </PagePanel>
+      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }

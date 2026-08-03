@@ -115,6 +115,10 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 		fileName = filepath.Base(stagingKey)
 	}
 
+	folderID := ParseFolderIDFromVirtualPath(hook.VirtualPath)
+	directDocuments := stagingBucket == s.documentsBucket ||
+		strings.EqualFold(stagingBucket, s.documentsBucket)
+
 	// Bloque si un document homonyme est EN_VALIDATION ou verrouillé
 	if blocked, _ := s.docRepo.OwnerHasLockedOrValidatingFile(ownerID, fileName); blocked {
 		if s.audit != nil {
@@ -176,12 +180,16 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 		contentType = "application/octet-stream"
 	}
 
-	canonicalKey := config.NewArchiveObjectName(fileName)
-	if err := config.CopyObject(ctx, stagingBucket, stagingKey, s.documentsBucket, canonicalKey); err != nil {
-		event.Status = models.SftpIngestFailed
-		event.ErrorMessage = err.Error()
-		_ = s.sftpRepo.UpdateIngestEvent(event)
-		return nil, fmt.Errorf("copy to canonical: %w", err)
+	canonicalBucket := s.documentsBucket
+	canonicalKey := stagingKey
+	if !directDocuments {
+		canonicalKey = config.NewArchiveObjectName(fileName)
+		if err := config.CopyObject(ctx, stagingBucket, stagingKey, s.documentsBucket, canonicalKey); err != nil {
+			event.Status = models.SftpIngestFailed
+			event.ErrorMessage = err.Error()
+			_ = s.sftpRepo.UpdateIngestEvent(event)
+			return nil, fmt.Errorf("copy to canonical: %w", err)
+		}
 	}
 
 	user, _ := s.userRepo.GetByID(ownerID)
@@ -194,17 +202,23 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 		}
 	}
 
+	category := "SFTP"
+	if directDocuments {
+		category = "Upload"
+	}
+
 	doc := &models.Document{
-		Title:           fileName,
-		Description:     "Imported via SFTP",
+		Title:           strings.TrimSuffix(fileName, filepath.Ext(fileName)),
+		Description:     "Imported via SFTPGo",
 		FileName:        fileName,
 		MimeType:        contentType,
 		Size:            size,
-		Category:        "SFTP",
-		MinioBucket:     s.documentsBucket,
+		Category:        category,
+		MinioBucket:     canonicalBucket,
 		MinioObjectName: canonicalKey,
-		MinioURL:        fmt.Sprintf("%s/%s/%s", s.documentsBucket, s.documentsBucket, canonicalKey),
+		MinioURL:        fmt.Sprintf("%s/%s/%s", canonicalBucket, canonicalBucket, canonicalKey),
 		OwnerID:         ownerID,
+		FolderID:        folderID,
 		CreatedByID:     ownerID,
 		ModifiedByID:    ownerID,
 		Status:          models.DocumentStatusDraft,
@@ -219,7 +233,7 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 	}
 
 	event.Status = models.SftpIngestIngested
-	event.CanonicalBucket = s.documentsBucket
+	event.CanonicalBucket = canonicalBucket
 	event.CanonicalKey = canonicalKey
 	event.DocumentID = &doc.ID
 	event.Size = size
@@ -236,7 +250,7 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 			ResourceID:    fmt.Sprintf("%d", doc.ID),
 			IP:            hook.IP,
 			CorrelationID: correlationID,
-			Metadata:      fmt.Sprintf(`{"staging":%q,"canonical":%q}`, stagingKey, canonicalKey),
+			Metadata:      fmt.Sprintf(`{"staging":%q,"canonical":%q,"folder_id":%v}`, stagingKey, canonicalKey, folderID),
 		})
 	}
 
@@ -244,13 +258,13 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 		_ = s.collab.notifyUser(
 			ownerID,
 			"SFTP_INGEST",
-			"Document importé via SFTP",
-			fmt.Sprintf("« %s » a été importé depuis SFTP", fileName),
+			"Document importé",
+			fmt.Sprintf("« %s » a été importé", fileName),
 			fmt.Sprintf("/documents/%d", doc.ID),
 		)
 	}
 	if s.notify != nil {
-		s.notify.PublishDocumentEvent(ownerID, "sftp_ingested", doc.ID, fileName)
+		s.notify.PublishDocumentEvent(ownerID, "upload_completed", doc.ID, fileName)
 	}
 
 	return doc, nil

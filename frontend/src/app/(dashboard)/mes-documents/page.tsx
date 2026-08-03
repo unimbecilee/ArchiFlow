@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  FolderOpen,
   FileText,
   UploadSimple,
   FolderPlus,
@@ -13,6 +12,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { DocumentList } from "@/components/documents/document-list";
+import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
 import { FolderBreadcrumb } from "@/components/documents/folder-breadcrumb";
 import { FolderCard } from "@/components/documents/folder-card";
 import { FolderEditDialog, mapFolderError } from "@/components/documents/folder-edit-dialog";
@@ -28,7 +28,6 @@ import {
   getFoldersFlat,
   getMyDocuments,
   moveDocument,
-  previewUrl,
   updateFolder,
 } from "@/services/documents.service";
 import { startValidation } from "@/services/workflows.service";
@@ -38,12 +37,23 @@ import { buildMesDocumentsActions } from "@/lib/document-crud-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconTooltipButton } from "@/components/ui/icon-tooltip-button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { EmptyState } from "@/components/layout/empty-state";
+import { useConfirm } from "@/components/feedback/confirm-provider";
+import { toast } from "sonner";
+import { useAuthStore } from "@/store/auth-store";
 
 function parseFolderParam(raw: string | null): number | null {
   if (!raw || raw === "null" || raw === "0") return null;
@@ -54,7 +64,15 @@ function parseFolderParam(raw: string | null): number | null {
 function MesDocumentsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const confirm = useConfirm();
+  const { user } = useAuthStore();
   const folderId = parseFolderParam(searchParams.get("folder"));
+  const canOrgFolderScope =
+    user?.capabilities?.view_org_documents === true ||
+    user?.role === "admin" ||
+    user?.role === "manager" ||
+    user?.role === "archivist";
+  const [orgFolderScope, setOrgFolderScope] = useState(false);
 
   const [breadcrumb, setBreadcrumb] = useState<FolderBreadcrumbItem[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -71,6 +89,8 @@ function MesDocumentsContent() {
   const [editFolderName, setEditFolderName] = useState("");
   const [editFolderDesc, setEditFolderDesc] = useState("");
   const [folderSaving, setFolderSaving] = useState(false);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   const navigateFolder = (id: number | null) => {
     if (id == null) {
@@ -84,10 +104,11 @@ function MesDocumentsContent() {
     setLoading(true);
     setError(null);
     try {
+      const folderOpts = orgFolderScope && canOrgFolderScope ? { orgScope: true } : undefined;
       const [f, d, flat] = await Promise.all([
-        getFolders(folderId),
+        getFolders(folderId, folderOpts),
         getMyDocuments(folderId),
-        getFoldersFlat(),
+        getFoldersFlat(folderOpts),
       ]);
       setFolders(f);
       setDocuments(d.documents ?? []);
@@ -104,11 +125,11 @@ function MesDocumentsContent() {
         setCurrentFolder(null);
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Erreur chargement");
+      setError(getApiErrorMessage(e, "Erreur chargement"));
     } finally {
       setLoading(false);
     }
-  }, [folderId]);
+  }, [folderId, orgFolderScope, canOrgFolderScope]);
 
   useEffect(() => {
     load();
@@ -116,13 +137,23 @@ function MesDocumentsContent() {
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
+    setCreatingFolder(true);
+    setError(null);
     try {
       await createFolder({ name: newFolderName.trim(), parent_id: folderId });
       setNewFolderName("");
+      setCreateFolderOpen(false);
       load();
     } catch (e: unknown) {
       setError(mapFolderError(getApiErrorMessage(e, "Creation impossible")));
+    } finally {
+      setCreatingFolder(false);
     }
+  };
+
+  const openCreateFolderModal = () => {
+    setNewFolderName("");
+    setCreateFolderOpen(true);
   };
 
   const openEditFolder = (folder: Folder) => {
@@ -167,7 +198,16 @@ function MesDocumentsContent() {
     const message = recursive
       ? `Supprimer « ${folder.name} » et tout son contenu (${subs} sous-dossier(s), ${docs} fichier(s)) ?\n\nLes fichiers seront envoyés à la corbeille.`
       : `Supprimer le dossier « ${folder.name} » ?`;
-    if (!confirm(message)) return;
+    if (
+      !(await confirm({
+        title: "Supprimer le dossier",
+        description: message,
+        confirmLabel: "Supprimer",
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
     setError(null);
     try {
       await deleteFolder(folder.id, recursive);
@@ -184,13 +224,31 @@ function MesDocumentsContent() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Supprimer ce document ?")) return;
+    if (
+      !(await confirm({
+        title: "Supprimer le document",
+        description: "Le document sera envoye a la corbeille.",
+        confirmLabel: "Supprimer",
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
     await deleteDocument(id);
     load();
   };
 
   const handleBulkDelete = async (items: Document[]) => {
-    if (!confirm(`Supprimer ${items.length} document(s) ?`)) return;
+    if (
+      !(await confirm({
+        title: "Suppression multiple",
+        description: `Supprimer ${items.length} document(s) ? Ils seront envoyes a la corbeille.`,
+        confirmLabel: "Supprimer",
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
     await Promise.all(items.map((d) => deleteDocument(d.id)));
     load();
   };
@@ -207,10 +265,10 @@ function MesDocumentsContent() {
   const handleStartValidation = async (docId: number) => {
     try {
       await startValidation(docId);
-      alert("Document soumis a validation");
+      toast.success("Document soumis a validation");
       load();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Erreur workflow");
+      toast.error(e instanceof Error ? e.message : "Erreur workflow");
     }
   };
 
@@ -258,73 +316,63 @@ function MesDocumentsContent() {
   return (
     <PageFrame>
       <PageHeader
-        eyebrow="Documents"
         title="Mes documents"
-        description={folderTitle}
-        icon={<FolderOpen className="h-6 w-6" weight="duotone" />}
+        hideTitle
+        description={
+          [
+            orgFolderScope && canOrgFolderScope
+              ? `${folderTitle} · vue organisation`
+              : folderTitle,
+            currentFolder?.description?.trim(),
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        }
         actions={
-          <>
-            <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canOrgFolderScope && (
+              <Button
+                variant={orgFolderScope ? "default" : "outline"}
+                size="sm"
+                onClick={() => setOrgFolderScope((v) => !v)}
+              >
+                {orgFolderScope ? "Mes dossiers" : "Vue org."}
+              </Button>
+            )}
+            <IconTooltipButton label="Nouveau sous-dossier" onClick={openCreateFolderModal}>
+              <FolderPlus className="h-4 w-4" weight="bold" />
+            </IconTooltipButton>
+            {currentFolder && (
+              <>
+                <IconTooltipButton
+                  label="Modifier le dossier"
+                  onClick={() => openEditFolder(currentFolder)}
+                >
+                  <PencilSimple className="h-4 w-4" />
+                </IconTooltipButton>
+                <IconTooltipButton
+                  label="Supprimer le dossier"
+                  className="text-red-700 hover:bg-red-50 hover:text-red-800"
+                  onClick={() => void handleDeleteFolder(currentFolder)}
+                >
+                  <Trash className="h-4 w-4" />
+                </IconTooltipButton>
+              </>
+            )}
+            <IconTooltipButton label="Actualiser" onClick={() => void load()}>
               <ArrowsClockwise className="h-4 w-4" />
-              Actualiser
-            </Button>
+            </IconTooltipButton>
             <Link href={importHref}>
               <Button size="sm" className="gap-1.5">
                 <UploadSimple className="h-4 w-4" />
                 Importer ici
               </Button>
             </Link>
-          </>
+          </div>
         }
       />
 
       <FolderBreadcrumb items={breadcrumb} currentFolderId={folderId} />
-
-      {currentFolder && (
-        <PagePanel
-          title="Dossier actuel"
-          subtitle={currentFolder.description || "Modifier ou supprimer ce dossier"}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => openEditFolder(currentFolder)}
-            >
-              <PencilSimple className="h-4 w-4" />
-              Modifier
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-red-700 hover:bg-red-50 hover:text-red-800"
-              onClick={() => handleDeleteFolder(currentFolder)}
-            >
-              <Trash className="h-4 w-4" />
-              Supprimer
-            </Button>
-          </div>
-        </PagePanel>
-      )}
-
-      <PagePanel title="Organisation" subtitle="Creer un sous-dossier dans ce niveau">
-        <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="folderName">Nom du dossier</Label>
-            <Input
-              id="folderName"
-              placeholder="Ex: Contrats 2026"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-            />
-          </div>
-          <Button onClick={handleCreateFolder} className="gap-1.5 md:mb-0.5">
-            <FolderPlus className="h-4 w-4" />
-            Creer
-          </Button>
-        </div>
-      </PagePanel>
 
       {error && <ErrorBanner message={error} />}
 
@@ -347,7 +395,10 @@ function MesDocumentsContent() {
             </section>
           )}
 
-          <PagePanel title="Fichiers" subtitle={`${documents.length} document(s) dans ce dossier`}>
+          <PagePanel
+            title="Fichiers"
+            subtitle={`${documents.length} document(s) · clic sur une ligne pour l'apercu rapide`}
+          >
             {documents.length === 0 ? (
               <EmptyState
                 title="Aucun document ici"
@@ -365,11 +416,52 @@ function MesDocumentsContent() {
                 rowActions={documentActions.rowActions}
                 bulkActions={documentActions.bulkActions}
                 storageKey="archiflow-mes-documents-view"
+                onQuickPreview={setPreviewDoc}
               />
             )}
           </PagePanel>
         </>
       )}
+
+      <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nouveau sous-dossier</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 py-2">
+            <Label htmlFor="newFolderName">Nom du dossier</Label>
+            <Input
+              id="newFolderName"
+              placeholder="Ex: Contrats 2026"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleCreateFolder();
+              }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateFolderOpen(false)}
+              disabled={creatingFolder}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleCreateFolder()}
+              disabled={creatingFolder || !newFolderName.trim()}
+              className="gap-1.5"
+            >
+              <FolderPlus className="h-4 w-4" weight="bold" />
+              Creer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {editFolder && (
         <FolderEditDialog
@@ -414,21 +506,7 @@ function MesDocumentsContent() {
         </div>
       )}
 
-      {previewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm">
-          <div className="surface-bento flex max-h-[90vh] w-full max-w-4xl flex-col">
-            <div className="flex items-center justify-between border-b border-slate-200/70 p-4">
-              <h3 className="truncate font-semibold text-zinc-900">{previewDoc.titre}</h3>
-              <Button variant="ghost" size="sm" onClick={() => setPreviewDoc(null)}>
-                Fermer
-              </Button>
-            </div>
-            <div className="min-h-[300px] flex-1 overflow-auto p-4">
-              <DocumentPreview doc={previewDoc} />
-            </div>
-          </div>
-        </div>
-      )}
+      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }
@@ -439,39 +517,4 @@ export default function MesDocumentsPage() {
       <MesDocumentsContent />
     </Suspense>
   );
-}
-
-function DocumentPreview({ doc }: { doc: Document }) {
-  const [src, setSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    const token = getAccessToken();
-    const url = previewUrl(doc.id);
-    fetch(url, {
-      credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((r) => r.blob())
-      .then((blob) => setSrc(URL.createObjectURL(blob)))
-      .catch(() => setSrc(null));
-    return () => {
-      if (src) URL.revokeObjectURL(src);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.id]);
-
-  if (!src) {
-    return <p className="text-sm text-zinc-500">Chargement apercu...</p>;
-  }
-
-  if (doc.mime_type?.startsWith("image/")) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={doc.titre} className="mx-auto max-w-full" />
-    );
-  }
-  if (doc.mime_type === "application/pdf") {
-    return <iframe src={src} title={doc.titre} className="h-[70vh] w-full border-0" />;
-  }
-  return <p className="text-sm text-zinc-600">Apercu non disponible. Utilisez telecharger.</p>;
 }

@@ -32,6 +32,13 @@ func SecurityWarnings() []string {
 			out = append(out, "SFTPGO_WEBHOOK_SECRET is default or empty while SFTPGO_INTEGRATION_ENABLED=true")
 		}
 	}
+	if pwd := os.Getenv("SFTPGO_USER_PASSWORD_SECRET"); pwd == "" ||
+		pwd == "archiflow_sftpgo_user_password_secret_dev" ||
+		pwd == "change-me-sftpgo-user-pwd-secret-32" {
+		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") {
+			out = append(out, "SFTPGO_USER_PASSWORD_SECRET is default or empty while SFTPGo upload enabled")
+		}
+	}
 	return out
 }
 
