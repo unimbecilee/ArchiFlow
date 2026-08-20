@@ -206,6 +206,9 @@ func main() {
 	// OnlyOffice Document Server (auth par token HMAC, pas JWT utilisateur)
 	api.GET("/office/files/:id/:token", officeHandler.DownloadFile)
 	api.POST("/office/callback/:id/:token", officeHandler.Callback)
+	api.GET("/wopi/files/:id", officeHandler.WopiCheckFileInfo)
+	api.GET("/wopi/files/:id/contents", officeHandler.WopiGetFile)
+	api.POST("/wopi/files/:id/contents", officeHandler.WopiPutFile)
 
 	// SFTPGo MFT — external auth + webhooks (pas de JWT utilisateur)
 	sftpgoAPI := api.Group("/integrations/sftpgo")

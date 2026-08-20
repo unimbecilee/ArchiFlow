@@ -26,7 +26,7 @@ export const ROLE_HINTS: Record<PlatformRole, string> = {
   manager: "Approbations et pilotage equipe",
   user: "Coffre personnel et partages",
   validator: "Approbations workflow assignees",
-  archivist: "Lecture org + historique workflows",
+  archivist: "Coffre personnel + vue org + classement MAC",
 };
 
 export const ASSIGNABLE_ROLES: PlatformRole[] = [
@@ -48,7 +48,7 @@ export const SFTP_MODE_LABELS: Record<SftpMode, string> = {
 
 /** Defauts canal SFTP alignes backend DefaultSftpForRole. */
 export function defaultSftpForRole(role: string): { enabled: boolean; mode: SftpMode } {
-  if (role === "user" || role === "manager") {
+  if (role === "user" || role === "manager" || role === "archivist") {
     return { enabled: true, mode: "drop" };
   }
   return { enabled: false, mode: "none" };
@@ -59,5 +59,5 @@ export function canViewOrgWorkflows(role?: string, caps?: RoleCapabilities): boo
 }
 
 export function canWriteDocuments(role?: string, caps?: RoleCapabilities): boolean {
-  return caps?.write_documents ?? role !== "archivist";
+  return caps?.write_documents ?? true;
 }

@@ -78,8 +78,12 @@ func (s *OfficeService) GetEditorConfig(
 	docID, userID uint,
 	role, userName string,
 ) (*OfficeEditorConfig, error) {
+	// Collabora prioritaire si active, sinon OnlyOffice.
+	if CollaboraEnabled() {
+		return s.GetCollaboraEditorConfig(ctx, docID, userID, role, userName)
+	}
 	if !OfficeEnabled() {
-		return &OfficeEditorConfig{Enabled: false, Reason: "OnlyOffice desactive"}, nil
+		return &OfficeEditorConfig{Enabled: false, Reason: "Editeur bureautique desactive (Collabora ou OnlyOffice)"}, nil
 	}
 	if s.policy != nil {
 		if err := s.policy.EnsureCan(userID, role, docID, ActionRead); err != nil {

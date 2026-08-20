@@ -55,7 +55,6 @@ type RoleCapabilities struct {
 }
 
 func CapabilitiesForRole(role string) RoleCapabilities {
-	archivist := role == RoleArchivist
 	validator := role == RoleValidator
 	admin := RoleIsAdmin(role)
 	return RoleCapabilities{
@@ -63,6 +62,8 @@ func CapabilitiesForRole(role string) RoleCapabilities {
 		ApproveWorkflows: admin || role == RoleManager || validator,
 		ViewOrgDocuments: RoleCanViewOrgDocuments(role),
 		ViewOrgWorkflows: RoleCanViewOrgWorkflows(role),
-		WriteDocuments:   !archivist,
+		// Archiviste = user + vue org : ecriture sur son coffre (ownership),
+		// pas d'ecriture de contenu sur les docs d'autrui (CanAccess).
+		WriteDocuments: true,
 	}
 }

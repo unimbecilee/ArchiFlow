@@ -3,7 +3,18 @@ import type { SharedDocument } from "@/types/collaboration";
 
 /** Champs minimaux pour l'apercu rapide (partages, etc.). */
 export function documentForQuickPreview(
-  doc: Pick<Document, "id" | "titre" | "mime_type" | "file_name" | "taille" | "taille_formatee" | "date_creation" | "description" | "previewable">
+  doc: Pick<
+    Document,
+    | "id"
+    | "titre"
+    | "mime_type"
+    | "file_name"
+    | "taille"
+    | "taille_formatee"
+    | "date_creation"
+    | "description"
+    | "previewable"
+  >
 ): Document {
   return {
     id: doc.id,
@@ -26,6 +37,8 @@ export function sharedDocumentForPreview(doc: SharedDocument): Document {
     taille: doc.taille,
     taille_formatee: doc.taille_formatee,
     mime_type: doc.mime_type,
+    file_name: doc.file_name,
     date_creation: doc.date_creation,
+    previewable: doc.previewable,
   });
 }

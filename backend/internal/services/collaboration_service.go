@@ -77,8 +77,9 @@ func (s *CollaborationService) CanAccess(docID, userID uint, role string) (bool,
 	if models.RoleIsAdmin(role) {
 		return true, []string{models.PermRead, models.PermDownload, models.PermWrite, models.PermComment, models.PermShare}, nil
 	}
+	// Archiviste : lecture org + peut classer (metadonnees) sans editer le contenu binaire.
 	if role == models.RoleArchivist {
-		return true, []string{models.PermRead, models.PermDownload}, nil
+		return true, []string{models.PermRead, models.PermDownload, models.PermComment}, nil
 	}
 	if doc.Status == models.DocumentStatusValidation {
 		if role == models.RoleValidator || role == models.RoleManager {
@@ -177,6 +178,8 @@ func (s *CollaborationService) ListSharedWithMe(userID uint) ([]map[string]any, 
 			"taille":            doc.Size,
 			"taille_formatee":   FormatFileSize(doc.Size),
 			"mime_type":         doc.MimeType,
+			"file_name":         doc.FileName,
+			"previewable":       IsPreviewableMime(doc.MimeType),
 			"date_creation":     doc.CreatedAt,
 			"permissions":       decodePerms(sh.Permissions),
 			"date_partage":      sh.CreatedAt,

@@ -239,6 +239,33 @@ func (s *DocumentService) MoveToFolder(id, ownerID uint, isAdmin bool, folderID 
 	return doc, nil
 }
 
+// UpdateMACMetadata met a jour classification / departement (archiviste ou proprietaire).
+func (s *DocumentService) UpdateMACMetadata(id uint, classification, department *string) (*models.Document, error) {
+	doc, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if classification != nil {
+		c := strings.TrimSpace(*classification)
+		switch c {
+		case models.ClassificationPublic, models.ClassificationInternal, models.ClassificationConfidential, "":
+			if c == "" {
+				c = models.ClassificationInternal
+			}
+			doc.Classification = c
+		default:
+			return nil, fmt.Errorf("classification invalide")
+		}
+	}
+	if department != nil {
+		doc.Department = strings.TrimSpace(*department)
+	}
+	if err := s.repo.Update(doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
 func (s *DocumentService) OpenContent(ctx context.Context, id uint, ownerID uint, isAdmin bool) (io.ReadCloser, string, string, error) {
 	doc, err := s.Get(id, ownerID, isAdmin)
 	if err != nil {
@@ -320,10 +347,14 @@ func FormatFileSize(size int64) string {
 }
 
 func IsPreviewableMime(mime string) bool {
-	m := strings.ToLower(mime)
+	m := strings.ToLower(strings.TrimSpace(mime))
 	return strings.HasPrefix(m, "image/") ||
 		m == "application/pdf" ||
-		strings.HasPrefix(m, "text/")
+		strings.HasPrefix(m, "text/") ||
+		m == "application/json" ||
+		m == "application/xml" ||
+		strings.HasPrefix(m, "audio/") ||
+		strings.HasPrefix(m, "video/")
 }
 
 func ExtFromFilename(name string) string {

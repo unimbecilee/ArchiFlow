@@ -14,11 +14,15 @@ export function canEditDocument(doc: {
   status?: string;
   is_locked?: boolean;
   editable?: boolean;
-  role?: string;
+  can_write?: boolean;
   capabilities?: { write_documents?: boolean };
 }): { ok: boolean; reason?: string } {
-  if (doc.capabilities?.write_documents === false || doc.role === "archivist") {
-    return { ok: false, reason: "Votre role est en lecture seule sur les documents." };
+  if (typeof doc.can_write === "boolean") {
+    if (!doc.can_write) {
+      return { ok: false, reason: "Vous n'avez pas le droit de modifier ce document." };
+    }
+  } else if (doc.capabilities?.write_documents === false) {
+    return { ok: false, reason: "Vous n'avez pas le droit de modifier ce document." };
   }
   if (!doc.editable) {
     return { ok: false, reason: "Ce type de fichier ne supporte pas l'edition en ligne." };

@@ -25,23 +25,35 @@ declare global {
   }
 }
 
+function absoluteServerUrl(raw: string | undefined): string | null {
+  const s = (raw || "").trim().replace(/\/$/, "");
+  if (!s) return null;
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return null;
+}
+
 export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps) {
   const { user } = useAuthStore();
-  const containerId = `onlyoffice-${doc.id}`;
+  const containerId = `office-editor-${doc.id}`;
   const editorRef = useRef<{ destroyEditor?: () => void } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [mode, setMode] = useState<string>("view");
+  const [provider, setProvider] = useState<"collabora" | "onlyoffice" | null>(null);
+  const [collaboraUrl, setCollaboraUrl] = useState<string | null>(null);
 
   const gate = canEditOfficeDocument({
     ...doc,
-    role: user?.role,
     capabilities: user?.capabilities,
   });
 
   const loadScript = (src: string) =>
     new Promise<void>((resolve, reject) => {
+      if (!src.startsWith("http://") && !src.startsWith("https://")) {
+        reject(new Error("URL Document Server invalide (absolue requise)"));
+        return;
+      }
       if (document.querySelector(`script[src="${src}"]`)) {
         resolve();
         return;
@@ -50,7 +62,7 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
       s.src = src;
       s.async = true;
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error("Impossible de charger OnlyOffice"));
+      s.onerror = () => reject(new Error("Impossible de charger le Document Server"));
       document.body.appendChild(s);
     });
 
@@ -58,22 +70,42 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
     setLoading(true);
     setError(null);
     setHint(null);
+    setCollaboraUrl(null);
+    setProvider(null);
     try {
       const cfg = await getOfficeEditorConfig(doc.id);
       if (!cfg.enabled || !cfg.config) {
         setHint(
           cfg.reason ||
-            "OnlyOffice non active. Definissez ONLYOFFICE_ENABLED=true et demarrez le service Document Server (profil Docker office)."
+            "Editeur inactif. Activez COLLABORA_ENABLED=true et demarrez : docker compose --profile office up -d collabora"
         );
         return;
       }
       setMode(cfg.mode || "view");
-      const server = cfg.document_server || process.env.NEXT_PUBLIC_ONLYOFFICE_URL || "";
-      if (!server) {
-        setHint("URL Document Server manquante (NEXT_PUBLIC_ONLYOFFICE_URL).");
+      const cfgProvider = cfg.config.provider;
+
+      if (cfgProvider === "collabora" && typeof cfg.config.editor_url === "string") {
+        const url = cfg.config.editor_url;
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+          setError("URL Collabora invalide renvoyee par l'API");
+          return;
+        }
+        setProvider("collabora");
+        setCollaboraUrl(url);
         return;
       }
-      await loadScript(`${server.replace(/\/$/, "")}/web-apps/apps/api/documents/api.js`);
+
+      setProvider("onlyoffice");
+      const server = absoluteServerUrl(
+        cfg.document_server || process.env.NEXT_PUBLIC_ONLYOFFICE_URL
+      );
+      if (!server) {
+        setHint(
+          "URL OnlyOffice manquante. Preferer Collabora (COLLABORA_ENABLED) ou definir NEXT_PUBLIC_ONLYOFFICE_URL=http://localhost:9980"
+        );
+        return;
+      }
+      await loadScript(`${server}/web-apps/apps/api/documents/api.js`);
       if (!window.DocsAPI) {
         setError("API OnlyOffice indisponible");
         return;
@@ -104,16 +136,28 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
     return null;
   }
 
+  const label =
+    provider === "collabora"
+      ? "Collabora Online"
+      : provider === "onlyoffice"
+        ? "OnlyOffice"
+        : "Editeur bureautique";
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm text-zinc-600">
         <FileDoc className="h-4 w-4 text-emerald-700" weight="duotone" />
         <span>
-          Edition bureautique (Word / Excel / PowerPoint)
+          {label} (Word / Excel / PowerPoint)
           {mode === "view" && " — lecture seule"}
         </span>
       </div>
-      {!gate.ok && <ErrorBanner message={gate.reason || "Edition indisponible"} />}
+      {/* 5A : message seulement si pas de droit d'ecriture effectif */}
+      {!gate.ok && doc.can_write === false && (
+        <p className="rounded-xl border border-slate-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          {gate.reason} Mode lecture seule.
+        </p>
+      )}
       {error && <ErrorBanner message={error} />}
       {hint && (
         <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
@@ -121,10 +165,19 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
         </p>
       )}
       {loading && !hint ? <ListSkeleton rows={4} /> : null}
-      <div
-        id={containerId}
-        className="min-h-[32rem] w-full overflow-hidden rounded-xl border border-slate-200 bg-white"
-      />
+      {provider === "collabora" && collaboraUrl ? (
+        <iframe
+          title={`Collabora — ${doc.titre}`}
+          src={collaboraUrl}
+          className="min-h-[32rem] w-full rounded-xl border border-slate-200 bg-white"
+          allow="clipboard-read; clipboard-write"
+        />
+      ) : (
+        <div
+          id={containerId}
+          className="min-h-[32rem] w-full overflow-hidden rounded-xl border border-slate-200 bg-white"
+        />
+      )}
     </div>
   );
 }

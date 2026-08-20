@@ -71,3 +71,40 @@ func (h *OfficeHandler) Callback(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]any{"error": 0})
 }
+
+// WopiCheckFileInfo GET /api/wopi/files/:id
+func (h *OfficeHandler) WopiCheckFileInfo(c echo.Context) error {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	token := c.QueryParam("access_token")
+	info, err := h.office.WopiCheckFileInfo(c.Request().Context(), uint(id), token)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]any{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, info)
+}
+
+// WopiGetFile GET /api/wopi/files/:id/contents
+func (h *OfficeHandler) WopiGetFile(c echo.Context) error {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	token := c.QueryParam("access_token")
+	rc, mime, size, err := h.office.WopiGetFile(c.Request().Context(), uint(id), token)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]any{"error": err.Error()})
+	}
+	defer rc.Close()
+	c.Response().Header().Set("Content-Type", mime)
+	if size > 0 {
+		c.Response().Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	}
+	return c.Stream(http.StatusOK, mime, rc)
+}
+
+// WopiPutFile POST /api/wopi/files/:id/contents
+func (h *OfficeHandler) WopiPutFile(c echo.Context) error {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	token := c.QueryParam("access_token")
+	if err := h.office.WopiPutFile(c.Request().Context(), uint(id), token, c.Request().Body); err != nil {
+		return c.JSON(http.StatusForbidden, map[string]any{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string]any{})
+}

@@ -101,10 +101,34 @@ func documentToView(d models.Document) map[string]any {
 		"office_editable":         services.IsOfficeDocument(d.MimeType, d.FileName),
 		"classification":          d.Classification,
 		"department":              d.Department,
+		"owner_id":                d.OwnerID,
 		"locked_by_id":          d.LockedByID,
 		"locked_at":             d.LockedAt,
 		"is_locked":             d.LockedByID != nil,
 	}
+}
+
+func (h *DocumentHandler) documentToViewForUser(c echo.Context, d models.Document) map[string]any {
+	view := documentToView(d)
+	userID, err := userIDFromContext(c)
+	if err != nil {
+		view["can_write"] = false
+		return view
+	}
+	role := roleFromContext(c)
+	ok, perms, _ := h.collaborationService.CanAccess(d.ID, userID, role)
+	canWrite := false
+	if ok {
+		for _, p := range perms {
+			if p == models.PermWrite {
+				canWrite = true
+				break
+			}
+		}
+	}
+	view["can_write"] = canWrite
+	view["can_classify"] = ok && (canWrite || role == models.RoleArchivist || models.RoleIsAdmin(role))
+	return view
 }
 
 // Lock POST /api/documents/:id/lock
@@ -240,7 +264,7 @@ func (h *DocumentHandler) Get(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": "document not found"})
 	}
-	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": documentToView(*doc)})
+	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": h.documentToViewForUser(c, *doc)})
 }
 
 // Upload POST /api/documents/upload
@@ -381,27 +405,64 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 	return nil
 }
 
-// Patch PATCH /api/documents/:id — deplacer vers un dossier (folder_id null = racine)
+// Patch PATCH /api/documents/:id — deplacer et/ou metadonnees MAC (classification, departement)
 func (h *DocumentHandler) Patch(c echo.Context) error {
 	userID, err := userIDFromContext(c)
 	if err != nil {
 		return err
 	}
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
-		return err
-	}
+	role := roleFromContext(c)
+
 	var body struct {
-		FolderID *uint `json:"folder_id"`
+		FolderID       *uint   `json:"folder_id"`
+		Classification *string `json:"classification"`
+		Department     *string `json:"department"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
+	}
+
+	metaOnly := body.FolderID == nil && (body.Classification != nil || body.Department != nil)
+	if metaOnly {
+		if err := h.ensureDocPolicy(c, uint(id), services.ActionRead); err != nil {
+			return err
+		}
+		// Contenu : write requis sauf archiviste / admin (classement MAC org)
+		if !models.RoleIsAdmin(role) && role != models.RoleArchivist {
+			if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+				return err
+			}
+		}
+		doc, err := h.documentService.UpdateMACMetadata(uint(id), body.Classification, body.Department)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+		}
+		if h.policyService != nil {
+			h.policyService.InvalidateCache(userID, uint(id))
+			h.policyService.InvalidateCache(doc.OwnerID, uint(id))
+		}
+		h.auditDoc(c, "document.classify", uint(id))
+		return c.JSON(http.StatusOK, map[string]any{"success": true, "data": h.documentToViewForUser(c, *doc)})
+	}
+
+	if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+		return err
 	}
 	doc, err := h.documentService.MoveToFolder(uint(id), userID, isAdminFromContext(c), body.FolderID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": documentToView(*doc)})
+	if body.Classification != nil || body.Department != nil {
+		doc, err = h.documentService.UpdateMACMetadata(uint(id), body.Classification, body.Department)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+		}
+		if h.policyService != nil {
+			h.policyService.InvalidateCache(userID, uint(id))
+		}
+	}
+	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": h.documentToViewForUser(c, *doc)})
 }
 
 // Delete DELETE /api/documents/:id

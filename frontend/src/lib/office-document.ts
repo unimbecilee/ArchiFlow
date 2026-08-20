@@ -31,12 +31,19 @@ export function canEditOfficeDocument(doc: {
   status?: string;
   is_locked?: boolean;
   office_editable?: boolean;
-  role?: string;
+  /** Droit d'ecriture effectif renvoye par l'API (ownership / ACL). */
+  can_write?: boolean;
   capabilities?: { write_documents?: boolean };
 }): { ok: boolean; reason?: string } {
-  if (doc.capabilities?.write_documents === false || doc.role === "archivist") {
-    return { ok: false, reason: "Votre role est en lecture seule sur les documents." };
+  // 5A : se fier au droit reel, pas au role seul
+  if (typeof doc.can_write === "boolean") {
+    if (!doc.can_write) {
+      return { ok: false, reason: "Vous n'avez pas le droit de modifier ce document." };
+    }
+  } else if (doc.capabilities?.write_documents === false) {
+    return { ok: false, reason: "Vous n'avez pas le droit de modifier ce document." };
   }
+
   if (!doc.office_editable) {
     return { ok: false, reason: "Ce type de fichier ne supporte pas l'edition bureautique." };
   }

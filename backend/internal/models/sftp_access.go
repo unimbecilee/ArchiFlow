@@ -29,7 +29,7 @@ func NormalizeSftpMode(mode string) string {
 // DefaultSftpForRole retourne (enabled, mode) recommandés à la création d'un user.
 func DefaultSftpForRole(role string) (enabled bool, mode string) {
 	switch role {
-	case RoleUser, RoleManager:
+	case RoleUser, RoleManager, RoleArchivist:
 		return true, SftpModeDrop
 	default:
 		return false, SftpModeNone

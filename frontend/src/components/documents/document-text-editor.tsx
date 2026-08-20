@@ -57,7 +57,6 @@ export function DocumentTextEditor({ doc, validationCtx, onSaved }: DocumentText
 
   const editGate = canEditDocument({
     ...doc,
-    role: user?.role,
     capabilities: user?.capabilities,
   });
   const dirty = content !== initial;

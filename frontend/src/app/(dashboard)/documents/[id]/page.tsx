@@ -54,6 +54,7 @@ import {
   downloadUrl,
   lockDocument,
   unlockDocument,
+  updateDocumentClassification,
 } from "@/services/documents.service";
 import {
   addFavorite,
@@ -93,6 +94,9 @@ export default function DocumentDetailPage() {
     kind: "current",
     versionNumber: 1,
   });
+  const [classification, setClassification] = useState("INTERNE");
+  const [department, setDepartment] = useState("");
+  const [savingMeta, setSavingMeta] = useState(false);
 
   const load = useCallback(async () => {
     if (!docId || Number.isNaN(docId)) return;
@@ -111,6 +115,8 @@ export default function DocumentDetailPage() {
       setVersions(v);
       setTags(t);
       setValidationCtx(vctx);
+      setClassification(d.classification || "INTERNE");
+      setDepartment(d.department || "");
       const curVer = d.current_version_number ?? vctx?.current_version_number ?? 1;
       setVersionSelection({ kind: "current", versionNumber: curVer });
       setFavorited(await getFavoriteStatus(docId));
@@ -138,6 +144,22 @@ export default function DocumentDetailPage() {
     a.download = doc.file_name || doc.titre;
     a.click();
     URL.revokeObjectURL(a.href);
+  };
+
+  const handleSaveClassification = async () => {
+    setSavingMeta(true);
+    try {
+      const updated = await updateDocumentClassification(docId, {
+        classification,
+        department: department.trim(),
+      });
+      setDoc(updated);
+      toast.success("Classement enregistre");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Enregistrement impossible");
+    } finally {
+      setSavingMeta(false);
+    }
   };
 
   const handleAddComment = async () => {
@@ -203,8 +225,7 @@ export default function DocumentDetailPage() {
     doc?.current_version_number ?? validationCtx?.current_version_number ?? 1;
   const rejectedAtVersion =
     doc?.rejected_at_version ?? validationCtx?.rejected_at_version ?? null;
-  const showCurrentPreview =
-    versionSelection.kind === "current" && (doc?.previewable ?? false);
+  const showCurrentPreview = versionSelection.kind === "current";
   const showOfficeEditor =
     doc?.office_editable &&
     isOfficeDocument(doc.mime_type, doc.file_name) &&
@@ -214,7 +235,8 @@ export default function DocumentDetailPage() {
     versionSelection.kind === "current" &&
     !isOfficeDocument(doc.mime_type, doc.file_name);
   const showArchivePreview = versionSelection.kind === "archive";
-  const showPreviewPanel = showCurrentPreview || showArchivePreview;
+  const showPreviewPanel =
+    (showCurrentPreview && !showOfficeEditor && !showTextEditor) || showArchivePreview;
   const hasMainWorkspace = showOfficeEditor || showTextEditor || showPreviewPanel;
 
   if (loading) {
@@ -318,7 +340,7 @@ export default function DocumentDetailPage() {
           {showOfficeEditor && (
             <PagePanel
               title="Edition bureautique"
-              subtitle="Word, Excel, PowerPoint — sauvegarde = nouvelle version"
+              subtitle="Collabora / OnlyOffice — sauvegarde = nouvelle version"
               delay={0.08}
             >
               <DocumentOfficeEditor doc={doc} onSaved={load} />
@@ -503,6 +525,47 @@ export default function DocumentDetailPage() {
               </div>
             </div>
           </PagePanel>
+
+          {doc.can_classify && (
+            <PagePanel
+              compact
+              title="Classement MAC"
+              subtitle="Classification et departement"
+              delay={0.15}
+            >
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="docClassification">Classification</Label>
+                  <select
+                    id="docClassification"
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    value={classification}
+                    onChange={(e) => setClassification(e.target.value)}
+                  >
+                    <option value="PUBLIC">PUBLIC</option>
+                    <option value="INTERNE">INTERNE</option>
+                    <option value="CONFIDENTIEL">CONFIDENTIEL</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="docDepartment">Departement</Label>
+                  <Input
+                    id="docDepartment"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    placeholder="Ex: Juridique"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={savingMeta}
+                  onClick={() => void handleSaveClassification()}
+                >
+                  Enregistrer le classement
+                </Button>
+              </div>
+            </PagePanel>
+          )}
 
           <PagePanel
             compact

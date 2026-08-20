@@ -153,6 +153,23 @@ services:
     networks:
       - archiflow
 
+  collabora:
+    image: collabora/code:24.04.10.2.1
+    container_name: archiflow-collabora
+    profiles: ["office"]
+    environment:
+      domain: backend|host.docker.internal|localhost
+      extra_params: --o:ssl.enable=false --o:ssl.termination=false
+      username: admin
+      password: ${COLLABORA_ADMIN_PASSWORD:-collabora}
+    ports:
+      - "9981:9980"
+    restart: unless-stopped
+    networks:
+      - archiflow
+    cap_add:
+      - MKNOD
+
   cells:
     build:
       context: ./pydio_cells

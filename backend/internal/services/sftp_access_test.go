@@ -15,7 +15,7 @@ func TestDefaultSftpForRole(t *testing.T) {
 		{models.RoleUser, true, models.SftpModeDrop},
 		{models.RoleManager, true, models.SftpModeDrop},
 		{models.RoleValidator, false, models.SftpModeNone},
-		{models.RoleArchivist, false, models.SftpModeNone},
+		{models.RoleArchivist, true, models.SftpModeDrop},
 		{models.RoleAdmin, false, models.SftpModeNone},
 		{"", false, models.SftpModeNone},
 	}

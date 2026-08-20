@@ -142,38 +142,80 @@ function ArchivedVersionPreview({
   title: string;
 }) {
   const [src, setSrc] = useState<string | null>(null);
+  const [text, setText] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    const ac = new AbortController();
+    let objectUrl: string | null = null;
+    setSrc(null);
+    setText(null);
+    setFailed(false);
+
     const token = getAccessToken();
     const base = api.defaults.baseURL || "";
     fetch(`${base}${versionPreviewUrl(docId, versionId)}`, {
       credentials: "include",
+      signal: ac.signal,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-      .then((r) => r.blob())
-      .then((blob) => setSrc(URL.createObjectURL(blob)))
-      .catch(() => setSrc(null));
-    return () => {
-      if (src) URL.revokeObjectURL(src);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docId, versionId]);
+      .then(async (r) => {
+        if (!r.ok) throw new Error("preview failed");
+        const blob = await r.blob();
+        const type = blob.type || mime || "";
+        if (type.startsWith("text/") || type === "application/json") {
+          const t = await blob.text();
+          if (!ac.signal.aborted) setText(t);
+          return;
+        }
+        objectUrl = URL.createObjectURL(blob);
+        if (ac.signal.aborted) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        setSrc(objectUrl);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setFailed(true);
+      });
 
+    return () => {
+      ac.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [docId, versionId, mime]);
+
+  if (failed) {
+    return (
+      <p className="text-sm text-zinc-600">
+        Apercu indisponible pour ce type. Utilisez telecharger.
+      </p>
+    );
+  }
+  if (text != null) {
+    return (
+      <pre className="max-h-[40vh] overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-xs text-zinc-800">
+        {text}
+      </pre>
+    );
+  }
   if (!src) {
     return <p className="text-sm text-zinc-500">Chargement apercu version...</p>;
   }
-  if (mime?.startsWith("image/")) {
+  if (mime?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(title)) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={src} alt={title} className="mx-auto max-h-[40vh] max-w-full rounded-lg" />
     );
   }
-  if (mime === "application/pdf") {
+  if (mime === "application/pdf" || title.toLowerCase().endsWith(".pdf")) {
     return <iframe src={src} title={title} className="h-[40vh] w-full rounded-lg border-0" />;
   }
-  return (
-    <p className="text-sm text-zinc-600">
-      Apercu indisponible pour ce type. Utilisez telecharger.
-    </p>
-  );
+  if (mime?.startsWith("audio/")) {
+    return <audio controls src={src} className="w-full" />;
+  }
+  if (mime?.startsWith("video/")) {
+    return <video controls src={src} className="mx-auto max-h-[40vh] max-w-full rounded-lg" />;
+  }
+  return <iframe src={src} title={title} className="h-[40vh] w-full rounded-lg border border-slate-200" />;
 }

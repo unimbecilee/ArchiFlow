@@ -22,6 +22,11 @@ export interface Document {
   office_editable?: boolean;
   is_locked?: boolean;
   locked_by_id?: number | null;
+  owner_id?: number;
+  can_write?: boolean;
+  can_classify?: boolean;
+  classification?: string;
+  department?: string;
 }
 
 export interface Folder {

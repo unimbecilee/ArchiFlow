@@ -5,6 +5,8 @@ export interface SharedDocument {
   taille: number;
   taille_formatee?: string;
   mime_type?: string;
+  file_name?: string;
+  previewable?: boolean;
   date_creation: string;
   permissions: string[];
   date_partage: string;

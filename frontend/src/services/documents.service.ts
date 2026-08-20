@@ -94,6 +94,14 @@ export async function moveDocument(
   return res.data.data;
 }
 
+export async function updateDocumentClassification(
+  id: number,
+  data: { classification?: string; department?: string }
+): Promise<Document> {
+  const res = await api.patch<{ success: boolean; data: Document }>(`/api/documents/${id}`, data);
+  return res.data.data;
+}
+
 export async function uploadDocument(
   file: File,
   meta: {
