@@ -33,8 +33,8 @@ func NewSftpGoAdminClient() *SftpGoAdminClient {
 		user = "admin"
 	}
 	pass := os.Getenv("SFTPGO_ADMIN_PASSWORD")
-	if pass == "" {
-		pass = "Admin1234!"
+	if enabled && pass == "" {
+		enabled = false
 	}
 	return &SftpGoAdminClient{
 		baseURL:   base,

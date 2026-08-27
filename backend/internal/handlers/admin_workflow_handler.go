@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"archiflow/backend/internal/dto"
 	"archiflow/backend/internal/models"
@@ -49,8 +48,11 @@ func (h *AdminWorkflowHandler) Get(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	wf, err := h.svc.GetWorkflow(uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	wf, err := h.svc.GetWorkflow(id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": "workflow not found"})
 	}
@@ -88,12 +90,15 @@ func (h *AdminWorkflowHandler) Put(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var body dto.AdminUpdateWorkflowRequest
 	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
-	wf, err := h.svc.AdminUpdateWorkflow(uint(id), body)
+	wf, err := h.svc.AdminUpdateWorkflow(id, body)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -104,8 +109,11 @@ func (h *AdminWorkflowHandler) Delete(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.svc.AdminDeleteWorkflow(uint(id)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.svc.AdminDeleteWorkflow(id); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true})

@@ -1,10 +1,12 @@
 /** Tous types de fichiers sauf executables/scripts (aligne backend blocklist). */
+import { MAX_CONTENT_LENGTH } from "@/lib/upload-limits";
+
 export const IMPORT_ACCEPT = "*/*";
 
 export const MAX_IMPORT_FILES = 500;
-/** Limite upload HTTP classique (FormData). */
-export const MAX_IMPORT_FILE_MB = 20;
-export const MAX_IMPORT_FILE_BYTES = MAX_IMPORT_FILE_MB * 1024 * 1024;
+/** Limite upload HTTP classique (FormData) — MAX_CONTENT_LENGTH. */
+export const MAX_IMPORT_FILE_MB = MAX_CONTENT_LENGTH / (1024 * 1024);
+export const MAX_IMPORT_FILE_BYTES = MAX_CONTENT_LENGTH;
 
 /** Extension File avec chemin relatif (import dossier). */
 export type FileWithPath = File & { webkitRelativePath?: string };

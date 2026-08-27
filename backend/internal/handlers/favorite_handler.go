@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"archiflow/backend/internal/services"
 
@@ -41,8 +40,11 @@ func (h *FavoriteHandler) Add(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.fav.Add(userID, uint(id), roleFromContext(c)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.fav.Add(userID, id, roleFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "favorited": true})
@@ -54,8 +56,11 @@ func (h *FavoriteHandler) Remove(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	_ = h.fav.Remove(userID, uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = h.fav.Remove(userID, id)
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "favorited": false})
 }
 
@@ -65,7 +70,10 @@ func (h *FavoriteHandler) Status(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	ok, _ := h.fav.IsFavorite(userID, uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	ok, _ := h.fav.IsFavorite(userID, id)
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "favorited": ok})
 }

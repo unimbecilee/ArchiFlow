@@ -12,6 +12,9 @@ class ApiClient {
     this.client = axios.create({
       baseURL: getApiBaseUrl(),
       withCredentials: true,
+      // Prevent unbounded request/response bodies (Herozion / axios guidance).
+      maxContentLength: 50 * 1024 * 1024 * 1024,
+      maxBodyLength: 50 * 1024 * 1024 * 1024,
     });
 
     this.client.interceptors.request.use(

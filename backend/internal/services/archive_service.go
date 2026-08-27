@@ -43,8 +43,11 @@ func (s *ArchiveService) CreateFromMultipart(ctx context.Context, in CreateArchi
 	if in.File == nil {
 		return nil, fmt.Errorf("file is required")
 	}
+	if in.File.Size > MAX_CONTENT_LENGTH {
+		return nil, fmt.Errorf("fichier trop volumineux (MAX_CONTENT_LENGTH=%d)", MAX_CONTENT_LENGTH)
+	}
 
-	contentType, raw, err := ValidateUploadFile(in.File)
+	contentType, raw, err := ValidateMultipartFile(in.File)
 	if err != nil {
 		return nil, err
 	}

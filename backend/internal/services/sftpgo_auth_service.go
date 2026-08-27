@@ -31,10 +31,10 @@ func NewSftpGoAuthService(
 }
 
 type SftpGoAuthRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	IP       string `json:"ip"`
-	Protocol string `json:"protocol"`
+	Username string `json:"username" validate:"required,max=255"`
+	Password string `json:"password" validate:"required"`
+	IP       string `json:"ip" validate:"omitempty,max=64"`
+	Protocol string `json:"protocol" validate:"omitempty,max=32"`
 }
 
 // SftpGoAuthResponse format attendu par SFTPGo external auth hook.
@@ -117,6 +117,12 @@ func (s *SftpGoAuthService) Authenticate(req SftpGoAuthRequest) (*SftpGoAuthResp
 		return &SftpGoAuthResponse{Status: 0}, nil
 	}
 
+	fsCfg, ok := s3FilesystemConfig(ownerID)
+	if !ok {
+		s.logLogin(&ownerID, actorEmail, req.IP, req.Protocol, false)
+		return &SftpGoAuthResponse{Status: 0}, nil
+	}
+
 	home := path.Join("/users", strconv.FormatUint(uint64(ownerID), 10))
 	s.logLogin(&ownerID, actorEmail, req.IP, req.Protocol, true)
 
@@ -127,7 +133,7 @@ func (s *SftpGoAuthService) Authenticate(req SftpGoAuthRequest) (*SftpGoAuthResp
 		UID:         0,
 		GID:         0,
 		Permissions: perms,
-		Filesystem:  s3FilesystemConfig(ownerID),
+		Filesystem:  fsCfg,
 	}, nil
 }
 
@@ -152,7 +158,7 @@ func (s *SftpGoAuthService) logLogin(actorID *uint, email, ip, protocol string, 
 	})
 }
 
-func s3FilesystemConfig(userID uint) map[string]any {
+func s3FilesystemConfig(userID uint) (map[string]any, bool) {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	if endpoint == "" {
 		endpoint = "minio:9000"
@@ -165,11 +171,8 @@ func s3FilesystemConfig(userID uint) map[string]any {
 	if secret == "" {
 		secret = os.Getenv("MINIO_SECRET_KEY")
 	}
-	if access == "" {
-		access = "minioadmin"
-	}
-	if secret == "" {
-		secret = "minioadmin123"
+	if access == "" || secret == "" {
+		return nil, false
 	}
 	bucket := config.SFTPInboxBucket()
 	keyPrefix := path.Join("users", strconv.FormatUint(uint64(userID), 10))
@@ -189,7 +192,7 @@ func s3FilesystemConfig(userID uint) map[string]any {
 			"upload_concurrency": sftpUploadConcurrency(),
 			"skip_tls_verify":    !useSSL,
 		},
-	}
+	}, true
 }
 
 func sftpUploadPartSizeMB() int {

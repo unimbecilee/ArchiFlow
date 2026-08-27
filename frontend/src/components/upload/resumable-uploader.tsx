@@ -3,14 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { MAX_RESUMABLE_FILE_BYTES, MAX_RESUMABLE_FILE_GB } from "@/lib/upload-limits";
 import { subscribeRealtime } from "@/lib/realtime-socket";
 import {
   formatUploadError,
-  uploadFileResumable,
+  putFileResumable,
   type ResumableProgress,
   type ResumableUploadMeta,
 } from "@/services/resumable-upload.service";
 import type { Document } from "@/types/documents";
+
+/** Classic multipart ceiling (Flask-style MAX_CONTENT_LENGTH). */
+const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
 
 export type ResumableUploaderProps = {
   file: File;
@@ -57,11 +61,16 @@ export function ResumableUploader({
 
   const start = async () => {
     if (running) return;
+    // MAX_CONTENT_LENGTH (classic) + MAX_RESUMABLE_FILE_BYTES (MPU/SFTPGo)
+    if (file.size > MAX_RESUMABLE_FILE_BYTES) {
+      onError(`Fichier trop volumineux (max ${MAX_RESUMABLE_FILE_GB} Go; classic MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH})`);
+      return;
+    }
     setPaused(false);
     setRunning(true);
     abortRef.current = new AbortController();
     try {
-      const doc = await uploadFileResumable(
+      const doc = await putFileResumable(
         file,
         meta,
         setProgress,

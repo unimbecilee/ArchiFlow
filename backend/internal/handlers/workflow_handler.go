@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/services"
@@ -78,15 +77,18 @@ func (h *WorkflowHandler) Start(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	wfID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	wfID, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var body struct {
-		DocumentID  uint   `json:"document_id"`
+		DocumentID  uint   `json:"document_id" validate:"required,gt=0"`
 		Commentaire string `json:"commentaire"`
 	}
-	if err := bindJSONStrict(c, &body); err != nil || body.DocumentID == 0 {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "document_id required"})
 	}
-	inst, err := h.workflowService.StartInstance(uint(wfID), body.DocumentID, userID, body.Commentaire)
+	inst, err := h.workflowService.StartInstance(wfID, body.DocumentID, userID, body.Commentaire)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -100,10 +102,10 @@ func (h *WorkflowHandler) StartValidation(c echo.Context) error {
 		return err
 	}
 	var body struct {
-		DocumentID  uint   `json:"document_id"`
+		DocumentID  uint   `json:"document_id" validate:"required,gt=0"`
 		Commentaire string `json:"commentaire"`
 	}
-	if err := bindJSONStrict(c, &body); err != nil || body.DocumentID == 0 {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "document_id required"})
 	}
 	inst, err := h.workflowService.StartValidation(body.DocumentID, userID, body.Commentaire)
@@ -120,10 +122,10 @@ func (h *WorkflowHandler) RestartValidation(c echo.Context) error {
 		return err
 	}
 	var body struct {
-		DocumentID  uint   `json:"document_id"`
+		DocumentID  uint   `json:"document_id" validate:"required,gt=0"`
 		Commentaire string `json:"commentaire"`
 	}
-	if err := bindJSONStrict(c, &body); err != nil || body.DocumentID == 0 {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "document_id required"})
 	}
 	inst, err := h.workflowService.RestartValidation(body.DocumentID, userID, body.Commentaire)
@@ -138,8 +140,11 @@ func (h *WorkflowHandler) ValidationContext(c echo.Context) error {
 	if _, err := userIDFromContext(c); err != nil {
 		return err
 	}
-	docID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	ctx, err := h.workflowService.GetValidationContext(uint(docID))
+	docID, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	ctx, err := h.workflowService.GetValidationContext(docID)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -223,8 +228,11 @@ func (h *WorkflowHandler) GetInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	inst, approvals, err := h.workflowService.GetInstanceDetail(uint(id), userID, roleFromContext(c))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	inst, approvals, err := h.workflowService.GetInstanceDetail(id, userID, roleFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -252,7 +260,10 @@ func (h *WorkflowHandler) decide(c echo.Context, approve bool) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	role, _ := c.Get("role").(string)
 	var body struct {
 		Commentaire string `json:"commentaire"`
@@ -263,14 +274,14 @@ func (h *WorkflowHandler) decide(c echo.Context, approve bool) error {
 
 	var svcErr error
 	if approve {
-		svcErr = h.workflowService.Approve(uint(id), userID, role, body.Commentaire)
+		svcErr = h.workflowService.Approve(id, userID, role, body.Commentaire)
 	} else {
-		svcErr = h.workflowService.Reject(uint(id), userID, role, body.Commentaire)
+		svcErr = h.workflowService.Reject(id, userID, role, body.Commentaire)
 	}
 	if svcErr != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": svcErr.Error()})
 	}
-	inst, _ := h.workflowService.GetInstance(uint(id))
+	inst, _ := h.workflowService.GetInstance(id)
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": instanceView(inst)})
 }
 
@@ -280,8 +291,11 @@ func (h *WorkflowHandler) Cancel(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.workflowService.Cancel(uint(id), userID, isAdminFromContext(c)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.workflowService.Cancel(id, userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true})

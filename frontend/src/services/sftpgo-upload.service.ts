@@ -2,7 +2,11 @@
 
 import api from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { MAX_RESUMABLE_FILE_BYTES } from "@/lib/upload-limits";
 import type { Document } from "@/types/documents";
+
+/** Classic multipart ceiling (Flask-style MAX_CONTENT_LENGTH). */
+const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
 
 export type SftpGoUploadMeta = {
   folder_id?: number | null;
@@ -129,13 +133,20 @@ async function putFileSftpGo(
   throw new Error("SFTPGo upload failed after retries");
 }
 
-export async function uploadFilesViaSftpGo(
+export async function putFilesViaSftpGo(
   specs: SftpGoFileSpec[],
   meta: SftpGoUploadMeta,
   onProgress?: (p: SftpGoProgress) => void,
   signal?: AbortSignal
 ): Promise<Array<{ file: File; document?: Document; error?: string }>> {
   if (specs.length === 0) return [];
+  for (const s of specs) {
+    if (s.file.size > MAX_RESUMABLE_FILE_BYTES) {
+      throw new Error(
+        `Fichier trop volumineux (MAX_CONTENT_LENGTH resumable=${MAX_RESUMABLE_FILE_BYTES}, classic=${MAX_CONTENT_LENGTH}): ${s.file.name}`
+      );
+    }
+  }
 
   const tokenData = await mintToken(meta.folder_id, specs);
   const pathByName = new Map(tokenData.files.map((f) => [f.name, f]));

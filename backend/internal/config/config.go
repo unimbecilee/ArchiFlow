@@ -32,21 +32,21 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		DatabaseURL:         getEnv("DATABASE_URL", "postgresql://archiflow:archiflow_secret@localhost:5432/archiflow?sslmode=disable"),
-		MinioEndpoint:       getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinioAccessKey:      getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-		MinioSecretKey:      getEnv("MINIO_SECRET_KEY", "minioadmin123"),
-		MinioUseSSL:         getEnv("MINIO_USE_SSL", "false") == "true",
+		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://archiflow:archiflow_secret@localhost:5432/archiflow?sslmode=disable"),
+		MinioEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinioAccessKey:       getEnv("MINIO_ACCESS_KEY", ""),
+		MinioSecretKey:       getEnv("MINIO_SECRET_KEY", ""),
+		MinioUseSSL:          getEnv("MINIO_USE_SSL", "false") == "true",
 		MinioArchivesBucket:  getEnv("MINIO_ARCHIVES_BUCKET", "archives-requests"),
 		MinioDocumentsBucket: getEnv("MINIO_DOCUMENTS_BUCKET", "archiflow-documents"),
 		MinioSFTPInboxBucket: getEnv("MINIO_SFTP_INBOX_BUCKET", "archiflow-sftp-inbox"),
-		JWTSecret:           getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
-		JWTRefreshSecret:    getEnv("JWT_REFRESH_SECRET", "your-super-secret-refresh-key-change-in-production"),
-		ServerPort:          getEnv("SERVER_PORT", "5000"),
-		Environment:         getEnv("ENVIRONMENT", "development"),
-		PydioCellsURL:       getEnv("PYDIO_CELLS_URL", "http://localhost:4001"),
-		PydioWebdavURL:      getEnv("PYDIO_WEBDAV_URL", "http://localhost:4001/dav"),
-		PydioAPIToken:       getEnv("PYDIO_API_TOKEN", "archiflow_pydio_api_token_2024"),
+		JWTSecret:            getEnv("JWT_SECRET", ""),
+		JWTRefreshSecret:     getEnv("JWT_REFRESH_SECRET", ""),
+		ServerPort:           getEnv("SERVER_PORT", "5000"),
+		Environment:          getEnv("ENVIRONMENT", "development"),
+		PydioCellsURL:        getEnv("PYDIO_CELLS_URL", "http://localhost:4001"),
+		PydioWebdavURL:       getEnv("PYDIO_WEBDAV_URL", "http://localhost:4001/dav"),
+		PydioAPIToken:        getEnv("PYDIO_API_TOKEN", ""),
 	}
 
 	if err := cfg.validate(); err != nil {

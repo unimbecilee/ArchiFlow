@@ -2,10 +2,10 @@ package dto
 
 // AdminCreateUserRequest body for POST /api/admin/users
 type AdminCreateUserRequest struct {
-	Email       string `json:"email"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	Role        string `json:"role"`
+	Email     string `json:"email" validate:"required,email"`
+	FirstName string `json:"first_name" validate:"required,max=100"`
+	LastName  string `json:"last_name" validate:"required,max=100"`
+	Role      string `json:"role" validate:"required,oneof=admin manager user validator archivist"`
 }
 
 type AdminCreateUserResponse struct {
@@ -15,10 +15,10 @@ type AdminCreateUserResponse struct {
 
 // AdminUpdateUserRequest body for PUT /api/admin/users/:id
 type AdminUpdateUserRequest struct {
-	FirstName   *string `json:"first_name"`
-	LastName    *string `json:"last_name"`
-	Role        *string `json:"role"`
-	IsActive    *bool   `json:"is_active"`
+	FirstName *string `json:"first_name" validate:"omitempty,max=100"`
+	LastName  *string `json:"last_name" validate:"omitempty,max=100"`
+	Role      *string `json:"role" validate:"omitempty,oneof=admin manager user validator archivist"`
+	IsActive  *bool   `json:"is_active"`
 }
 
 // AdminUserDetailResponse fiche admin (incl. Cells)

@@ -7,9 +7,6 @@ const apiProxyTarget = (
 ).replace(/\/$/, '');
 
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   async rewrites() {
     return [
       {

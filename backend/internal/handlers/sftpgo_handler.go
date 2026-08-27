@@ -29,7 +29,7 @@ func NewSftpGoHandler(
 // Auth POST /api/integrations/sftpgo/auth — external auth hook SFTPGo.
 func (h *SftpGoHandler) Auth(c echo.Context) error {
 	var req services.SftpGoAuthRequest
-	if err := c.Bind(&req); err != nil {
+	if err := bindJSONStrict(c, &req); err != nil {
 		return c.JSON(http.StatusOK, services.SftpGoAuthResponse{Status: 0})
 	}
 	resp, err := h.auth.Authenticate(req)
@@ -42,7 +42,7 @@ func (h *SftpGoHandler) Auth(c echo.Context) error {
 // Hooks POST /api/integrations/sftpgo/hooks — actions upload/pre-upload/login.
 func (h *SftpGoHandler) Hooks(c echo.Context) error {
 	var payload services.SftpHookPayload
-	if err := c.Bind(&payload); err != nil {
+	if err := bindJSONStrict(c, &payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
 

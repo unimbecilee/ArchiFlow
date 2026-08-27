@@ -4,13 +4,28 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 
+	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/services"
 	"archiflow/backend/internal/utils"
 
 	"gorm.io/gorm"
 )
+
+func seedPasswordRequired(envKey string) (string, bool) {
+	password := strings.TrimSpace(os.Getenv(envKey))
+	if password == "" {
+		if config.IsProduction() {
+			log.Printf("seed skipped: %s required in production", envKey)
+		} else {
+			log.Printf("seed skipped: set %s to create seed user", envKey)
+		}
+		return "", false
+	}
+	return password, true
+}
 
 // DefaultAdmin creates admin user if no admin exists (dev/docker first boot).
 func DefaultAdmin(db *gorm.DB, pydioSync *services.UserPydioSync) {
@@ -24,9 +39,9 @@ func DefaultAdmin(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	if email == "" {
 		email = "admin@archiflow.local"
 	}
-	password := os.Getenv("SEED_ADMIN_PASSWORD")
-	if password == "" {
-		password = "Admin1234!"
+	password, ok := seedPasswordRequired("SEED_ADMIN_PASSWORD")
+	if !ok {
+		return
 	}
 
 	var existing models.User
@@ -52,7 +67,7 @@ func DefaultAdmin(db *gorm.DB, pydioSync *services.UserPydioSync) {
 		LastName:           "ArchiFlow",
 		Role:               "admin",
 		IsActive:           true,
-		MustChangePassword: isDefaultSeedPassword(password, "Admin1234!"),
+		MustChangePassword: true,
 	}
 	models.ApplyDefaultSftpIfUnset(u, models.RoleAdmin, nil, nil)
 	if err := db.Create(u).Error; err != nil {
@@ -75,9 +90,9 @@ func DefaultManager(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	if email == "" {
 		email = "manager@archiflow.local"
 	}
-	password := os.Getenv("SEED_MANAGER_PASSWORD")
-	if password == "" {
-		password = "Manager1234!"
+	password, ok := seedPasswordRequired("SEED_MANAGER_PASSWORD")
+	if !ok {
+		return
 	}
 	var existing models.User
 	if err := db.Where("email = ?", email).First(&existing).Error; err == nil {
@@ -98,7 +113,7 @@ func DefaultManager(db *gorm.DB, pydioSync *services.UserPydioSync) {
 		LastName:           "ArchiFlow",
 		Role:               "manager",
 		IsActive:           true,
-		MustChangePassword: isDefaultSeedPassword(password, "Manager1234!"),
+		MustChangePassword: true,
 	}
 	models.ApplyDefaultSftpIfUnset(u, models.RoleManager, nil, nil)
 	if err := db.Create(u).Error; err != nil {
@@ -114,7 +129,7 @@ func DefaultManager(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	log.Printf("✅ Default manager seeded: %s", email)
 }
 
-func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, password, firstName, lastName, role, documentedDefault string) {
+func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, password, firstName, lastName, role string) {
 	if email == "" || password == "" {
 		return
 	}
@@ -137,7 +152,7 @@ func seedRoleUser(db *gorm.DB, pydioSync *services.UserPydioSync, email, passwor
 		LastName:           "ArchiFlow",
 		Role:               role,
 		IsActive:           true,
-		MustChangePassword: isDefaultSeedPassword(password, documentedDefault),
+		MustChangePassword: true,
 	}
 	models.ApplyDefaultSftpIfUnset(u, role, nil, nil)
 	if err := db.Create(u).Error; err != nil {
@@ -159,11 +174,11 @@ func DefaultValidator(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	if email == "" {
 		email = "validator@archiflow.local"
 	}
-	password := os.Getenv("SEED_VALIDATOR_PASSWORD")
-	if password == "" {
-		password = "Validator1234!"
+	password, ok := seedPasswordRequired("SEED_VALIDATOR_PASSWORD")
+	if !ok {
+		return
 	}
-	seedRoleUser(db, pydioSync, email, password, "Validateur", "", models.RoleValidator, "Validator1234!")
+	seedRoleUser(db, pydioSync, email, password, "Validateur", "", models.RoleValidator)
 }
 
 // DefaultArchivist compte archiviste (lecture org + workflows termines).
@@ -172,11 +187,11 @@ func DefaultArchivist(db *gorm.DB, pydioSync *services.UserPydioSync) {
 	if email == "" {
 		email = "archivist@archiflow.local"
 	}
-	password := os.Getenv("SEED_ARCHIVIST_PASSWORD")
-	if password == "" {
-		password = "Archivist1234!"
+	password, ok := seedPasswordRequired("SEED_ARCHIVIST_PASSWORD")
+	if !ok {
+		return
 	}
-	seedRoleUser(db, pydioSync, email, password, "Archiviste", "", models.RoleArchivist, "Archivist1234!")
+	seedRoleUser(db, pydioSync, email, password, "Archiviste", "", models.RoleArchivist)
 }
 
 func provisionExistingIfNeeded(ctx context.Context, pydioSync *services.UserPydioSync, u *models.User, password string) {
@@ -186,10 +201,6 @@ func provisionExistingIfNeeded(ctx context.Context, pydioSync *services.UserPydi
 	if err := pydioSync.ProvisionOnCreate(ctx, u, password); err != nil {
 		log.Printf("seed pydio provision %s: %v", u.Email, err)
 	}
-}
-
-func isDefaultSeedPassword(actual, documentedDefault string) bool {
-	return documentedDefault != "" && actual == documentedDefault
 }
 
 // BackfillSftpDefaults active SFTP drop pour user/manager encore au zero-value post-migration.

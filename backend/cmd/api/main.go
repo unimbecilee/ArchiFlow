@@ -184,6 +184,7 @@ func main() {
 	wsHandler := handlers.NewWSHandler(rtHub, jwtUtil, sessionService)
 
 	e := echo.New()
+	e.Validator = handlers.NewEchoValidator()
 	e.Use(middleware.RequestTimer())
 	e.Use(middleware.Logger(logger))
 	e.Use(middleware.SecurityHeaders())
@@ -250,8 +251,8 @@ func main() {
 	protected.POST("/upload/sessions/:id/complete", uploadHandler.Complete, mpuControl)
 	protected.DELETE("/upload/sessions/:id", uploadHandler.Abort, mpuControl)
 
-	protected.POST("/upload/token", uploadTokenHandler.MintToken, middleware.UploadTokenRateLimit())
-	protected.POST("/upload/token/refresh", uploadTokenHandler.RefreshToken, middleware.UploadTokenRateLimit())
+	protected.POST("/upload/token", uploadTokenHandler.MintToken, middleware.SftpGoJWTMintRateLimit())
+	protected.POST("/upload/token/refresh", uploadTokenHandler.RefreshToken, middleware.SftpGoJWTMintRateLimit())
 
 	protected.POST("/documents/:id/restore", documentHandler.Restore)
 	protected.POST("/documents/:id/lock", documentHandler.Lock)

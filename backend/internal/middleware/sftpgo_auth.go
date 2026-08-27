@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"archiflow/backend/internal/config"
-
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,10 +19,7 @@ func SftpGoWebhookAuth() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			secret := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET"))
 			if secret == "" {
-				if config.IsProduction() {
-					return echo.NewHTTPError(http.StatusUnauthorized, "SFTPGO_WEBHOOK_SECRET not configured")
-				}
-				secret = "archiflow_sftpgo_webhook_secret_2024"
+				return echo.NewHTTPError(http.StatusUnauthorized, "SFTPGO_WEBHOOK_SECRET not configured")
 			}
 
 			provided := c.Request().Header.Get("X-SFTPGO-Secret")

@@ -20,11 +20,11 @@ func NewPydioHandler(archiveService *services.ArchiveService, documentService *s
 }
 
 type pydioArchivePayload struct {
-	DocumentID   string         `json:"document_id"`
-	DocumentName string         `json:"document_name"`
+	DocumentID   string         `json:"document_id" validate:"required"`
+	DocumentName string         `json:"document_name" validate:"required"`
 	Workspace    string         `json:"workspace"`
 	Path         string         `json:"path"`
-	User         string         `json:"user"`
+	User         string         `json:"user" validate:"required"`
 	UserEmail    string         `json:"user_email"`
 	Metadata     map[string]any `json:"metadata"`
 }
@@ -49,13 +49,8 @@ func (h *PydioHandler) Stats(c echo.Context) error {
 // CreateArchiveRequest POST /api/v1/pydio/archive-requests
 func (h *PydioHandler) CreateArchiveRequest(c echo.Context) error {
 	var payload pydioArchivePayload
-	if err := c.Bind(&payload); err != nil {
+	if err := bindJSONStrict(c, &payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid JSON"})
-	}
-	if payload.DocumentID == "" || payload.DocumentName == "" || payload.User == "" {
-		return c.JSON(http.StatusBadRequest, map[string]any{
-			"error": "document_id, document_name and user are required",
-		})
 	}
 
 	req, err := h.archiveService.CreatePydioArchiveRequest(services.PydioArchiveInput{
@@ -87,9 +82,9 @@ func (h *PydioHandler) ListArchiveRequests(c echo.Context) error {
 }
 
 type pydioSyncPayload struct {
-	PydioNodeID string         `json:"pydio_node_id"`
-	Name        string         `json:"name"`
-	Path        string         `json:"path"`
+	PydioNodeID string         `json:"pydio_node_id" validate:"required"`
+	Name        string         `json:"name" validate:"required"`
+	Path        string         `json:"path" validate:"required"`
 	MimeType    string         `json:"mime_type"`
 	Size        int64          `json:"size"`
 	Workspace   string         `json:"workspace"`
@@ -100,11 +95,8 @@ type pydioSyncPayload struct {
 // SyncDocument POST /api/v1/pydio/documents/sync
 func (h *PydioHandler) SyncDocument(c echo.Context) error {
 	var payload pydioSyncPayload
-	if err := c.Bind(&payload); err != nil {
+	if err := bindJSONStrict(c, &payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid JSON"})
-	}
-	if payload.PydioNodeID == "" || payload.Name == "" || payload.Path == "" {
-		return c.JSON(http.StatusBadRequest, map[string]any{"error": "pydio_node_id, name, path required"})
 	}
 	meta := ""
 	if payload.Metadata != nil {
@@ -129,9 +121,9 @@ func (h *PydioHandler) SyncDocument(c echo.Context) error {
 
 // DeleteSync DELETE /api/v1/pydio/documents/sync/:node_id
 func (h *PydioHandler) DeleteSync(c echo.Context) error {
-	nodeID := c.Param("node_id")
-	if nodeID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]any{"error": "node_id required"})
+	nodeID, err := requirePathParam(c, "node_id")
+	if err != nil {
+		return err
 	}
 	if err := h.documentService.DeletePydioSync(nodeID); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -149,8 +141,12 @@ func (h *PydioHandler) ListSync(c echo.Context) error {
 }
 
 func (h *PydioHandler) handleWebhook(c echo.Context, event string) error {
-	body, _ := io.ReadAll(c.Request().Body)
-	_ = h.archiveService.LogWebhook(event, c.Param("node_id"), string(body))
+	pathNodeID, err := requirePathParam(c, "node_id")
+	if err != nil {
+		return err
+	}
+	body, _ := io.ReadAll(io.LimitReader(c.Request().Body, 1<<20))
+	_ = h.archiveService.LogWebhook(event, pathNodeID, string(body))
 
 	var payload map[string]any
 	_ = json.Unmarshal(body, &payload)
@@ -160,7 +156,7 @@ func (h *PydioHandler) handleWebhook(c echo.Context, event string) error {
 		nodeID = v
 	}
 	if nodeID == "" {
-		nodeID = c.Param("node_id")
+		nodeID = pathNodeID
 	}
 
 	name, _ := payload["Path"].(string)

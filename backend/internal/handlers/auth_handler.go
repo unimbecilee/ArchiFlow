@@ -45,13 +45,13 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		})
 	}
 
-	setRefreshTokenCookie(c, resp.Token.RefreshToken)
+	setRefreshTokenCookie(c, resp.RefreshToken)
 	return c.JSON(http.StatusCreated, dto.SuccessResponse{
 		Success: true,
 		Message: "User registered successfully",
 		Data: map[string]any{
 			"user":  resp.User,
-			"token": dto.ToPublicToken(resp.Token),
+			"token": resp.Token,
 		},
 	})
 }
@@ -73,13 +73,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		})
 	}
 
-	setRefreshTokenCookie(c, resp.Token.RefreshToken)
+	setRefreshTokenCookie(c, resp.RefreshToken)
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Login successful",
 		Data: map[string]any{
 			"user":  resp.User,
-			"token": dto.ToPublicToken(resp.Token),
+			"token": resp.Token,
 		},
 	})
 }
@@ -112,12 +112,12 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 		})
 	}
 
-	setRefreshTokenCookie(c, resp.Token.RefreshToken)
+	setRefreshTokenCookie(c, resp.RefreshToken)
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Token refreshed successfully",
 		Data: map[string]any{
-			"token": dto.ToPublicToken(resp.Token),
+			"token": resp.Token,
 		},
 	})
 }

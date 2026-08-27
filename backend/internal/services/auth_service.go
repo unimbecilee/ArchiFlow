@@ -89,8 +89,9 @@ func (s *authService) Register(req dto.RegisterRequest, meta SessionMeta) (*dto.
 	}
 
 	return &dto.RegisterResponse{
-		User:  toUserResponse(user),
-		Token: toTokenResponse(tokenPair),
+		User:         toUserResponse(user),
+		Token:        toPublicToken(tokenPair),
+		RefreshToken: tokenPair.RefreshToken,
 	}, nil
 }
 
@@ -116,8 +117,9 @@ func (s *authService) Login(req dto.LoginRequest, meta SessionMeta) (*dto.LoginR
 	}
 
 	return &dto.LoginResponse{
-		User:  toUserResponse(user),
-		Token: toTokenResponse(tokenPair),
+		User:         toUserResponse(user),
+		Token:        toPublicToken(tokenPair),
+		RefreshToken: tokenPair.RefreshToken,
 	}, nil
 }
 
@@ -127,7 +129,8 @@ func (s *authService) RefreshToken(refreshToken string, meta SessionMeta) (*dto.
 		return nil, err
 	}
 	return &dto.RefreshResponse{
-		Token: toTokenResponse(tokenPair),
+		Token:        toPublicToken(tokenPair),
+		RefreshToken: tokenPair.RefreshToken,
 	}, nil
 }
 
@@ -236,10 +239,9 @@ func toUserResponse(user *models.User) dto.UserResponse {
 	}
 }
 
-func toTokenResponse(pair *utils.TokenPair) dto.TokenPair {
-	return dto.TokenPair{
-		AccessToken:  pair.AccessToken,
-		RefreshToken: pair.RefreshToken,
-		ExpiresIn:    pair.ExpiresIn,
+func toPublicToken(pair *utils.TokenPair) dto.PublicTokenResponse {
+	return dto.PublicTokenResponse{
+		AccessToken: pair.AccessToken,
+		ExpiresIn:   pair.ExpiresIn,
 	}
 }

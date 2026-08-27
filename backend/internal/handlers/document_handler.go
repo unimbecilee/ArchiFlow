@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -137,8 +138,11 @@ func (h *DocumentHandler) Lock(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.documentService.Lock(uint(id), userID, isAdminFromContext(c)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.documentService.Lock(id, userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document locked"})
@@ -150,8 +154,11 @@ func (h *DocumentHandler) Unlock(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.documentService.Unlock(uint(id), userID, isAdminFromContext(c)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.documentService.Unlock(id, userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document unlocked"})
@@ -244,8 +251,11 @@ func (h *DocumentHandler) Restore(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.documentService.Restore(uint(id), userID, isAdminFromContext(c)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.documentService.Restore(id, userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document restored"})
@@ -256,11 +266,14 @@ func (h *DocumentHandler) Get(c echo.Context) error {
 	if _, err := userIDFromContext(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.ensureDocAccess(c, uint(id)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
 		return err
 	}
-	doc, err := h.documentService.GetByID(uint(id))
+	if err := h.ensureDocAccess(c, id); err != nil {
+		return err
+	}
+	doc, err := h.documentService.GetByID(id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": "document not found"})
 	}
@@ -273,12 +286,21 @@ func (h *DocumentHandler) Upload(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := c.Request().ParseMultipartForm(64 << 20); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid form"})
+	// Bound request body to MAX_CONTENT_LENGTH (+ form field overhead).
+	maxBytes := int64(services.MAX_CONTENT_LENGTH)
+	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, maxBytes+1<<20)
+	if err := c.Request().ParseMultipartForm(maxBytes); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid form or exceeds MAX_CONTENT_LENGTH"})
 	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "file required"})
+	}
+	if file.Size > services.MAX_CONTENT_LENGTH {
+		return c.JSON(http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   fmt.Sprintf("fichier trop volumineux (MAX_CONTENT_LENGTH=%d)", services.MAX_CONTENT_LENGTH),
+		})
 	}
 
 	var folderID *uint
@@ -337,16 +359,19 @@ func (h *DocumentHandler) Download(c echo.Context) error {
 	if _, err := userIDFromContext(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.ensureDocAccess(c, uint(id)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
 		return err
 	}
-	reader, mime, filename, err := h.documentService.OpenContentByID(c.Request().Context(), uint(id))
+	if err := h.ensureDocAccess(c, id); err != nil {
+		return err
+	}
+	reader, mime, filename, err := h.documentService.OpenContentByID(c.Request().Context(), id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
 	}
 	defer reader.Close()
-	h.auditDoc(c, "document.download", uint(id))
+	h.auditDoc(c, "document.download", id)
 
 	c.Response().Header().Set("Content-Type", mime)
 	if cd := utils.ContentDispositionAttachment(filename); cd != "" {
@@ -360,8 +385,11 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 	if _, err := userIDFromContext(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.ensureDocAccess(c, uint(id)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.ensureDocAccess(c, id); err != nil {
 		return err
 	}
 
@@ -372,7 +400,7 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 				"error":   "presigned preview URLs disabled in production",
 			})
 		}
-		doc, err := h.documentService.GetByID(uint(id))
+		doc, err := h.documentService.GetByID(id)
 		if err != nil {
 			return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": "not found"})
 		}
@@ -383,7 +411,7 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{"success": true, "url": url})
 	}
 
-	reader, mime, filename, err := h.documentService.OpenContentByID(c.Request().Context(), uint(id))
+	reader, mime, filename, err := h.documentService.OpenContentByID(c.Request().Context(), id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -411,55 +439,58 @@ func (h *DocumentHandler) Patch(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	role := roleFromContext(c)
 
 	var body struct {
 		FolderID       *uint   `json:"folder_id"`
-		Classification *string `json:"classification"`
-		Department     *string `json:"department"`
+		Classification *string `json:"classification" validate:"omitempty,oneof=PUBLIC INTERNE CONFIDENTIEL"`
+		Department     *string `json:"department" validate:"omitempty,max=128"`
 	}
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
 
 	metaOnly := body.FolderID == nil && (body.Classification != nil || body.Department != nil)
 	if metaOnly {
-		if err := h.ensureDocPolicy(c, uint(id), services.ActionRead); err != nil {
+		if err := h.ensureDocPolicy(c, id, services.ActionRead); err != nil {
 			return err
 		}
 		// Contenu : write requis sauf archiviste / admin (classement MAC org)
 		if !models.RoleIsAdmin(role) && role != models.RoleArchivist {
-			if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+			if err := h.ensureDocPolicy(c, id, services.ActionWrite); err != nil {
 				return err
 			}
 		}
-		doc, err := h.documentService.UpdateMACMetadata(uint(id), body.Classification, body.Department)
+		doc, err := h.documentService.UpdateMACMetadata(id, body.Classification, body.Department)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 		}
 		if h.policyService != nil {
-			h.policyService.InvalidateCache(userID, uint(id))
-			h.policyService.InvalidateCache(doc.OwnerID, uint(id))
+			h.policyService.InvalidateCache(userID, id)
+			h.policyService.InvalidateCache(doc.OwnerID, id)
 		}
-		h.auditDoc(c, "document.classify", uint(id))
+		h.auditDoc(c, "document.classify", id)
 		return c.JSON(http.StatusOK, map[string]any{"success": true, "data": h.documentToViewForUser(c, *doc)})
 	}
 
-	if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+	if err := h.ensureDocPolicy(c, id, services.ActionWrite); err != nil {
 		return err
 	}
-	doc, err := h.documentService.MoveToFolder(uint(id), userID, isAdminFromContext(c), body.FolderID)
+	doc, err := h.documentService.MoveToFolder(id, userID, isAdminFromContext(c), body.FolderID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	if body.Classification != nil || body.Department != nil {
-		doc, err = h.documentService.UpdateMACMetadata(uint(id), body.Classification, body.Department)
+		doc, err = h.documentService.UpdateMACMetadata(id, body.Classification, body.Department)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 		}
 		if h.policyService != nil {
-			h.policyService.InvalidateCache(userID, uint(id))
+			h.policyService.InvalidateCache(userID, id)
 		}
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": h.documentToViewForUser(c, *doc)})
@@ -471,13 +502,16 @@ func (h *DocumentHandler) Delete(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.ensureDocPolicy(c, uint(id), services.ActionWrite); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
 		return err
 	}
-	if err := h.documentService.Delete(uint(id), userID, isAdminFromContext(c)); err != nil {
+	if err := h.ensureDocPolicy(c, id, services.ActionWrite); err != nil {
+		return err
+	}
+	if err := h.documentService.Delete(id, userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
-	h.auditDoc(c, "document.delete", uint(id))
+	h.auditDoc(c, "document.delete", id)
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document deleted"})
 }

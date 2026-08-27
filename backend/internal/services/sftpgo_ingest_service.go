@@ -62,18 +62,18 @@ func NewSFTPIngestService(
 }
 
 type SftpHookPayload struct {
-	Action      string `json:"action"`
-	Username    string `json:"username"`
-	Path        string `json:"path"`
-	VirtualPath string `json:"virtual_path"`
-	FilePath    string `json:"file_path"`
-	FileSize    int64  `json:"file_size"`
-	Protocol    string `json:"protocol"`
-	IP          string `json:"ip"`
+	Action      string `json:"action" validate:"required,max=64"`
+	Username    string `json:"username" validate:"omitempty,max=255"`
+	Path        string `json:"path" validate:"omitempty,max=2048"`
+	VirtualPath string `json:"virtual_path" validate:"omitempty,max=2048"`
+	FilePath    string `json:"file_path" validate:"omitempty,max=2048"`
+	FileSize    int64  `json:"file_size" validate:"omitempty,gte=0"`
+	Protocol    string `json:"protocol" validate:"omitempty,max=32"`
+	IP          string `json:"ip" validate:"omitempty,max=64"`
 	Status      int    `json:"status"`
 	FsProvider  int    `json:"fs_provider"`
-	Bucket      string `json:"bucket"`
-	Endpoint    string `json:"endpoint"`
+	Bucket      string `json:"bucket" validate:"omitempty,max=255"`
+	Endpoint    string `json:"endpoint" validate:"omitempty,max=512"`
 }
 
 func (s *SFTPIngestService) ResolveOwnerID(username string) (uint, error) {

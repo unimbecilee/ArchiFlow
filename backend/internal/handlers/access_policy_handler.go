@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"archiflow/backend/internal/services"
 
@@ -18,11 +17,11 @@ func NewAccessPolicyHandler(svc *services.AccessPolicyService) *AccessPolicyHand
 }
 
 type accessPolicyBody struct {
-	Name      string `json:"name"`
-	Effect    string `json:"effect"`
-	Priority  int    `json:"priority"`
-	Condition string `json:"condition"`
-	Actions   string `json:"actions"`
+	Name      string `json:"name" validate:"required,max=200"`
+	Effect    string `json:"effect" validate:"required,oneof=allow deny"`
+	Priority  int    `json:"priority" validate:"gte=0"`
+	Condition string `json:"condition" validate:"omitempty,max=4000"`
+	Actions   string `json:"actions" validate:"omitempty,max=1000"`
 	Active    bool   `json:"active"`
 }
 
@@ -36,7 +35,7 @@ func (h *AccessPolicyHandler) List(c echo.Context) error {
 
 func (h *AccessPolicyHandler) Create(c echo.Context) error {
 	var body accessPolicyBody
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
 	p, err := h.svc.Create(services.AccessPolicyInput{
@@ -50,12 +49,15 @@ func (h *AccessPolicyHandler) Create(c echo.Context) error {
 }
 
 func (h *AccessPolicyHandler) Update(c echo.Context) error {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var body accessPolicyBody
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
-	p, err := h.svc.Update(uint(id), services.AccessPolicyInput{
+	p, err := h.svc.Update(id, services.AccessPolicyInput{
 		Name: body.Name, Effect: body.Effect, Priority: body.Priority,
 		Condition: body.Condition, Actions: body.Actions, Active: body.Active,
 	})
@@ -66,8 +68,11 @@ func (h *AccessPolicyHandler) Update(c echo.Context) error {
 }
 
 func (h *AccessPolicyHandler) Delete(c echo.Context) error {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.svc.Delete(uint(id)); err != nil {
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.svc.Delete(id); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true})

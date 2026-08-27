@@ -67,8 +67,11 @@ func (h *FolderHandler) Breadcrumb(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	chain, err := h.folderService.Breadcrumb(uint(id), userID, isAdminFromContext(c))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	chain, err := h.folderService.Breadcrumb(id, userID, isAdminFromContext(c))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -81,8 +84,11 @@ func (h *FolderHandler) Get(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	f, err := h.folderService.Get(uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	f, err := h.folderService.Get(id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": "folder not found"})
 	}
@@ -93,7 +99,7 @@ func (h *FolderHandler) Get(c echo.Context) error {
 }
 
 type folderBody struct {
-	Name        string `json:"name"`
+	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 	ParentID    *uint  `json:"parent_id"`
 }
@@ -105,7 +111,7 @@ func (h *FolderHandler) Create(c echo.Context) error {
 		return err
 	}
 	var body folderBody
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
 	f, err := h.folderService.Create(services.CreateFolderInput{
@@ -126,12 +132,15 @@ func (h *FolderHandler) Update(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var body folderBody
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
-	f, err := h.folderService.Update(uint(id), userID, isAdminFromContext(c), body.Name, body.Description)
+	f, err := h.folderService.Update(id, userID, isAdminFromContext(c), body.Name, body.Description)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -144,9 +153,12 @@ func (h *FolderHandler) Delete(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	recursive := c.QueryParam("recursive") == "true"
-	if err := h.folderService.Delete(uint(id), userID, isAdminFromContext(c), recursive); err != nil {
+	if err := h.folderService.Delete(id, userID, isAdminFromContext(c), recursive); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "folder deleted"})

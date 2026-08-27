@@ -2,12 +2,10 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"archiflow/backend/internal/dto"
 	"archiflow/backend/internal/services"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -51,9 +49,9 @@ func (h *UploadHandler) GetStatus(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	sessionID, err := uuid.Parse(c.Param("id"))
+	sessionID, err := parseUUIDParam(c, "id")
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid session id")
+		return err
 	}
 	resp, err := h.svc.GetStatus(c.Request().Context(), sessionID, uid)
 	if err != nil {
@@ -67,13 +65,13 @@ func (h *UploadHandler) PresignPart(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	sessionID, err := uuid.Parse(c.Param("id"))
+	sessionID, err := parseUUIDParam(c, "id")
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid session id")
+		return err
 	}
-	partNumber, err := strconv.Atoi(c.Param("n"))
-	if err != nil || partNumber < 1 {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid part number")
+	partNumber, err := parsePositiveIntParam(c, "n")
+	if err != nil {
+		return err
 	}
 	resp, err := h.svc.PresignPart(c.Request().Context(), sessionID, uid, partNumber)
 	if err != nil {
@@ -87,9 +85,9 @@ func (h *UploadHandler) Complete(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	sessionID, err := uuid.Parse(c.Param("id"))
+	sessionID, err := parseUUIDParam(c, "id")
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid session id")
+		return err
 	}
 	var req dto.CompleteUploadRequest
 	if err := bindJSONStrict(c, &req); err != nil {
@@ -107,9 +105,9 @@ func (h *UploadHandler) Abort(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	sessionID, err := uuid.Parse(c.Param("id"))
+	sessionID, err := parseUUIDParam(c, "id")
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid session id")
+		return err
 	}
 	if err := h.svc.Abort(c.Request().Context(), sessionID, uid); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())

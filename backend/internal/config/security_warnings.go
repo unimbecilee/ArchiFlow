@@ -15,28 +15,26 @@ func SecurityWarnings() []string {
 	if weakSecret(os.Getenv("JWT_SECRET")) {
 		out = append(out, "JWT_SECRET is weak or default — change before any shared/staging deploy")
 	}
-	if token := os.Getenv("PYDIO_API_TOKEN"); token == "" || token == "archiflow_pydio_api_token_2024" {
-		out = append(out, "PYDIO_API_TOKEN is default or empty — set strong token if Cells integration enabled")
+	if token := strings.TrimSpace(os.Getenv("PYDIO_API_TOKEN")); token == "" {
+		out = append(out, "PYDIO_API_TOKEN is empty — set strong token if Cells integration enabled")
 	}
-	if wh := os.Getenv("PYDIO_WEBHOOK_SECRET"); wh == "" || wh == "archiflow_pydio_webhook_secret_2024" {
-		out = append(out, "PYDIO_WEBHOOK_SECRET is default or empty")
+	if wh := strings.TrimSpace(os.Getenv("PYDIO_WEBHOOK_SECRET")); wh == "" {
+		out = append(out, "PYDIO_WEBHOOK_SECRET is empty")
 	}
 	if isDefaultMinioCreds() {
-		out = append(out, "MinIO uses default minioadmin credentials")
+		out = append(out, "MinIO credentials missing or still using weak defaults")
 	}
 	if OfficeEnabled() && weakOfficeSecret() {
 		out = append(out, "ONLYOFFICE enabled but OFFICE_FILE_TOKEN_SECRET is weak, missing, or equals JWT_SECRET")
 	}
-	if wh := os.Getenv("SFTPGO_WEBHOOK_SECRET"); wh == "" || wh == "archiflow_sftpgo_webhook_secret_2024" {
+	if wh := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET")); wh == "" {
 		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") {
-			out = append(out, "SFTPGO_WEBHOOK_SECRET is default or empty while SFTPGO_INTEGRATION_ENABLED=true")
+			out = append(out, "SFTPGO_WEBHOOK_SECRET is empty while SFTPGO_INTEGRATION_ENABLED=true")
 		}
 	}
-	if pwd := os.Getenv("SFTPGO_USER_PASSWORD_SECRET"); pwd == "" ||
-		pwd == "archiflow_sftpgo_user_password_secret_dev" ||
-		pwd == "change-me-sftpgo-user-pwd-secret-32" {
+	if pwd := strings.TrimSpace(os.Getenv("SFTPGO_USER_PASSWORD_SECRET")); pwd == "" || weakSecret(pwd) {
 		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") {
-			out = append(out, "SFTPGO_USER_PASSWORD_SECRET is default or empty while SFTPGo upload enabled")
+			out = append(out, "SFTPGO_USER_PASSWORD_SECRET is missing or weak while SFTPGo upload enabled")
 		}
 	}
 	return out
@@ -86,7 +84,7 @@ func validatePydioWebhookProduction() error {
 		return nil
 	}
 	wh := strings.TrimSpace(os.Getenv("PYDIO_WEBHOOK_SECRET"))
-	if wh == "" || wh == "archiflow_pydio_webhook_secret_2024" {
+	if wh == "" || weakSecret(wh) {
 		return fmt.Errorf("set a strong PYDIO_WEBHOOK_SECRET in production")
 	}
 	return nil
@@ -117,7 +115,7 @@ func validateSftpGoProduction() error {
 		return nil
 	}
 	wh := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET"))
-	if wh == "" || wh == "archiflow_sftpgo_webhook_secret_2024" || weakSecret(wh) {
+	if wh == "" || weakSecret(wh) {
 		return fmt.Errorf("set a strong SFTPGO_WEBHOOK_SECRET when SFTPGO_INTEGRATION_ENABLED=true in production")
 	}
 	return nil

@@ -1,5 +1,8 @@
+/** Classic multipart / import ceiling (Flask-style MAX_CONTENT_LENGTH). */
+export const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
+
 /** Seuil : au-dessus, upload MPU résilient ; en dessous, POST classique 20 Mo. */
-export const RESUMABLE_UPLOAD_THRESHOLD_BYTES = 20 * 1024 * 1024;
+export const RESUMABLE_UPLOAD_THRESHOLD_BYTES = MAX_CONTENT_LENGTH;
 
 /** Plafond fichier résilient (50 Go par défaut, aligné backend). */
 export const MAX_RESUMABLE_FILE_GB = 50;

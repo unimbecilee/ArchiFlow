@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20.18.1-alpine AS builder
 
 WORKDIR /app
 
@@ -19,15 +19,21 @@ ENV NEXT_PUBLIC_REALTIME_MODE=${NEXT_PUBLIC_REALTIME_MODE}
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:20.18.1-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
+RUN addgroup -S app && adduser -S app -G app
+
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+
+RUN chown -R app:app /app
+
+USER app
 
 EXPOSE 3000
 

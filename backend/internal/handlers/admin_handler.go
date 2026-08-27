@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"archiflow/backend/internal/dto"
 	"archiflow/backend/internal/services"
@@ -59,7 +58,7 @@ func (h *AdminHandler) CreateUser(c echo.Context) error {
 		return err
 	}
 	var body dto.AdminCreateUserRequest
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
 	resp, err := h.admin.CreateUser(body)
@@ -69,20 +68,25 @@ func (h *AdminHandler) CreateUser(c echo.Context) error {
 	return c.JSON(http.StatusCreated, map[string]any{"success": true, "data": resp})
 }
 
+type adminPatchUserBody struct {
+	Role     *string `json:"role" validate:"omitempty,oneof=admin manager user validator archivist"`
+	IsActive *bool   `json:"is_active"`
+}
+
 // PatchUser PATCH /api/admin/users/:id
 func (h *AdminHandler) PatchUser(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	var body struct {
-		Role     *string `json:"role"`
-		IsActive *bool   `json:"is_active"`
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
 	}
-	if err := c.Bind(&body); err != nil {
+	var body adminPatchUserBody
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
-	u, err := h.admin.UpdateUserLegacy(uint(id), body.Role, body.IsActive)
+	u, err := h.admin.UpdateUserLegacy(id, body.Role, body.IsActive)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -105,8 +109,11 @@ func (h *AdminHandler) GetUser(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	detail, err := h.admin.GetUser(uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	detail, err := h.admin.GetUser(id)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -118,12 +125,15 @@ func (h *AdminHandler) PutUser(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var body dto.AdminUpdateUserRequest
-	if err := c.Bind(&body); err != nil {
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
-	detail, err := h.admin.UpdateUser(uint(id), body)
+	detail, err := h.admin.UpdateUser(id, body)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -135,8 +145,11 @@ func (h *AdminHandler) ResendCredentials(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	resp, err := h.admin.ResendCredentials(uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	resp, err := h.admin.ResendCredentials(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -148,8 +161,11 @@ func (h *AdminHandler) SyncPydio(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	resp, err := h.admin.SyncPydio(uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	resp, err := h.admin.SyncPydio(id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -161,18 +177,29 @@ func (h *AdminHandler) DeleteUser(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
 	userID, err := userIDFromContext(c)
 	if err != nil {
 		return err
 	}
-	if uint(id) == userID {
+	if id == userID {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "cannot delete yourself"})
 	}
-	if err := h.admin.DeleteUser(uint(id)); err != nil {
+	if err := h.admin.DeleteUser(id); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true})
+}
+
+type adminServiceAccountBody struct {
+	Name        string `json:"name" validate:"required,max=200"`
+	Username    string `json:"username" validate:"required,max=128"`
+	Password    string `json:"password" validate:"required,min=8"`
+	Description string `json:"description" validate:"omitempty,max=1000"`
+	SftpMode    string `json:"sftp_mode" validate:"omitempty,oneof=none drop inbox full"`
 }
 
 // CreateServiceAccount POST /api/admin/users/:id/service-accounts
@@ -180,18 +207,15 @@ func (h *AdminHandler) CreateServiceAccount(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	var body struct {
-		Name        string `json:"name"`
-		Username    string `json:"username"`
-		Password    string `json:"password"`
-		Description string `json:"description"`
-		SftpMode    string `json:"sftp_mode"`
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
 	}
-	if err := c.Bind(&body); err != nil {
+	var body adminServiceAccountBody
+	if err := bindJSONStrict(c, &body); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": "invalid body"})
 	}
-	sa, err := h.admin.CreateServiceAccount(c.Request().Context(), uint(id), body.Name, body.Username, body.Password, body.Description, body.SftpMode)
+	sa, err := h.admin.CreateServiceAccount(c.Request().Context(), id, body.Name, body.Username, body.Password, body.Description, body.SftpMode)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
@@ -213,8 +237,11 @@ func (h *AdminHandler) ListServiceAccounts(c echo.Context) error {
 	if err := requireAdmin(c); err != nil {
 		return err
 	}
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	rows, err := h.admin.ListServiceAccounts(uint(id))
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	rows, err := h.admin.ListServiceAccounts(id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}

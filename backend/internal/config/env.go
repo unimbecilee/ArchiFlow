@@ -61,13 +61,10 @@ func weakSecret(s string) bool {
 func isDefaultMinioCreds() bool {
 	ak := strings.TrimSpace(os.Getenv("MINIO_ACCESS_KEY"))
 	sk := strings.TrimSpace(os.Getenv("MINIO_SECRET_KEY"))
-	if ak == "" {
-		ak = "minioadmin"
+	if ak == "" || sk == "" {
+		return true
 	}
-	if sk == "" {
-		sk = "minioadmin123"
-	}
-	return ak == "minioadmin" && sk == "minioadmin123"
+	return strings.EqualFold(ak, "minioadmin") && sk == "minioadmin123"
 }
 
 func cookieSecureDisabledInProd() bool {
@@ -88,7 +85,7 @@ func ValidateSecurityForEnv() error {
 	if PydioDevInsecure() {
 		return fmt.Errorf("PYDIO_DEV_INSECURE must not be set in production")
 	}
-	if token := os.Getenv("PYDIO_API_TOKEN"); token == "" || token == "archiflow_pydio_api_token_2024" {
+	if token := strings.TrimSpace(os.Getenv("PYDIO_API_TOKEN")); token == "" || weakSecret(token) {
 		return fmt.Errorf("set a strong PYDIO_API_TOKEN in production")
 	}
 	if isDefaultMinioCreds() {

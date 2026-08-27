@@ -8,7 +8,11 @@
 const API = (process.argv[2] || "http://localhost:5010").replace(/\/$/, "");
 const WS_BASE = API.replace(/^http/, "ws");
 const EMAIL = process.env.TEST_EMAIL || "admin@archiflow.local";
-const PASSWORD = process.env.TEST_PASSWORD || "Admin1234!";
+const PASSWORD = process.env.TEST_PASSWORD || process.env.SMOKE_PASSWORD || "";
+if (!PASSWORD) {
+  console.error("Set TEST_PASSWORD or SMOKE_PASSWORD — no default password");
+  process.exit(1);
+}
 
 async function login() {
   const res = await fetch(`${API}/api/auth/login`, {

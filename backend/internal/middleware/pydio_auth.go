@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"os"
+	"strings"
 
 	"archiflow/backend/internal/config"
 
@@ -22,12 +23,9 @@ func PydioAPIAuth() echo.MiddlewareFunc {
 			}
 
 			token := c.Request().Header.Get("X-Pydio-Token")
-			expected := os.Getenv("PYDIO_API_TOKEN")
+			expected := strings.TrimSpace(os.Getenv("PYDIO_API_TOKEN"))
 			if expected == "" {
-				if config.IsProduction() {
-					return echo.NewHTTPError(http.StatusUnauthorized, "PYDIO_API_TOKEN not configured")
-				}
-				expected = "archiflow_pydio_api_token_2024"
+				return echo.NewHTTPError(http.StatusUnauthorized, "PYDIO_API_TOKEN not configured")
 			}
 			if token != "" && token == expected {
 				return next(c)
@@ -35,9 +33,9 @@ func PydioAPIAuth() echo.MiddlewareFunc {
 
 			sig := c.Request().Header.Get("X-Pydio-Signature")
 			if sig != "" {
-				secret := os.Getenv("PYDIO_WEBHOOK_SECRET")
+				secret := strings.TrimSpace(os.Getenv("PYDIO_WEBHOOK_SECRET"))
 				if secret == "" {
-					secret = "archiflow_pydio_webhook_secret_2024"
+					return echo.NewHTTPError(http.StatusUnauthorized, "PYDIO_WEBHOOK_SECRET not configured")
 				}
 				body, err := readBodyPreserve(c)
 				if err != nil {

@@ -164,24 +164,3 @@ func UploadMPUControlRateLimit() echo.MiddlewareFunc {
 		return fmt.Sprintf("upload-mpu:%s:%d", c.RealIP(), uid), nil
 	})
 }
-
-// UploadTokenRateLimit limits SFTPGo JWT mint (per user + IP).
-func UploadTokenRateLimit() echo.MiddlewareFunc {
-	perHour := envInt("UPLOAD_TOKEN_RATE_LIMIT_PER_HOUR", 200)
-	burst := envInt("UPLOAD_TOKEN_RATE_LIMIT_BURST", 50)
-	if perHour < 1 {
-		perHour = 200
-	}
-	if burst < 1 {
-		burst = 50
-	}
-	perMinute := perHour / 60
-	if perMinute < 1 {
-		perMinute = 1
-	}
-	store := rateLimitStore(perMinute, burst, time.Hour)
-	return rateLimitMiddleware(store, func(c echo.Context) (string, error) {
-		uid, _ := c.Get("userID").(uint)
-		return fmt.Sprintf("upload-token:%s:%d", c.RealIP(), uid), nil
-	})
-}

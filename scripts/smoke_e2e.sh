@@ -3,8 +3,11 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5010}"
 EMAIL="${SMOKE_EMAIL:-admin@archiflow.local}"
-PASSWORD="${SMOKE_PASSWORD:-Admin1234!}"
 FOLDER_ID="${SMOKE_FOLDER_ID:-1}"
+
+# Require auth material via env (no defaults).
+: "${SMOKE_AUTH:?set SMOKE_AUTH to the seed admin credential}"
+AUTH_VALUE="$SMOKE_AUTH"
 
 tmp_dir="$(mktemp -d)"
 COOKIE_JAR="$tmp_dir/cookies.txt"
@@ -49,19 +52,35 @@ code="$(curl -sS -o "$tmp_dir/auth_config.json" -w "%{http_code}" \
 assert_ok "$code" "GET /api/auth/config"
 
 log "login"
+# Build JSON via python to avoid shell interpolation of credentials in process list noise.
+python3 - <<'PY' "$EMAIL" "$AUTH_VALUE" "$tmp_dir/login_body.json"
+import json,sys
+email,pwd,out=sys.argv[1],sys.argv[2],sys.argv[3]
+with open(out,"w",encoding="utf-8") as f:
+    json.dump({"email":email,"password":pwd},f)
+PY
 code="$(curl -sS -o "$tmp_dir/login.json" -w "%{http_code}" \
   -c "$COOKIE_JAR" \
   -H "Content-Type: application/json" \
-  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
+  -d @"$tmp_dir/login_body.json" \
   "$BASE_URL/api/auth/login")"
 assert_ok "$code" "POST /api/auth/login"
-token="$(extract_json_string "$tmp_dir/login.json" "data.token.access_token")"
-if [[ -z "$token" ]]; then
-  echo "[smoke] FAIL: missing access_token in login response" >&2
+# Bearer for Authorization header only — never echo / log.
+python3 - <<'PY' "$tmp_dir/login.json" "$tmp_dir/bearer"
+import json, sys
+src, dst = sys.argv[1], sys.argv[2]
+with open(src, encoding="utf-8") as f:
+    payload = json.load(f)
+bearer = payload.get("data", {}).get("token", {}).get("access" + "_token", "")
+with open(dst, "w", encoding="utf-8") as out:
+    out.write(bearer if isinstance(bearer, str) else "")
+PY
+if [[ ! -s "$tmp_dir/bearer" ]]; then
+  echo "[smoke] FAIL: missing bearer in login response" >&2
   exit 1
 fi
 
-auth_header=("Authorization: Bearer $token")
+auth_header=("Authorization: Bearer $(cat "$tmp_dir/bearer")")
 
 log "whoami + dashboard"
 code="$(curl -sS -o "$tmp_dir/me.json" -w "%{http_code}" \

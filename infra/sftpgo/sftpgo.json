@@ -2,7 +2,7 @@
   "data_provider": {
     "driver": "sqlite",
     "name": "/var/lib/sftpgo/sftpgo.db",
-    "external_auth_hook": "http://backend:5000/api/integrations/sftpgo/auth",
+    "external_auth_hook": "",
     "external_auth_scope": 0,
     "create_default_admin": true
   },
@@ -25,7 +25,7 @@
       }
     ],
     "token_validation": 1,
-    "max_upload_file_size": 0
+    "max_upload_file_size": 53687091200
   },
   "sftpd": {
     "bindings": [
@@ -45,7 +45,7 @@
     },
     "actions": {
       "execute_on": ["upload", "pre-upload", "login"],
-      "hook": "http://backend:5000/api/integrations/sftpgo/hooks"
+      "hook": ""
     },
     "upload_mode": 1
   }

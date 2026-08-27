@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -20,10 +21,12 @@ func NewArchivesRequestsHandler(archiveService *services.ArchiveService) *Archiv
 
 // Create POST /api/v1/archives-requests — multipart, compatible plugin Cells / Socle.
 func (h *ArchivesRequestsHandler) Create(c echo.Context) error {
-	if err := c.Request().ParseMultipartForm(32 << 20); err != nil {
+	maxBytes := int64(services.MAX_CONTENT_LENGTH)
+	c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, maxBytes+1<<20)
+	if err := c.Request().ParseMultipartForm(maxBytes); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{
 			"success": false,
-			"error":   "invalid multipart form",
+			"error":   "invalid multipart form or exceeds MAX_CONTENT_LENGTH",
 		})
 	}
 
@@ -32,6 +35,12 @@ func (h *ArchivesRequestsHandler) Create(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]any{
 			"success": false,
 			"error":   "file is required",
+		})
+	}
+	if file.Size > services.MAX_CONTENT_LENGTH {
+		return c.JSON(http.StatusBadRequest, map[string]any{
+			"success": false,
+			"error":   fmt.Sprintf("file exceeds MAX_CONTENT_LENGTH=%d", services.MAX_CONTENT_LENGTH),
 		})
 	}
 

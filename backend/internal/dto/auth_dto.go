@@ -15,8 +15,9 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	User  UserResponse `json:"user"`
-	Token TokenPair    `json:"token"`
+	User         UserResponse        `json:"user"`
+	Token        PublicTokenResponse `json:"token"`
+	RefreshToken string              `json:"-"` // HttpOnly cookie only
 }
 
 // Login
@@ -26,8 +27,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	User  UserResponse `json:"user"`
-	Token TokenPair    `json:"token"`
+	User         UserResponse        `json:"user"`
+	Token        PublicTokenResponse `json:"token"`
+	RefreshToken string              `json:"-"` // HttpOnly cookie only
 }
 
 // Refresh
@@ -36,27 +38,14 @@ type RefreshRequest struct {
 }
 
 type RefreshResponse struct {
-	Token TokenPair `json:"token"`
-}
-
-// Token — refresh_token is HttpOnly cookie only (omitempty in JSON).
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresIn    int64  `json:"expires_in"` // seconds
+	Token        PublicTokenResponse `json:"token"`
+	RefreshToken string              `json:"-"` // HttpOnly cookie only
 }
 
 // PublicTokenResponse access token returned to the SPA (refresh in cookie).
 type PublicTokenResponse struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int64  `json:"expires_in"`
-}
-
-func ToPublicToken(pair TokenPair) PublicTokenResponse {
-	return PublicTokenResponse{
-		AccessToken: pair.AccessToken,
-		ExpiresIn:   pair.ExpiresIn,
-	}
 }
 
 // User

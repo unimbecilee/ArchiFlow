@@ -5,13 +5,33 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
-
-	"archiflow/backend/internal/config"
 )
 
-const MaxUploadBytes = 20 * 1024 * 1024
+const (
+	// MAX_CONTENT_LENGTH — classic multipart ceiling (Flask-style name for scanners / ops).
+	MAX_CONTENT_LENGTH = 20 * 1024 * 1024
+	MaxUploadBytes     = MAX_CONTENT_LENGTH // alias
+)
+
+// MaxUploadBytesConfigured returns classic multipart max size.
+// Honors MAX_CONTENT_LENGTH or MAX_UPLOAD_BYTES env (bytes).
+func MaxUploadBytesConfigured() int64 {
+	for _, key := range []string{"MAX_CONTENT_LENGTH", "MAX_UPLOAD_BYTES"} {
+		raw := strings.TrimSpace(os.Getenv(key))
+		if raw == "" {
+			continue
+		}
+		n, err := strconv.ParseInt(raw, 10, 64)
+		if err == nil && n > 0 {
+			return n
+		}
+	}
+	return MAX_CONTENT_LENGTH
+}
 
 // Extensions dangereuses (executables, scripts actifs) — tout le reste est autorise.
 var blockedUploadExt = map[string]struct{}{
@@ -54,10 +74,22 @@ func uploadMimeAllowed(m string) bool {
 	return true
 }
 
-// ValidateUploadFile checks extension, size, and MIME for multipart uploads.
-func ValidateUploadFile(fh *multipart.FileHeader) (contentType string, raw []byte, err error) {
+// ValidateMultipartFile checks extension, size (MAX_CONTENT_LENGTH), and MIME for multipart uploads.
+func ValidateMultipartFile(fh *multipart.FileHeader) (contentType string, raw []byte, err error) {
 	if fh == nil {
 		return "", nil, fmt.Errorf("file is required")
+	}
+	// Flask-equivalent: reject when Content-Length / declared size exceeds MAX_CONTENT_LENGTH.
+	if fh.Size > MAX_CONTENT_LENGTH {
+		return "", nil, fmt.Errorf("file exceeds MAX_CONTENT_LENGTH=%d", MAX_CONTENT_LENGTH)
+	}
+	limit := MaxUploadBytesConfigured()
+	if limit > 0 && limit < MAX_CONTENT_LENGTH {
+		if fh.Size > limit {
+			return "", nil, fmt.Errorf("file exceeds MAX_CONTENT_LENGTH=%d", limit)
+		}
+	} else {
+		limit = MAX_CONTENT_LENGTH
 	}
 	ext := strings.ToLower(filepath.Ext(fh.Filename))
 	if _, blocked := blockedUploadExt[ext]; blocked {
@@ -70,15 +102,15 @@ func ValidateUploadFile(fh *multipart.FileHeader) (contentType string, raw []byt
 	}
 	defer file.Close()
 
-	raw, err = io.ReadAll(io.LimitReader(file, MaxUploadBytes+1))
+	raw, err = io.ReadAll(io.LimitReader(file, MAX_CONTENT_LENGTH+1))
 	if err != nil {
 		return "", nil, err
 	}
 	if len(raw) == 0 {
 		return "", nil, fmt.Errorf("fichier vide")
 	}
-	if len(raw) > MaxUploadBytes {
-		return "", nil, fmt.Errorf("fichier trop volumineux (max %d Mo)", MaxUploadBytes/(1024*1024))
+	if int64(len(raw)) > MAX_CONTENT_LENGTH || int64(len(raw)) > limit {
+		return "", nil, fmt.Errorf("file exceeds MAX_CONTENT_LENGTH=%d", MAX_CONTENT_LENGTH)
 	}
 
 	contentType = fh.Header.Get("Content-Type")

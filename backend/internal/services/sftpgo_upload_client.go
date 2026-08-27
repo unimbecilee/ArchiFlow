@@ -59,27 +59,18 @@ func NewSFTPGoUploadClient() *SFTPGoUploadClient {
 	if secret == "" {
 		secret = os.Getenv("MINIO_SECRET_KEY")
 	}
-	if access == "" {
-		access = "minioadmin"
-	}
-	if secret == "" {
-		secret = "minioadmin123"
-	}
 	bucket := os.Getenv("MINIO_DOCUMENTS_BUCKET")
 	if bucket == "" {
 		bucket = "archiflow-documents"
 	}
 	pwdSecret := strings.TrimSpace(os.Getenv("SFTPGO_USER_PASSWORD_SECRET"))
-	if pwdSecret == "" {
-		pwdSecret = "archiflow_sftpgo_user_password_secret_dev"
-	}
 	adminUser := os.Getenv("SFTPGO_ADMIN_USER")
 	if adminUser == "" {
 		adminUser = "admin"
 	}
 	adminPass := os.Getenv("SFTPGO_ADMIN_PASSWORD")
-	if adminPass == "" {
-		adminPass = "Admin1234!"
+	if enabled && (access == "" || secret == "" || pwdSecret == "" || adminPass == "") {
+		enabled = false
 	}
 	return &SFTPGoUploadClient{
 		baseURL:         base,

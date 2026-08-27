@@ -46,11 +46,14 @@ type UploadDocumentInput struct {
 	IsAdmin     bool
 }
 
-const maxUploadBytes = MaxUploadBytes
+const maxUploadBytes = MAX_CONTENT_LENGTH
 
 func (s *DocumentService) Upload(ctx context.Context, in UploadDocumentInput) (*models.Document, error) {
 	if in.File == nil {
 		return nil, fmt.Errorf("file is required")
+	}
+	if in.File.Size > MAX_CONTENT_LENGTH || in.File.Size > maxUploadBytes {
+		return nil, fmt.Errorf("fichier trop volumineux (MAX_CONTENT_LENGTH=%d)", MAX_CONTENT_LENGTH)
 	}
 	if in.FolderID != nil {
 		f, err := s.folderRepo.FindByID(*in.FolderID)
@@ -62,7 +65,7 @@ func (s *DocumentService) Upload(ctx context.Context, in UploadDocumentInput) (*
 		}
 	}
 
-	contentType, raw, err := ValidateUploadFile(in.File)
+	contentType, raw, err := ValidateMultipartFile(in.File)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,8 @@
 import api from "@/lib/api";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
+  MAX_RESUMABLE_FILE_BYTES,
+  MAX_RESUMABLE_FILE_GB,
   MAX_RESUMABLE_PARALLEL_PARTS,
   RESUMABLE_UPLOAD_THRESHOLD_BYTES,
 } from "@/lib/upload-limits";
@@ -11,6 +13,9 @@ import {
   saveUploadSession,
 } from "@/lib/upload-indexeddb";
 import type { Document } from "@/types/documents";
+
+/** Classic multipart ceiling (Flask-style MAX_CONTENT_LENGTH). */
+const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
 
 export type ResumableUploadMeta = {
   title?: string;
@@ -122,12 +127,17 @@ async function putPartWithRetry(
   throw new Error("Echec upload part");
 }
 
-export async function uploadFileResumable(
+export async function putFileResumable(
   file: File,
   meta: ResumableUploadMeta,
   onProgress?: (p: ResumableProgress) => void,
   signal?: AbortSignal
 ): Promise<Document> {
+  if (file.size > MAX_RESUMABLE_FILE_BYTES) {
+    throw new Error(
+      `Fichier trop volumineux (max ${MAX_RESUMABLE_FILE_GB} Go; classic MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH})`
+    );
+  }
   const fingerprint = fileFingerprint(file);
   const fileSha = await sha256Hex(file);
   let sessionId: string | null = null;
@@ -144,6 +154,10 @@ export async function uploadFileResumable(
       title: meta.title,
       description: meta.description,
       category: meta.category,
+    },
+    {
+      maxContentLength: MAX_CONTENT_LENGTH,
+      maxBodyLength: MAX_RESUMABLE_FILE_BYTES,
     }
   );
   const init = initRes.data.data;

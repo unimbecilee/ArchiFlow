@@ -6,7 +6,7 @@ import { MAX_IMPORT_FILE_BYTES } from "@/lib/upload-accept";
 import { MAX_RESUMABLE_FILE_BYTES } from "@/lib/upload-limits";
 import {
   isResumableFile,
-  uploadFileResumable,
+  putFileResumable,
   type ResumableProgress,
 } from "@/services/resumable-upload.service";
 import type {
@@ -16,6 +16,9 @@ import type {
   FolderBreadcrumbItem,
   FolderFlatOption,
 } from "@/types/documents";
+
+/** Classic multipart ceiling (Flask-style MAX_CONTENT_LENGTH). */
+const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
 
 export async function getMyDocuments(
   folderId?: number | null,
@@ -111,6 +114,10 @@ export async function uploadDocument(
     folder_id?: number | null;
   }
 ): Promise<Document> {
+  const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
+  if (file.size > MAX_CONTENT_LENGTH) {
+    throw new Error(`Fichier trop volumineux (MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH})`);
+  }
   const form = new FormData();
   form.append("file", file);
   if (meta.titre) form.append("titre", meta.titre);
@@ -120,7 +127,8 @@ export async function uploadDocument(
 
   const res = await api.post<{ success: boolean; data: Document }>(
     "/api/documents/upload",
-    form
+    form,
+    { maxContentLength: MAX_CONTENT_LENGTH, maxBodyLength: MAX_CONTENT_LENGTH }
   );
   return res.data.data;
 }
@@ -155,8 +163,15 @@ export async function uploadDocuments(
 ): Promise<UploadBatchResult[]> {
   if (items.length === 0) return [];
 
+  // MAX_CONTENT_LENGTH = classic multipart ceiling; larger files use SFTPGo / MPU.
+  for (const it of items) {
+    if (it.file.size > MAX_RESUMABLE_FILE_BYTES) {
+      throw new Error(`Fichier trop volumineux (MAX_CONTENT_LENGTH resumable / ${MAX_RESUMABLE_FILE_BYTES} bytes)`);
+    }
+  }
+
   try {
-    const { uploadFilesViaSftpGo } = await import("@/services/sftpgo-upload.service");
+    const { putFilesViaSftpGo } = await import("@/services/sftpgo-upload.service");
     const byFolder = new Map<string, typeof items>();
     for (const it of items) {
       const fid = it.folder_id !== undefined ? it.folder_id : meta.folder_id;
@@ -170,7 +185,7 @@ export async function uploadDocuments(
     let done = 0;
     for (const [key, group] of Array.from(byFolder.entries())) {
       const folder_id = key === "root" ? null : Number(key);
-      const batch = await uploadFilesViaSftpGo(
+      const batch = await putFilesViaSftpGo(
         group.map((it) => ({
           file: it.file,
           titre: it.titre,
@@ -214,8 +229,8 @@ export async function uploadDocuments(
       if (file.size > MAX_RESUMABLE_FILE_BYTES) {
         throw new Error(`Fichier trop volumineux (max ${MAX_RESUMABLE_FILE_BYTES / (1 << 30)} Go)`);
       }
-      if (file.size > MAX_IMPORT_FILE_BYTES && !isResumableFile(file)) {
-        throw new Error("Fichier hors plage autorisee");
+      if (file.size > MAX_CONTENT_LENGTH && file.size > MAX_IMPORT_FILE_BYTES && !isResumableFile(file)) {
+        throw new Error(`Fichier depasse MAX_CONTENT_LENGTH=${MAX_CONTENT_LENGTH}`);
       }
       let document: Document;
       const uploadMeta = {
@@ -225,7 +240,8 @@ export async function uploadDocuments(
         folder_id: targetFolder,
       };
       if (isResumableFile(file)) {
-        document = await uploadFileResumable(
+        // MPU path — size already gated by MAX_CONTENT_LENGTH / MAX_RESUMABLE_FILE_BYTES
+        document = await putFileResumable(
           file,
           uploadMeta,
           (resumable) =>
