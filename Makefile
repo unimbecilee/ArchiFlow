@@ -1,4 +1,4 @@
-.PHONY: dev build up down logs backend frontend psql shell
+.PHONY: dev build up down logs backend frontend psql shell migrate migrate-down migrate-version
 
 # Development commands
 dev:
@@ -45,7 +45,14 @@ psql:
 	docker-compose exec postgres psql -U archiflow -d archiflow
 
 migrate:
-	cd backend && go run cmd/api/main.go migrate
+	cd backend && go run cmd/api/main.go migrate up
+
+# Exemple : make migrate-down STEPS=1
+migrate-down:
+	cd backend && go run cmd/api/main.go migrate down $(or $(STEPS),1)
+
+migrate-version:
+	cd backend && go run cmd/api/main.go migrate version
 
 # Utilities
 shell-backend:

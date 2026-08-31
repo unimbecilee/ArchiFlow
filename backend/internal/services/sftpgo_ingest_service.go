@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"archiflow/backend/internal/config"
+	"archiflow/backend/internal/jobqueue"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 
@@ -224,6 +225,7 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 		Status:          models.DocumentStatusDraft,
 		Classification:  classif,
 		Department:      dept,
+		ContentSHA256:   "",
 	}
 	if err := s.docRepo.Create(doc); err != nil {
 		event.Status = models.SftpIngestFailed
@@ -266,6 +268,7 @@ func (s *SFTPIngestService) IngestUpload(ctx context.Context, hook SftpHookPaylo
 	if s.notify != nil {
 		s.notify.PublishDocumentEvent(ownerID, "upload_completed", doc.ID, fileName)
 	}
+	jobqueue.EnqueueAfterUpload(context.Background(), doc)
 
 	return doc, nil
 }

@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
+	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/dto"
 	"archiflow/backend/internal/services"
 
@@ -11,10 +13,11 @@ import (
 
 type AdminHandler struct {
 	admin *services.AdminService
+	audit *services.AuditService
 }
 
-func NewAdminHandler(admin *services.AdminService) *AdminHandler {
-	return &AdminHandler{admin: admin}
+func NewAdminHandler(admin *services.AdminService, audit *services.AuditService) *AdminHandler {
+	return &AdminHandler{admin: admin, audit: audit}
 }
 
 func requireAdmin(c echo.Context) error {
@@ -65,6 +68,7 @@ func (h *AdminHandler) CreateUser(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.user_create", "user", strconv.FormatUint(uint64(resp.User.ID), 10)))
 	return c.JSON(http.StatusCreated, map[string]any{"success": true, "data": resp})
 }
 
@@ -90,6 +94,7 @@ func (h *AdminHandler) PatchUser(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.user_update", "user", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{
 		"success": true,
 		"data": dto.UserResponse{
@@ -137,6 +142,7 @@ func (h *AdminHandler) PutUser(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.user_update", "user", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": detail})
 }
 
@@ -153,6 +159,7 @@ func (h *AdminHandler) ResendCredentials(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.user_resend_credentials", "user", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
@@ -169,6 +176,7 @@ func (h *AdminHandler) SyncPydio(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.user_sync_pydio", "user", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": resp})
 }
 
@@ -191,6 +199,7 @@ func (h *AdminHandler) DeleteUser(c echo.Context) error {
 	if err := h.admin.DeleteUser(id); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.user_delete", "user", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true})
 }
 
@@ -219,6 +228,7 @@ func (h *AdminHandler) CreateServiceAccount(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.service_account_create", "service_account", strconv.FormatUint(uint64(sa.ID), 10)))
 	return c.JSON(http.StatusCreated, map[string]any{
 		"success": true,
 		"data": map[string]any{
@@ -246,4 +256,30 @@ func (h *AdminHandler) ListServiceAccounts(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": rows})
+}
+
+func (h *AdminHandler) AuditVerify(c echo.Context) error {
+	if h.audit == nil {
+		return c.JSON(http.StatusServiceUnavailable, map[string]any{"success": false, "error": "audit service unavailable"})
+	}
+	res, err := h.audit.VerifyChain(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, map[string]any{
+		"success": true,
+		"data": map[string]any{
+			"checked":     res.Checked,
+			"mismatches":  res.Mismatches,
+			"first_bad_id": res.FirstBadID,
+		},
+	})
+}
+
+func (h *AdminHandler) FeatureFlags(c echo.Context) error {
+	flags := config.LoadFeatureFlags()
+	return c.JSON(http.StatusOK, map[string]any{
+		"success": true,
+		"data":    flags,
+	})
 }

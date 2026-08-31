@@ -276,12 +276,71 @@ export async function deleteDocument(id: number): Promise<void> {
   await api.delete(`/api/documents/${id}`);
 }
 
-export async function searchDocuments(q: string, fullText = true): Promise<Document[]> {
-  const res = await api.get<{ success: boolean; documents: Document[] }>(
-    "/api/documents/search",
-    { params: { q, ...(fullText ? { mode: "fts" } : {}) } }
+export type SearchFacets = {
+  classification?: Record<string, number>;
+  category?: Record<string, number>;
+};
+
+export type SearchResult = {
+  documents: Document[];
+  total: number;
+  facets?: SearchFacets;
+};
+
+export async function searchDocuments(
+  q: string,
+  options?: boolean | { fullText?: boolean; classification?: string; category?: string }
+): Promise<Document[]> {
+  const opts = typeof options === "boolean" ? { fullText: options } : options;
+  const result = await searchDocumentsDetailed(q, opts);
+  return result.documents;
+}
+
+export async function searchDocumentsDetailed(
+  q: string,
+  options?: { fullText?: boolean; classification?: string; category?: string }
+): Promise<SearchResult> {
+  const fullText = options?.fullText !== false;
+  const res = await api.get<{
+    success: boolean;
+    documents: Document[];
+    total?: number;
+    facets?: SearchFacets;
+  }>("/api/documents/search", {
+    params: {
+      q,
+      ...(fullText ? { mode: "fts" } : {}),
+      ...(options?.classification ? { classification: options.classification } : {}),
+      ...(options?.category ? { category: options.category } : {}),
+    },
+  });
+  return {
+    documents: res.data.documents ?? [],
+    total: res.data.total ?? res.data.documents?.length ?? 0,
+    facets: res.data.facets,
+  };
+}
+
+export async function purgeDocument(id: number): Promise<void> {
+  await api.delete(`/api/documents/${id}/purge`);
+}
+
+export async function getDocumentHold(id: number): Promise<{
+  on_hold: boolean;
+  hold?: { id: number; reason?: string };
+}> {
+  const res = await api.get<{ success: boolean; on_hold: boolean; hold?: { id: number; reason?: string } }>(
+    `/api/documents/${id}/hold`
   );
-  return res.data.documents ?? [];
+  return { on_hold: res.data.on_hold, hold: res.data.hold };
+}
+
+export async function placeDocumentHold(id: number, reason: string): Promise<void> {
+  await api.post(`/api/documents/${id}/hold`, { reason });
+}
+
+export async function releaseDocumentHold(id: number, holdId: number): Promise<void> {
+  await api.post(`/api/documents/${id}/hold/${holdId}/release`);
 }
 
 export async function getRecentDocuments(): Promise<Document[]> {

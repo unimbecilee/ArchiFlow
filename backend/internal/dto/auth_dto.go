@@ -30,6 +30,7 @@ type LoginResponse struct {
 	User         UserResponse        `json:"user"`
 	Token        PublicTokenResponse `json:"token"`
 	RefreshToken string              `json:"-"` // HttpOnly cookie only
+	MFARequired  bool                `json:"mfa_required,omitempty"`
 }
 
 // Refresh
@@ -90,6 +91,35 @@ type ForgotPasswordRequest struct {
 type ResetPasswordRequest struct {
 	Token       string `json:"token" validate:"required"`
 	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
+
+// MFA
+type MFAInitiateResponse struct {
+	Secret      string `json:"secret"`
+	QRCodeURL   string `json:"qr_code_url"`
+	Issuer      string `json:"issuer"`
+}
+
+type MFAConfirmRequest struct {
+	Code   string `json:"code" validate:"required,len=6"`
+	Secret string `json:"secret,omitempty"`
+}
+
+type MFAVerifyRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	Code  string `json:"code" validate:"required,min=6,max=16"`
+}
+
+type MFADisableRequest struct {
+	Password string `json:"password" validate:"required"`
+}
+
+type MFARegenerateCodesRequest struct {
+	Password string `json:"password" validate:"required"`
+}
+
+type MFAStatusResponse struct {
+	Enabled bool `json:"enabled"`
 }
 
 // Error Response

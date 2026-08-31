@@ -15,6 +15,7 @@ func Logger(log *zap.Logger) echo.MiddlewareFunc {
 		LogMethod: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			log.Info("HTTP request",
+				zap.String("request_id", GetRequestID(c)),
 				zap.String("method", v.Method),
 				zap.String("uri", v.URI),
 				zap.Int("status", v.Status),

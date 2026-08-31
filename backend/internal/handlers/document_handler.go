@@ -8,6 +8,7 @@ import (
 
 	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/models"
+	"archiflow/backend/internal/repository"
 	"archiflow/backend/internal/services"
 	"archiflow/backend/internal/utils"
 
@@ -77,6 +78,34 @@ func parseFolderIDQuery(c echo.Context) *uint {
 	return &u
 }
 
+func parseCursorQuery(c echo.Context) *repository.Cursor {
+	idStr := c.QueryParam("cursor_id")
+	tsStr := c.QueryParam("cursor_created_at")
+	if idStr == "" || tsStr == "" {
+		return nil
+	}
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return nil
+	}
+	return &repository.Cursor{CreatedAt: tsStr, ID: uint(id)}
+}
+
+func parseLimitQuery(c echo.Context, def int) int {
+	raw := c.QueryParam("limit")
+	if raw == "" {
+		return def
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v <= 0 {
+		return def
+	}
+	if v > 200 {
+		return 200
+	}
+	return v
+}
+
 func documentToView(d models.Document) map[string]any {
 	return map[string]any{
 		"id":                    d.ID,
@@ -106,6 +135,7 @@ func documentToView(d models.Document) map[string]any {
 		"locked_by_id":          d.LockedByID,
 		"locked_at":             d.LockedAt,
 		"is_locked":             d.LockedByID != nil,
+		"content_sha256":        d.ContentSHA256,
 	}
 }
 
@@ -179,15 +209,21 @@ func (h *DocumentHandler) ListMy(c echo.Context) error {
 		return err
 	}
 	adminMode := c.QueryParam("admin_mode") == "true"
-	docs, err := h.documentService.ListMy(userID, adminMode && hasOrgDocReadAccess(c), parseFolderIDQuery(c))
+	cursor := parseCursorQuery(c)
+	limit := parseLimitQuery(c, 50)
+	docs, nextCursor, err := h.documentService.ListMyCursor(userID, adminMode && hasOrgDocReadAccess(c), parseFolderIDQuery(c), limit, cursor)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"success":   true,
 		"documents": h.documentsJSON(docs),
 		"total":     len(docs),
-	})
+	}
+	if nextCursor != nil {
+		resp["next_cursor"] = map[string]any{"cursor_id": nextCursor.ID, "cursor_created_at": nextCursor.CreatedAt}
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 // Search GET /api/documents/search?q=
@@ -198,17 +234,34 @@ func (h *DocumentHandler) Search(c echo.Context) error {
 	}
 	q := c.QueryParam("q")
 	fullText := c.QueryParam("mode") == "fts" || c.QueryParam("fulltext") == "1"
-	docs, err := h.documentService.Search(userID, hasOrgDocReadAccess(c), q, fullText)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+	limit := parseLimitQuery(c, 50)
+	offset := 0
+	if raw := c.QueryParam("offset"); raw != "" {
+		if n, e := strconv.Atoi(raw); e == nil && n > 0 {
+			offset = n
+		}
 	}
-	return c.JSON(http.StatusOK, map[string]any{
+	filters := map[string]string{
+		"classification": c.QueryParam("classification"),
+		"category":       c.QueryParam("category"),
+	}
+	docs, total, facets, err := h.documentService.SearchFacets(userID, hasOrgDocReadAccess(c), q, filters, limit, offset)
+	if err != nil {
+		docs, err = h.documentService.Search(userID, hasOrgDocReadAccess(c), q, fullText)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+		}
+		total = int64(len(docs))
+	}
+	resp := map[string]any{
 		"success":   true,
 		"documents": h.documentsJSON(docs),
-		"total":     len(docs),
+		"total":     total,
 		"query":     q,
 		"fulltext":  fullText,
-	})
+		"facets":    facets,
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 // ListRecent GET /api/documents/recent
@@ -217,15 +270,21 @@ func (h *DocumentHandler) ListRecent(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	docs, err := h.documentService.ListRecent(userID, hasOrgDocReadAccess(c))
+	cursor := parseCursorQuery(c)
+	limit := parseLimitQuery(c, 20)
+	docs, nextCursor, err := h.documentService.ListRecentCursor(userID, hasOrgDocReadAccess(c), limit, cursor)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"success":   true,
 		"documents": h.documentsJSON(docs),
 		"total":     len(docs),
-	})
+	}
+	if nextCursor != nil {
+		resp["next_cursor"] = map[string]any{"cursor_id": nextCursor.ID, "cursor_created_at": nextCursor.CreatedAt}
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 // ListTrash GET /api/documents/trash
@@ -234,15 +293,21 @@ func (h *DocumentHandler) ListTrash(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	docs, err := h.documentService.ListTrash(userID, isAdminFromContext(c))
+	cursor := parseCursorQuery(c)
+	limit := parseLimitQuery(c, 50)
+	docs, nextCursor, err := h.documentService.ListTrashCursor(userID, isAdminFromContext(c), limit, cursor)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]any{"success": false, "error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"success":   true,
 		"documents": h.documentsJSON(docs),
 		"total":     len(docs),
-	})
+	}
+	if nextCursor != nil {
+		resp["next_cursor"] = map[string]any{"cursor_id": nextCursor.ID, "cursor_created_at": nextCursor.CreatedAt}
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 // Restore POST /api/documents/:id/restore
@@ -514,4 +579,20 @@ func (h *DocumentHandler) Delete(c echo.Context) error {
 	}
 	h.auditDoc(c, "document.delete", id)
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document deleted"})
+}
+
+func (h *DocumentHandler) Purge(c echo.Context) error {
+	userID, err := userIDFromContext(c)
+	if err != nil {
+		return err
+	}
+	id, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.documentService.Purge(id, userID, isAdminFromContext(c)); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
+	}
+	h.auditDoc(c, "document.purge", id)
+	return c.JSON(http.StatusOK, map[string]any{"success": true, "message": "document purged"})
 }

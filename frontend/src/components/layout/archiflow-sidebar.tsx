@@ -1,46 +1,28 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { Archive } from "@phosphor-icons/react";
 import { ArchiFlowSidebarNav } from "./archiflow-sidebar-nav";
 import { SidebarProfileCard } from "./sidebar-profile-card";
 
 export function ArchiFlowSidebar() {
   return (
-    <aside className="relative hidden w-[17.5rem] shrink-0 flex-col border-r border-zinc-800/80 bg-zinc-950 text-zinc-300 md:flex">
-      <motion.div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 0%, rgba(16,185,129,0.18), transparent 42%), radial-gradient(circle at 80% 100%, rgba(255,255,255,0.04), transparent 35%)",
-        }}
-      />
-
-      <motion.div
-        className="relative border-b border-white/10 px-6 py-7"
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-      >
-        <div className="flex items-center gap-3">
-          <motion.div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-sm font-semibold text-emerald-400 ring-1 ring-emerald-500/25">
-            AF
-          </motion.div>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight text-white">
-              Archi<span className="text-emerald-400">Flow</span>
-            </h1>
-            <p className="text-xs text-zinc-500">GED &amp; workflows</p>
-          </div>
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 shrink-0 flex-col bg-zinc-950 text-zinc-400 lg:flex">
+      <div className="flex items-center gap-2.5 px-5 pb-5 pt-5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20">
+          <Archive className="h-5 w-5" weight="bold" />
         </div>
-      </motion.div>
-
-      <div className="relative flex-1 overflow-y-auto px-4 py-6">
-        <ArchiFlowSidebarNav />
+        <div className="leading-tight">
+          <p className="text-sm font-semibold tracking-tight text-white">ArchiFlow</p>
+          <p className="text-[11px] text-zinc-500">GED &amp; approbations</p>
+        </div>
       </div>
 
-      <div className="relative border-t border-white/10 px-6 py-5">
+      <div className="flex-1 overflow-y-auto px-3 pb-4">
+        <ArchiFlowSidebarNav indicatorId="desktop" />
+      </div>
+
+      <div className="border-t border-zinc-800/80 p-3">
         <SidebarProfileCard />
-        <p className="mt-4 text-center text-[11px] text-zinc-600">ArchiFlow v3</p>
       </div>
     </aside>
   );

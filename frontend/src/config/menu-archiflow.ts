@@ -1,20 +1,22 @@
 import type { Icon } from "@phosphor-icons/react";
 import {
-  SquaresFour,
-  FolderOpen,
-  ShareNetwork,
-  Clock,
-  Star,
-  MagnifyingGlass,
-  UploadSimple,
-  GitBranch,
-  CheckCircle,
-  ListBullets,
   Archive,
   Bell,
-  Trash,
+  CheckCircle,
+  Clock,
+  FolderOpen,
+  GearSix,
+  GitBranch,
+  ListBullets,
+  LockKey,
+  MagnifyingGlass,
+  ShareNetwork,
   ShieldCheck,
+  SquaresFour,
+  Star,
+  Trash,
   TreeStructure,
+  UploadSimple,
 } from "@phosphor-icons/react";
 import { COLLABORATION_MENU_LABEL } from "@/lib/branding";
 
@@ -34,31 +36,24 @@ export type MenuSection = {
 
 export const MENU_ARCHIFLOW: MenuSection[] = [
   {
-    items: [{ title: "Dashboard", path: "/", icon: SquaresFour }],
-  },
-  {
-    heading: "Documents",
+    heading: "GED",
     items: [
-      { title: "Mes Documents", path: "/mes-documents", icon: FolderOpen },
+      { title: "Vue d'ensemble", path: "/", icon: SquaresFour },
+      { title: "Mes documents", path: "/mes-documents", icon: FolderOpen },
       { title: "Partages", path: "/documents-partages", icon: ShareNetwork },
-      { title: "Notifications", path: "/notifications", icon: Bell },
       { title: "Récents", path: "/documents-recents", icon: Clock },
       { title: "Favoris", path: "/favoris", icon: Star },
-    ],
-  },
-  {
-    heading: "Actions",
-    items: [
       { title: "Recherche", path: "/recherche", icon: MagnifyingGlass },
       { title: "Corbeille", path: "/corbeille", icon: Trash },
       { title: "Importer", path: "/importer", icon: UploadSimple, requiresWrite: true },
+      { title: "Notifications", path: "/notifications", icon: Bell },
       { title: COLLABORATION_MENU_LABEL, path: "/ged/cells", icon: ShareNetwork },
     ],
   },
   {
     heading: "Workflows",
     items: [
-      { title: "Vue d'ensemble", path: "/workflows", icon: GitBranch },
+      { title: "Circuits", path: "/workflows", icon: GitBranch },
       { title: "Approbations", path: "/workflows/approbations", icon: CheckCircle },
       { title: "En cours", path: "/workflows/en-cours", icon: ListBullets },
       { title: "Terminés", path: "/workflows/termines", icon: Archive },
@@ -67,18 +62,16 @@ export const MENU_ARCHIFLOW: MenuSection[] = [
   {
     heading: "Administration",
     items: [
-      {
-        title: "Utilisateurs",
-        path: "/admin/users",
-        icon: ShieldCheck,
-        adminOnly: true,
-      },
-      {
-        title: "Workflows",
-        path: "/admin/workflows",
-        icon: TreeStructure,
-        adminOnly: true,
-      },
+      { title: "Utilisateurs", path: "/admin/users", icon: ShieldCheck, adminOnly: true },
+      { title: "Flux de validation", path: "/admin/workflows", icon: TreeStructure, adminOnly: true },
+      { title: "Conservation", path: "/admin/conservation", icon: LockKey, adminOnly: true },
+    ],
+  },
+  {
+    heading: "Paramètres",
+    items: [
+      { title: "Compte", path: "/parametres/compte", icon: GearSix },
+      { title: "Sécurité", path: "/parametres/securite", icon: LockKey },
     ],
   },
 ];

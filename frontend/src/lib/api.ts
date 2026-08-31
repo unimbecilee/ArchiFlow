@@ -4,6 +4,33 @@ import { refreshAccessToken, clearAuthSession } from '@/lib/auth-session';
 import { getApiBaseUrl } from '@/lib/api-base';
 import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/session-tokens';
 
+let lastCorrelationId = '';
+
+function headerValue(source: unknown, name: string): string {
+  if (!source) return '';
+  const headers = (source as { headers?: Record<string, unknown> }).headers;
+  const raw = headers?.[name];
+  return typeof raw === 'string' ? raw : '';
+}
+
+function rememberCorrelationId(...sources: Array<unknown>): void {
+  for (const source of sources) {
+    const id =
+      headerValue(source, 'x-correlation-id') ||
+      headerValue(source, 'X-Correlation-Id') ||
+      headerValue(source, 'x-request-id') ||
+      headerValue(source, 'X-Request-ID');
+    if (id) {
+      lastCorrelationId = id;
+      return;
+    }
+  }
+}
+
+export function getLastCorrelationId(): string {
+  return lastCorrelationId;
+}
+
 class ApiClient {
   private client: AxiosInstance;
   private refreshPromise: Promise<string | null> | null = null;
@@ -41,9 +68,14 @@ class ApiClient {
     );
 
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        rememberCorrelationId(response);
+        return response;
+      },
       async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config;
+        rememberCorrelationId(error.response, originalRequest);
+        (error as AxiosError<ApiError> & { correlationId?: string }).correlationId = lastCorrelationId;
 
         if (error.response?.status === 401 && originalRequest) {
           const req = originalRequest as typeof originalRequest & { _retry?: boolean };

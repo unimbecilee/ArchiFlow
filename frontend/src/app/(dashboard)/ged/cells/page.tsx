@@ -61,18 +61,18 @@ export default function CollaborationPage() {
 
       <section className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <motion.div
-          className="surface-bento overflow-hidden p-8 md:p-10"
+          className="surface-card overflow-hidden p-8 md:p-10"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 100, damping: 20 }}
         >
           <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div className="max-w-md space-y-4">
-              <span className="inline-flex rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
+              <span className="icon-well h-12 w-12">
                 <UsersThree className="h-7 w-7" weight="duotone" />
               </span>
               <div className="space-y-2">
-                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
                   Acces workspace
                 </p>
                 <p className="text-base leading-relaxed text-zinc-600">
@@ -111,12 +111,12 @@ export default function CollaborationPage() {
         </motion.div>
 
         <motion.div
-          className="glass-panel flex flex-col gap-4 rounded-[2rem] p-8"
+          className="surface-card flex flex-col gap-4 p-8"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.06 }}
         >
-          <span className="inline-flex w-fit rounded-2xl bg-emerald-500/10 p-2.5 text-emerald-700">
+          <span className="icon-well">
             <Archive className="h-5 w-5" weight="duotone" />
           </span>
           <p className="text-sm font-semibold text-zinc-900">Verser vers ArchiFlow</p>
@@ -130,7 +130,7 @@ export default function CollaborationPage() {
 
       <PagePanel title="Rappel" subtitle="Collaboration et archivage">
         <div className="flex items-start gap-4 text-sm leading-relaxed text-zinc-600">
-          <span className="rounded-2xl bg-emerald-500/10 p-2.5 text-emerald-700">
+          <span className="icon-well">
             <CloudArrowUp className="h-5 w-5" weight="duotone" />
           </span>
           <p>

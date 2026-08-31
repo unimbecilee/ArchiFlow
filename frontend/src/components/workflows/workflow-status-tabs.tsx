@@ -34,8 +34,8 @@ export function WorkflowStatusTabs({ value, onChange, counts }: WorkflowStatusTa
           className={cn(
             "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
             value === tab.id
-              ? "bg-emerald-600 text-white shadow-sm"
-              : "border border-slate-200/80 bg-white text-zinc-700 hover:border-emerald-200 hover:bg-emerald-50/50"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "border border-border bg-card text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-foreground"
           )}
         >
           {tab.label}

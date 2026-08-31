@@ -18,7 +18,8 @@ interface AuthState {
   isInitializing: boolean;
   error: string | null;
 
-  login: (credentials: LoginRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<{ mfaRequired: boolean }>;
+  verifyMfa: (email: string, code: string) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -37,8 +38,19 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post('/api/auth/login', credentials);
-      const { user, token } = response.data.data;
+      const data = response.data.data as {
+        mfa_required?: boolean;
+        user?: User;
+        token?: { access_token: string };
+      };
 
+      if (data.mfa_required) {
+        set({ isLoading: false });
+        return { mfaRequired: true };
+      }
+
+      const user = data.user!;
+      const token = data.token!;
       setAccessToken(token.access_token);
       api.setToken(token.access_token);
 
@@ -57,9 +69,35 @@ export const useAuthStore = create<AuthState>()((set) => ({
           window.location.href = '/changer-mot-de-passe';
         }
       }
+      return { mfaRequired: false };
     } catch (error: unknown) {
       set({
-        error: getApiErrorMessage(error, 'Login failed'),
+        error: getApiErrorMessage(error, 'Échec de connexion'),
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  verifyMfa: async (email, code) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axios.post('/api/auth/verify-mfa', { email, code });
+      const { user, token } = response.data.data;
+      setAccessToken(token.access_token);
+      api.setToken(token.access_token);
+      set({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        isInitializing: false,
+      });
+      if (user.must_change_password && typeof window !== 'undefined') {
+        window.location.href = '/changer-mot-de-passe';
+      }
+    } catch (error: unknown) {
+      set({
+        error: getApiErrorMessage(error, 'Code MFA invalide'),
         isLoading: false,
       });
       throw error;

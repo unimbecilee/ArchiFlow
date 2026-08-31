@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
-	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"archiflow/backend/internal/config"
+	"archiflow/backend/internal/dbmigrate"
 	"archiflow/backend/internal/handlers"
+	"archiflow/backend/internal/jobqueue"
 	"archiflow/backend/internal/middleware"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/realtime"
@@ -16,10 +20,12 @@ import (
 	"archiflow/backend/internal/seed"
 	"archiflow/backend/internal/services"
 	"archiflow/backend/internal/utils"
+	migrations "archiflow/backend/migrations"
 
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -42,6 +48,13 @@ func main() {
 		logger.Fatal("Failed to initialize database", zap.Error(err))
 	}
 
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		runMigrationsCLI(logger, db, os.Args[2:])
+		return
+	}
+
+	// GORM crée / aligne le schéma applicatif avant les migrations SQL
+	// (ex. 000002 ALTER audit_events nécessite la table).
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.UserRefreshToken{},
@@ -57,6 +70,15 @@ func main() {
 		&models.WorkflowInstance{},
 		&models.WorkflowApproval{},
 		&models.DocumentShare{},
+		&models.ExternalShare{},
+		&models.ShareAccessLog{},
+		&models.FileRequest{},
+		&models.FileRequestUpload{},
+		&models.WorkflowDelegation{},
+		&models.WorkflowSLA{},
+		&models.RetentionPolicy{},
+		&models.LegalHold{},
+		&models.NotificationPreference{},
 		&models.DocumentComment{},
 		&models.DocumentVersion{},
 		&models.Tag{},
@@ -73,6 +95,23 @@ func main() {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 	logger.Info("Database migrated successfully")
+
+	mgr, mgrErr := dbmigrate.New(db, migrations.All())
+	if mgrErr != nil {
+		logger.Fatal("Migration manager init failed", zap.Error(mgrErr))
+	}
+	if dirty, dErr := mgr.ForceCleanDirty(); dErr != nil {
+		logger.Fatal("Failed to recover dirty migration state", zap.Error(dErr))
+	} else if dirty {
+		logger.Warn("Cleared dirty migration flag; re-applying pending SQL migrations")
+	}
+	if uErr := mgr.Up(); uErr != nil && !errors.Is(uErr, dbmigrate.ErrNoChange) {
+		logger.Fatal("SQL migrations failed", zap.Error(uErr))
+	} else if errors.Is(uErr, dbmigrate.ErrNoChange) {
+		logger.Info("SQL migrations up to date")
+	} else {
+		logger.Info("SQL migrations applied")
+	}
 
 	if cfg.MinioEndpoint != "" {
 		_, err = config.InitMinio(cfg.MinioEndpoint, cfg.MinioAccessKey, cfg.MinioSecretKey, cfg.MinioUseSSL)
@@ -99,6 +138,23 @@ func main() {
 		}
 	}
 
+	jobQueue, err := jobqueue.NewClient(os.Getenv("REDIS_URL"))
+	if err != nil {
+		logger.Warn("Job queue unavailable, async jobs disabled", zap.Error(err))
+	} else {
+		logger.Info("Job queue connected")
+		jobqueue.SetGlobalClient(jobQueue)
+		defer jobQueue.Close()
+	}
+
+	redisLimiter, err := middleware.NewRedisRateLimiter(os.Getenv("REDIS_URL"))
+	if err != nil {
+		logger.Warn("Redis rate limiter unavailable", zap.Error(err))
+	} else {
+		logger.Info("Redis rate limiter connected")
+		defer redisLimiter.Close()
+	}
+
 	jwtUtil := utils.NewJWTUtil(cfg.JWTSecret, cfg.JWTRefreshSecret)
 
 	userRepo := repository.NewUserRepository(db)
@@ -121,14 +177,15 @@ func main() {
 	seed.DefaultWorkflows(db)
 	seed.EnsureValidationWorkflowApprovers(db)
 	seed.DefaultAdmin(db, userPydioSync)
-	seed.DefaultManager(db, userPydioSync)
-	seed.DefaultValidator(db, userPydioSync)
-	seed.DefaultArchivist(db, userPydioSync)
 	seed.BackfillSftpDefaults(db)
 	sessionService := services.NewSessionService(userRepo, refreshTokenRepo, jwtUtil)
 	authService := services.NewAuthService(userRepo, jwtUtil, sessionService, userPydioSync, userSftpGoSync)
 	folderService := services.NewFolderService(folderRepo, documentRepo)
 	documentService := services.NewDocumentService(documentRepo, folderRepo, cfg.MinioDocumentsBucket)
+	retentionService := services.NewRetentionService(db)
+	searchService := services.NewSearchService(documentRepo)
+	documentService.SetRetention(retentionService)
+	documentService.SetSearch(searchService)
 	archiveService := services.NewArchiveService(archiveRepo, cfg.MinioArchivesBucket)
 	rtHub := realtime.NewHub()
 	rtBroker, closeBroker, brokerErr := realtime.NewBroker(rtHub, os.Getenv("REDIS_URL"))
@@ -164,27 +221,42 @@ func main() {
 	sftpgoUploadClient := services.NewSFTPGoUploadClient()
 	uploadTokenService := services.NewUploadTokenService(sftpgoUploadClient, folderService, userRepo, uploadQuotaService)
 
-	authHandler := handlers.NewAuthHandler(authService)
+	mfaService := services.NewMFAService()
+	shareService := services.NewShareService(
+		repository.NewShareRepository(db),
+		config.MinioClient,
+		cfg.MinioDocumentsBucket,
+	)
+	oidcService, _ := services.NewOIDCService(context.Background())
+	scimService := services.NewSCIMService(userRepo)
+	authHandler := handlers.NewAuthHandler(authService, auditService)
+	shareHandler := handlers.NewShareHandler(shareService, auditService)
+	mfaHandler := handlers.NewMFAHandler(mfaService, authService)
+	oidcHandler := handlers.NewOIDCHandler(oidcService, authService)
+	scimHandler := handlers.NewSCIMHandler(scimService)
 	folderHandler := handlers.NewFolderHandler(folderService)
 	documentHandler := handlers.NewDocumentHandler(documentService, collaborationService, policyService, auditService)
+	retentionHandler := handlers.NewRetentionHandler(retentionService)
 	uploadHandler := handlers.NewUploadHandler(uploadService)
 	uploadTokenHandler := handlers.NewUploadTokenHandler(uploadTokenService)
 	collaborationHandler := handlers.NewCollaborationHandler(collaborationService, auditService, policyService)
 	favoriteHandler := handlers.NewFavoriteHandler(favoriteService, documentHandler)
-	adminHandler := handlers.NewAdminHandler(adminService)
-	accessPolicyHandler := handlers.NewAccessPolicyHandler(accessPolicyService)
+	adminHandler := handlers.NewAdminHandler(adminService, auditService)
+	accessPolicyHandler := handlers.NewAccessPolicyHandler(accessPolicyService, auditService)
 	archivesHandler := handlers.NewArchivesRequestsHandler(archiveService)
 	pydioHandler := handlers.NewPydioHandler(archiveService, documentService)
 	integrationsHandler := handlers.NewIntegrationsHandler(pydioIntegration, userPydioSync)
 	sftpGoHandler := handlers.NewSftpGoHandler(sftpAuthService, sftpIngestService, auditService)
-	workflowHandler := handlers.NewWorkflowHandler(workflowService)
+	workflowHandler := handlers.NewWorkflowHandler(workflowService, auditService)
 	adminWorkflowHandler := handlers.NewAdminWorkflowHandler(workflowService)
-	officeHandler := handlers.NewOfficeHandler(officeService)
+	officeHandler := handlers.NewOfficeHandler(officeService, auditService)
 	dashboardHandler := handlers.NewDashboardHandler(documentRepo, collabRepo, favRepo, workflowService)
+	healthHandler := handlers.NewHealthHandler(db, cfg.MinioDocumentsBucket)
 	wsHandler := handlers.NewWSHandler(rtHub, jwtUtil, sessionService)
 
 	e := echo.New()
 	e.Validator = handlers.NewEchoValidator()
+	e.Use(middleware.RequestID())
 	e.Use(middleware.RequestTimer())
 	e.Use(middleware.Logger(logger))
 	e.Use(middleware.SecurityHeaders())
@@ -196,8 +268,33 @@ func main() {
 
 	authPublic := api.Group("/auth")
 	authPublic.Use(middleware.AuthRateLimit())
+	if redisLimiter != nil {
+		authPublic.Use(redisLimiter.Middleware(middleware.RedisRateLimitConfig{
+			KeyPrefix: "auth",
+			Rate:      10,
+			Burst:     20,
+			KeyFunc:   func(c echo.Context) string { return c.RealIP() },
+		}))
+	}
 	authPublic.POST("/register", authHandler.Register)
 	authPublic.POST("/login", authHandler.Login)
+	authPublic.POST("/verify-mfa", authHandler.VerifyMFA)
+	// OIDC SSO
+	api.GET("/auth/oidc/login", oidcHandler.Login)
+	api.GET("/auth/oidc/callback", oidcHandler.Callback)
+	// SCIM provisioning
+	scim := e.Group("/scim/v2", middleware.SCIMAuth())
+	scim.GET("/Users", scimHandler.ListUsers)
+	scim.POST("/Users", scimHandler.CreateUser)
+	scim.GET("/Users/:id", scimHandler.GetUser)
+	scim.PUT("/Users/:id", scimHandler.UpdateUser)
+	scim.PATCH("/Users/:id", scimHandler.UpdateUser)
+	scim.DELETE("/Users/:id", scimHandler.DeleteUser)
+	// Public share access (no JWT)
+	e.GET("/s/:token", shareHandler.AccessShare)
+	e.GET("/s/:token/download", shareHandler.DownloadShare)
+	e.GET("/s/:token/preview", shareHandler.PreviewShare)
+	e.POST("/s/file-request/upload", shareHandler.UploadFileRequestMultipart)
 	authPublic.POST("/refresh", authHandler.RefreshToken)
 	authPublic.POST("/logout", authHandler.ClearSession)
 
@@ -205,11 +302,11 @@ func main() {
 	api.GET("/ws", wsHandler.Connect)
 
 	// OnlyOffice Document Server (auth par token HMAC, pas JWT utilisateur)
-	api.GET("/office/files/:id/:token", officeHandler.DownloadFile)
-	api.POST("/office/callback/:id/:token", officeHandler.Callback)
-	api.GET("/wopi/files/:id", officeHandler.WopiCheckFileInfo)
-	api.GET("/wopi/files/:id/contents", officeHandler.WopiGetFile)
-	api.POST("/wopi/files/:id/contents", officeHandler.WopiPutFile)
+	api.GET("/office/files/:id/:token", officeHandler.DownloadFile, middleware.OnlyOfficeCircuitBreaker())
+	api.POST("/office/callback/:id/:token", officeHandler.Callback, middleware.OnlyOfficeCircuitBreaker())
+	api.GET("/wopi/files/:id", officeHandler.WopiCheckFileInfo, middleware.CollaboraCircuitBreaker())
+	api.GET("/wopi/files/:id/contents", officeHandler.WopiGetFile, middleware.CollaboraCircuitBreaker())
+	api.POST("/wopi/files/:id/contents", officeHandler.WopiPutFile, middleware.CollaboraCircuitBreaker())
 
 	// SFTPGo MFT — external auth + webhooks (pas de JWT utilisateur)
 	sftpgoAPI := api.Group("/integrations/sftpgo")
@@ -219,13 +316,34 @@ func main() {
 	protected := api.Group("")
 	protected.Use(middleware.JWTAuth(jwtUtil, sessionService))
 	protected.Use(middleware.ProtectedRateLimit())
+	if redisLimiter != nil {
+		protected.Use(redisLimiter.Middleware(middleware.RedisRateLimitConfig{
+			KeyPrefix: "api",
+			Rate:      100,
+			Burst:     200,
+			KeyFunc: func(c echo.Context) string {
+				if uid, ok := c.Get("userID").(uint); ok && uid > 0 {
+					return strconv.FormatUint(uint64(uid), 10)
+				}
+				return c.RealIP()
+			},
+		}))
+	}
 	protected.Use(middleware.MustChangePassword(userRepo))
 	protected.POST("/auth/logout", authHandler.Logout)
 	protected.GET("/auth/me", authHandler.GetMe)
 	protected.PUT("/auth/me", authHandler.UpdateProfile)
 	protected.PUT("/auth/change-password", authHandler.ChangePassword)
-	protected.GET("/integrations/pydio", integrationsHandler.GetPydioConfig)
-	protected.GET("/integrations/pydio/sso-launch", integrationsHandler.PydioSSOLaunch)
+	protected.GET("/integrations/pydio", integrationsHandler.GetPydioConfig, middleware.PydioCircuitBreaker())
+	protected.GET("/integrations/pydio/sso-launch", integrationsHandler.PydioSSOLaunch, middleware.PydioCircuitBreaker())
+
+	// MFA endpoints (protected)
+	mfaProtected := protected.Group("/mfa")
+	mfaProtected.POST("/enroll", mfaHandler.InitiateEnrollment)
+	mfaProtected.POST("/confirm", mfaHandler.ConfirmEnrollment)
+	mfaProtected.POST("/disable", mfaHandler.DisableMFA)
+	mfaProtected.GET("/status", mfaHandler.GetMFAStatus)
+	mfaProtected.POST("/recovery-codes", mfaHandler.RegenerateRecoveryCodes)
 
 	// GED — dossiers & documents
 	protected.GET("/folders", folderHandler.List)
@@ -240,21 +358,44 @@ func main() {
 
 	protected.GET("/documents/my", documentHandler.ListMy)
 	protected.GET("/documents/search", documentHandler.Search, middleware.APIRateLimit())
+	if redisLimiter != nil {
+		protected.GET("/documents/search", documentHandler.Search,
+			middleware.APIRateLimit(),
+			redisLimiter.Middleware(middleware.RedisRateLimitConfig{
+				KeyPrefix: "search",
+				Rate:      30,
+				Burst:     60,
+				KeyFunc: func(c echo.Context) string {
+					if uid, ok := c.Get("userID").(uint); ok && uid > 0 {
+						return strconv.FormatUint(uint64(uid), 10)
+					}
+					return c.RealIP()
+				},
+			}))
+	}
 	protected.GET("/documents/recent", documentHandler.ListRecent)
 	protected.GET("/documents/trash", documentHandler.ListTrash)
 	protected.POST("/documents/upload", documentHandler.Upload, middleware.UploadRateLimit())
+	protected.POST("/shares", shareHandler.CreateShare)
+	protected.GET("/shares", shareHandler.ListShares)
+	protected.DELETE("/shares/:id", shareHandler.RevokeShare)
+	protected.POST("/file-requests", shareHandler.CreateFileRequest)
 
 	protected.POST("/upload/sessions", uploadHandler.InitSession, middleware.UploadInitRateLimit())
 	mpuControl := middleware.UploadMPUControlRateLimit()
 	protected.GET("/upload/sessions/:id", uploadHandler.GetStatus, mpuControl)
 	protected.GET("/upload/sessions/:id/parts/:n/url", uploadHandler.PresignPart, mpuControl)
-	protected.POST("/upload/sessions/:id/complete", uploadHandler.Complete, mpuControl)
+	protected.POST("/upload/sessions/:id/complete", uploadHandler.Complete, mpuControl, middleware.Idempotency(db))
 	protected.DELETE("/upload/sessions/:id", uploadHandler.Abort, mpuControl)
 
 	protected.POST("/upload/token", uploadTokenHandler.MintToken, middleware.SftpGoJWTMintRateLimit())
 	protected.POST("/upload/token/refresh", uploadTokenHandler.RefreshToken, middleware.SftpGoJWTMintRateLimit())
 
 	protected.POST("/documents/:id/restore", documentHandler.Restore)
+	protected.DELETE("/documents/:id/purge", documentHandler.Purge)
+	protected.GET("/documents/:id/hold", retentionHandler.Status)
+	protected.POST("/documents/:id/hold", retentionHandler.Hold)
+	protected.POST("/documents/:id/hold/:holdId/release", retentionHandler.Release)
 	protected.POST("/documents/:id/lock", documentHandler.Lock)
 	protected.DELETE("/documents/:id/lock", documentHandler.Unlock)
 	protected.GET("/documents/:id/favorite", favoriteHandler.Status)
@@ -278,12 +419,12 @@ func main() {
 	protected.GET("/workflows/instances/completed", workflowHandler.Completed)
 	protected.GET("/workflows/instances/my-decisions", workflowHandler.MyDecisions)
 	protected.GET("/workflows/instances/:id", workflowHandler.GetInstance)
-	protected.POST("/workflows/instances/:id/approve", workflowHandler.Approve)
-	protected.POST("/workflows/instances/:id/reject", workflowHandler.Reject)
+	protected.POST("/workflows/instances/:id/approve", workflowHandler.Approve, middleware.Idempotency(db))
+	protected.POST("/workflows/instances/:id/reject", workflowHandler.Reject, middleware.Idempotency(db))
 	protected.POST("/workflows/instances/:id/cancel", workflowHandler.Cancel)
 
 	protected.GET("/documents/shared-with-me", collaborationHandler.SharedWithMe)
-	protected.POST("/documents/:id/share", collaborationHandler.Share)
+	protected.POST("/documents/:id/share", collaborationHandler.Share, middleware.Idempotency(db))
 	protected.GET("/documents/:id/comments", collaborationHandler.ListComments)
 	protected.POST("/documents/:id/comments", collaborationHandler.AddComment)
 	protected.DELETE("/documents/:id/comments/:commentId", collaborationHandler.DeleteComment)
@@ -317,11 +458,17 @@ func main() {
 	admin.GET("/users/:id/service-accounts", adminHandler.ListServiceAccounts)
 	admin.DELETE("/users/:id", adminHandler.DeleteUser)
 
+	admin.GET("/audit/verify", adminHandler.AuditVerify)
+	admin.GET("/feature-flags", adminHandler.FeatureFlags)
+
 	admin.GET("/workflows", adminWorkflowHandler.List)
 	admin.GET("/workflows/:id", adminWorkflowHandler.Get)
 	admin.POST("/workflows", adminWorkflowHandler.Create)
 	admin.PUT("/workflows/:id", adminWorkflowHandler.Put)
 	admin.DELETE("/workflows/:id", adminWorkflowHandler.Delete)
+
+	admin.GET("/retention-policies", retentionHandler.ListPolicies)
+	admin.POST("/retention-policies", retentionHandler.CreatePolicy)
 
 	admin.GET("/access-policies", accessPolicyHandler.List)
 	admin.POST("/access-policies", accessPolicyHandler.Create)
@@ -344,12 +491,8 @@ func main() {
 	pydioAPI.POST("/pydio/webhooks/node-updated", pydioHandler.WebhookNodeUpdated)
 	pydioAPI.POST("/pydio/webhooks/node-deleted", pydioHandler.WebhookNodeDeleted)
 
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]any{
-			"status":         "healthy",
-			"upload_metrics": services.UploadMetricsSnapshot(),
-		})
-	})
+	e.GET("/health", healthHandler.Liveness)
+	e.GET("/readyz", healthHandler.Ready)
 
 	go func() {
 		ticker := time.NewTicker(1 * time.Hour)
@@ -360,6 +503,13 @@ func main() {
 			} else if n > 0 {
 				logger.Info("aborted expired upload sessions", zap.Int("count", n))
 			}
+			if res, err := auditService.VerifyChain(context.Background()); err != nil {
+				logger.Warn("audit chain verification failed", zap.Error(err))
+			} else if res.Mismatches > 0 {
+				logger.Error("audit chain mismatch", zap.Int("checked", res.Checked), zap.Int("mismatches", res.Mismatches), zap.Uint("first_bad_id", res.FirstBadID))
+			} else {
+				logger.Info("audit chain verified", zap.Int("checked", res.Checked))
+			}
 		}
 	}()
 
@@ -367,4 +517,41 @@ func main() {
 	if err := e.Start(":" + cfg.ServerPort); err != nil {
 		logger.Fatal("Server failed to start", zap.Error(err))
 	}
+}
+
+func runMigrationsCLI(logger *zap.Logger, db *gorm.DB, args []string) {
+	mgr, err := dbmigrate.New(db, migrations.All())
+	if err != nil {
+		logger.Fatal("Migration manager init failed", zap.Error(err))
+	}
+	cmd := "up"
+	if len(args) > 0 {
+		cmd = strings.ToLower(args[0])
+	}
+	switch cmd {
+	case "up":
+		err = mgr.Up()
+	case "down":
+		if len(args) < 2 {
+			logger.Fatal("usage: migrate down <steps>")
+		}
+		n, convErr := strconv.Atoi(args[1])
+		if convErr != nil || n <= 0 {
+			logger.Fatal("usage: migrate down <steps>", zap.String("steps", args[1]))
+		}
+		err = mgr.Down(n)
+	case "version":
+		v, dirty, vErr := mgr.Version()
+		if vErr != nil {
+			logger.Fatal("Failed to read schema version", zap.Error(vErr))
+		}
+		logger.Info("schema version", zap.Uint("version", v), zap.Bool("dirty", dirty))
+		return
+	default:
+		logger.Fatal("unknown migrate command", zap.String("command", cmd))
+	}
+	if err != nil && !errors.Is(err, dbmigrate.ErrNoChange) {
+		logger.Fatal("Migration failed", zap.Error(err))
+	}
+	logger.Info("Migrations done", zap.String("command", cmd))
 }

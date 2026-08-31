@@ -18,6 +18,10 @@ import { Button } from "@/components/ui/button";
 import { IconTooltipButton } from "@/components/ui/icon-tooltip-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import { IntegrityHash } from "@/components/documents/integrity-hash";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
@@ -52,7 +56,10 @@ import {
 } from "@/services/collaboration.service";
 import {
   downloadUrl,
+  getDocumentHold,
   lockDocument,
+  placeDocumentHold,
+  releaseDocumentHold,
   unlockDocument,
   updateDocumentClassification,
 } from "@/services/documents.service";
@@ -97,6 +104,10 @@ export default function DocumentDetailPage() {
   const [classification, setClassification] = useState("INTERNE");
   const [department, setDepartment] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
+  const [tab, setTab] = useState("apercu");
+  const [onHold, setOnHold] = useState(false);
+  const [holdId, setHoldId] = useState<number | null>(null);
+  const [holdReason, setHoldReason] = useState("");
 
   const load = useCallback(async () => {
     if (!docId || Number.isNaN(docId)) return;
@@ -120,6 +131,12 @@ export default function DocumentDetailPage() {
       const curVer = d.current_version_number ?? vctx?.current_version_number ?? 1;
       setVersionSelection({ kind: "current", versionNumber: curVer });
       setFavorited(await getFavoriteStatus(docId));
+      const hold = await getDocumentHold(docId).catch(() => ({
+        on_hold: false,
+        hold: undefined as { id: number; reason?: string } | undefined,
+      }));
+      setOnHold(hold.on_hold);
+      setHoldId(hold.hold?.id ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Document inaccessible");
     } finally {
@@ -276,6 +293,12 @@ export default function DocumentDetailPage() {
         eyebrow="Fiche document"
         title={doc.titre}
         description={`${doc.taille_formatee || doc.taille} · ${doc.mime_type}${doc.status ? ` · ${doc.status}` : ""}`}
+        badge={
+          <div className="flex flex-wrap items-center gap-2">
+            {onHold && <Badge className="border-amber-300 bg-amber-50 text-amber-900">Conservation</Badge>}
+            <IntegrityHash hash={doc.content_sha256} />
+          </div>
+        }
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <IconTooltipButton label="Telecharger" onClick={handleDownload}>
@@ -326,7 +349,7 @@ export default function DocumentDetailPage() {
         }
       />
 
-      {validationCtx && (
+      {validationCtx && tab === "workflow" && (
         <WorkflowStatusBanner
           context={validationCtx}
           onScrollToVersions={scrollToVersions}
@@ -335,9 +358,21 @@ export default function DocumentDetailPage() {
         />
       )}
 
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        tabs={[
+          { id: "apercu", label: "Aperçu" },
+          { id: "versions", label: "Versions" },
+          { id: "workflow", label: "Workflow" },
+          { id: "partage", label: "Partage" },
+          { id: "activite", label: "Activité" },
+        ]}
+      />
+
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex min-w-0 flex-col gap-6">
-          {showOfficeEditor && (
+          {tab === "apercu" && showOfficeEditor && (
             <PagePanel
               title="Edition bureautique"
               subtitle="Collabora / OnlyOffice — sauvegarde = nouvelle version"
@@ -347,7 +382,7 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {showTextEditor && (
+          {tab === "apercu" && showTextEditor && (
             <PagePanel
               title="Edition"
               subtitle="Texte, markdown, JSON — sauvegarde = nouvelle version"
@@ -357,7 +392,7 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {showPreviewPanel && (
+          {tab === "apercu" && showPreviewPanel && (
             <PagePanel
               title="Apercu"
               subtitle={
@@ -384,7 +419,7 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {!hasMainWorkspace && (
+          {tab === "apercu" && !hasMainWorkspace && (
             <PagePanel
               title="Fichier"
               subtitle={`${doc.file_name || doc.titre} — pas d'apercu inline pour ce format`}
@@ -411,7 +446,7 @@ export default function DocumentDetailPage() {
         </div>
 
         <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-0.5">
-          {showShare && (
+          {(tab === "partage" || showShare) && (
             <PagePanel compact title="Partage" subtitle="Compte ArchiFlow requis">
               <div className="space-y-3">
                 {shareError && <ErrorBanner message={shareError} />}
@@ -440,7 +475,9 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          <PagePanel compact title="Commentaires" subtitle={`${comments.length} message(s)`} delay={0.12}>
+          {tab === "activite" && (
+          <>
+          <PagePanel compact title="Commentaires" subtitle={`${comments.length} message(s)`}>
             <div className="space-y-3">
               <div className="flex gap-2">
                 <Input
@@ -487,7 +524,7 @@ export default function DocumentDetailPage() {
             </div>
           </PagePanel>
 
-          <PagePanel compact title="Etiquettes" subtitle="Classification libre" delay={0.14}>
+          <PagePanel compact title="Étiquettes" subtitle="Classification libre" delay={0.14}>
             <div className="space-y-3">
               <div className="flex flex-wrap gap-1.5">
                 {tags.length === 0 ? (
@@ -525,8 +562,10 @@ export default function DocumentDetailPage() {
               </div>
             </div>
           </PagePanel>
+          </>
+          )}
 
-          {doc.can_classify && (
+          {tab === "apercu" && doc.can_classify && (
             <PagePanel
               compact
               title="Classement MAC"
@@ -536,16 +575,15 @@ export default function DocumentDetailPage() {
               <div className="space-y-3">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="docClassification">Classification</Label>
-                  <select
+                  <Select
                     id="docClassification"
-                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
                     value={classification}
                     onChange={(e) => setClassification(e.target.value)}
                   >
                     <option value="PUBLIC">PUBLIC</option>
                     <option value="INTERNE">INTERNE</option>
                     <option value="CONFIDENTIEL">CONFIDENTIEL</option>
-                  </select>
+                  </Select>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="docDepartment">Departement</Label>
@@ -567,10 +605,59 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
+          {tab === "apercu" && (
+            <PagePanel compact title="Conservation" subtitle="Legal hold — bloque suppression et purge">
+              {onHold ? (
+                <div className="space-y-2">
+                  <Badge className="border-amber-300 bg-amber-50 text-amber-900">En conservation</Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!holdId}
+                    onClick={async () => {
+                      if (!holdId) return;
+                      await releaseDocumentHold(docId, holdId);
+                      setOnHold(false);
+                      setHoldId(null);
+                      toast.success("Conservation levée");
+                    }}
+                  >
+                    Lever le hold
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="holdReason">Motif</Label>
+                  <Input
+                    id="holdReason"
+                    value={holdReason}
+                    onChange={(e) => setHoldReason(e.target.value)}
+                    placeholder="Litige, contrôle, enquête…"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={holdReason.trim().length < 3}
+                    onClick={async () => {
+                      await placeDocumentHold(docId, holdReason.trim());
+                      const hold = await getDocumentHold(docId);
+                      setOnHold(hold.on_hold);
+                      setHoldId(hold.hold?.id ?? null);
+                      setHoldReason("");
+                      toast.success("Document placé en conservation");
+                    }}
+                  >
+                    Placer un hold
+                  </Button>
+                </div>
+              )}
+            </PagePanel>
+          )}
+
+          {tab === "versions" && (
           <PagePanel
             compact
             title="Versions"
-            subtitle={`${versions.length} revision(s)`}
+            subtitle={`${versions.length} révision(s)`}
             delay={0.16}
           >
             <div ref={versionsRef} className="space-y-3">
@@ -629,6 +716,15 @@ export default function DocumentDetailPage() {
               )}
             </div>
           </PagePanel>
+          )}
+
+          {tab === "workflow" && !validationCtx && (
+            <PagePanel compact title="Workflow" subtitle="Aucun circuit actif">
+              <p className="text-sm text-muted-foreground">
+                Ce document n&apos;est pas dans un workflow d&apos;approbation.
+              </p>
+            </PagePanel>
+          )}
         </aside>
       </div>
     </PageFrame>

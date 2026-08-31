@@ -73,17 +73,19 @@ func ClearanceRank(level string) int {
 
 // AuditEvent journal unifié API + SFTPGo.
 type AuditEvent struct {
-	ID           uint      `gorm:"primarykey" json:"id"`
-	Source       string    `gorm:"size:32;index;not null" json:"source"` // api | sftpgo
-	ActorID      *uint     `gorm:"index" json:"actor_id,omitempty"`
-	ActorEmail   string    `gorm:"size:255" json:"actor_email"`
-	Action       string    `gorm:"size:64;index;not null" json:"action"`
-	ResourceType string    `gorm:"size:64;index" json:"resource_type"`
-	ResourceID   string    `gorm:"size:128" json:"resource_id"`
-	IP           string    `gorm:"size:64" json:"ip"`
-	CorrelationID string   `gorm:"size:64;index" json:"correlation_id"`
-	Metadata     string    `gorm:"type:text" json:"metadata,omitempty"`
-	CreatedAt    time.Time `gorm:"index" json:"created_at"`
+	ID            uint      `gorm:"primarykey" json:"id"`
+	Source        string    `gorm:"size:32;index;not null" json:"source"` // api | sftpgo
+	ActorID       *uint     `gorm:"index" json:"actor_id,omitempty"`
+	ActorEmail    string    `gorm:"size:255" json:"actor_email"`
+	Action        string    `gorm:"size:64;index;not null" json:"action"`
+	ResourceType  string    `gorm:"size:64;index" json:"resource_type"`
+	ResourceID    string    `gorm:"size:128" json:"resource_id"`
+	IP            string    `gorm:"size:64" json:"ip"`
+	CorrelationID string    `gorm:"size:64;index" json:"correlation_id"`
+	Metadata      string    `gorm:"type:text" json:"metadata,omitempty"`
+	CreatedAt     time.Time `gorm:"index" json:"created_at"`
+	PrevHash      string    `gorm:"type:varchar(64);not null;default:''" json:"-"`
+	EntryHash     string    `gorm:"type:varchar(64);not null;default:''" json:"-"`
 }
 
 func (AuditEvent) TableName() string { return "audit_events" }

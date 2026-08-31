@@ -67,15 +67,17 @@ export default function WorkflowsPage() {
           >
             <Link
               href={item.href}
-              className="group surface-bento flex h-full flex-col justify-between p-8 transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
+              className="group surface-card surface-card-interactive flex h-full flex-col justify-between p-6"
             >
-              <item.icon className="h-6 w-6 text-emerald-700" weight="duotone" />
+              <span className="icon-well">
+                <item.icon className="h-5 w-5" weight="duotone" />
+              </span>
               <div className="mt-8 space-y-2">
-                <p className="text-lg font-semibold tracking-tight text-zinc-900">{item.title}</p>
-                <p className="text-sm text-zinc-600">{item.copy}</p>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700">
+                <p className="text-lg font-semibold tracking-tight">{item.title}</p>
+                <p className="text-sm text-muted-foreground">{item.copy}</p>
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Ouvrir
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" weight="bold" />
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" weight="bold" />
                 </span>
               </div>
             </Link>
@@ -85,14 +87,14 @@ export default function WorkflowsPage() {
 
       <PagePanel title="Definitions" subtitle={`${workflows.length} workflow(s) disponible(s)`}>
         {workflows.length === 0 ? (
-          <p className="text-sm text-zinc-600">Aucun workflow configure.</p>
+          <p className="text-sm text-muted-foreground">Aucun workflow configuré.</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {workflows.map((w) => (
               <li key={w.id} className="py-4 first:pt-0 last:pb-0">
-                <p className="font-medium text-zinc-900">{w.name}</p>
-                <p className="mt-1 text-sm text-zinc-600">{w.description}</p>
-                <p className="mt-2 font-mono text-xs text-zinc-400">
+                <p className="font-medium">{w.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{w.description}</p>
+                <p className="mt-2 font-mono text-xs text-muted-foreground">
                   {w.steps?.length ?? 0} etape(s)
                 </p>
               </li>

@@ -1,4 +1,4 @@
-// File: C:\Users\Gilles_Dan\Desktop\dev\ArchiFlow\frontend\src\app\(dashboard)\documents-partages\page.tsx
+// File: /work/frontend/src/app/(dashboard)/documents-partages/page.tsx
 import * as entry from '../../../../../src/app/(dashboard)/documents-partages/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

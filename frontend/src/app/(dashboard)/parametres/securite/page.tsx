@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Key, SignOut, WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { PagePanel } from "@/components/layout/page-panel";
+import { MfaSettings } from "@/components/settings/mfa-settings";
 import { useAuthStore } from "@/store/auth-store";
 
 export default function ParametresSecuritePage() {
@@ -18,12 +19,12 @@ export default function ParametresSecuritePage() {
         </div>
       )}
 
-      <PagePanel title="Securite">
-        <div className="divide-y divide-slate-100">
+      <PagePanel title="Sécurité">
+        <div className="divide-y divide-border">
           <div className="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-zinc-900">Mot de passe</p>
-              <p className="mt-0.5 text-sm text-zinc-500">Minimum 8 caracteres</p>
+              <p className="text-sm font-medium">Mot de passe</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">Minimum 8 caractères</p>
             </div>
             <Link href="/changer-mot-de-passe">
               <Button className="gap-1.5">
@@ -32,10 +33,13 @@ export default function ParametresSecuritePage() {
               </Button>
             </Link>
           </div>
+          <div className="py-6">
+            <MfaSettings />
+          </div>
           <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-zinc-900">Deconnexion</p>
-              <p className="mt-0.5 text-sm text-zinc-500">Terminer la session sur cet appareil</p>
+              <p className="text-sm font-medium">Déconnexion</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">Terminer la session sur cet appareil</p>
             </div>
             <Button
               type="button"
@@ -44,7 +48,7 @@ export default function ParametresSecuritePage() {
               onClick={() => void logout()}
             >
               <SignOut className="h-4 w-4" weight="bold" />
-              Se deconnecter
+              Se déconnecter
             </Button>
           </div>
         </div>

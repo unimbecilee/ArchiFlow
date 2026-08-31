@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"archiflow/backend/internal/services"
 
@@ -9,11 +10,12 @@ import (
 )
 
 type AccessPolicyHandler struct {
-	svc *services.AccessPolicyService
+	svc   *services.AccessPolicyService
+	audit *services.AuditService
 }
 
-func NewAccessPolicyHandler(svc *services.AccessPolicyService) *AccessPolicyHandler {
-	return &AccessPolicyHandler{svc: svc}
+func NewAccessPolicyHandler(svc *services.AccessPolicyService, audit *services.AuditService) *AccessPolicyHandler {
+	return &AccessPolicyHandler{svc: svc, audit: audit}
 }
 
 type accessPolicyBody struct {
@@ -45,6 +47,7 @@ func (h *AccessPolicyHandler) Create(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.access_policy_create", "access_policy", strconv.FormatUint(uint64(p.ID), 10)))
 	return c.JSON(http.StatusCreated, map[string]any{"success": true, "data": p})
 }
 
@@ -64,6 +67,7 @@ func (h *AccessPolicyHandler) Update(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.access_policy_update", "access_policy", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": p})
 }
 
@@ -75,5 +79,6 @@ func (h *AccessPolicyHandler) Delete(c echo.Context) error {
 	if err := h.svc.Delete(id); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "admin.access_policy_delete", "access_policy", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true})
 }

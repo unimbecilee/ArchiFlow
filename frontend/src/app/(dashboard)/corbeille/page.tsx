@@ -12,10 +12,13 @@ import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { useDocumentListPage } from "@/hooks/use-document-list-page";
-import { getTrashDocuments, restoreDocument } from "@/services/documents.service";
+import { getTrashDocuments, purgeDocument, restoreDocument } from "@/services/documents.service";
 import { buildTrashDocumentActions } from "@/lib/document-crud-actions";
+import { useConfirm } from "@/components/feedback/confirm-provider";
+import { toast } from "sonner";
 
 export default function CorbeillePage() {
+  const confirm = useConfirm();
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const { items: docs, loading, load, error } = useDocumentListPage({
     loadFn: getTrashDocuments,
@@ -26,9 +29,29 @@ export default function CorbeillePage() {
     await load();
   }, [load]);
 
+  const handlePurge = useCallback(async (id: number) => {
+    if (
+      !(await confirm({
+        title: "Purge définitive",
+        description: "Ce document sera détruit définitivement. Impossible si un legal hold est actif.",
+        confirmLabel: "Purger",
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
+    try {
+      await purgeDocument(id);
+      toast.success("Document purgé");
+      await load();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Purge impossible (conservation active ?)");
+    }
+  }, [confirm, load]);
+
   const { rowActions, bulkActions } = useMemo(
-    () => buildTrashDocumentActions(handleRestore),
-    [handleRestore]
+    () => buildTrashDocumentActions(handleRestore, handlePurge),
+    [handleRestore, handlePurge]
   );
 
   return (

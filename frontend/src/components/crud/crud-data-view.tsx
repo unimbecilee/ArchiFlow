@@ -173,7 +173,7 @@ export function CrudDataView<T>({
                 key={String(id)}
                 variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
                 className={cn(
-                  "surface-bento relative flex flex-col p-4 transition-shadow",
+                  "surface-card surface-card-interactive relative flex flex-col p-4",
                   selected && "ring-2 ring-emerald-500/40",
                   onRowClick && "cursor-pointer"
                 )}

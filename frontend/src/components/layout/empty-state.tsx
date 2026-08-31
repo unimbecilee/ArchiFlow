@@ -1,32 +1,34 @@
 "use client";
 
+import { FolderOpen } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 type EmptyStateProps = {
   title: string;
   description: string;
   action?: React.ReactNode;
   icon?: React.ReactNode;
+  className?: string;
 };
 
-export function EmptyState({ title, description, action, icon }: EmptyStateProps) {
+export function EmptyState({ title, description, action, icon, className }: EmptyStateProps) {
   return (
     <motion.div
-      className="flex flex-col items-start gap-4 rounded-[1.75rem] border border-dashed border-slate-200 bg-zinc-50/80 px-6 py-10 md:px-8"
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 120, damping: 20 }}
-    >
-      {icon && (
-        <span className="rounded-2xl bg-white p-3 text-zinc-500 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.12)]">
-          {icon}
-        </span>
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={cn(
+        "flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white/60 px-6 py-16 text-center",
+        className
       )}
-      <div className="space-y-2">
-        <p className="text-base font-medium text-zinc-900">{title}</p>
-        <p className="max-w-md text-sm leading-relaxed text-zinc-600">{description}</p>
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+        {icon ?? <FolderOpen className="h-7 w-7" weight="duotone" />}
       </div>
-      {action}
+      <h3 className="mt-4 text-sm font-semibold text-zinc-900">{title}</h3>
+      <p className="mt-1 max-w-sm text-sm text-zinc-500">{description}</p>
+      {action ? <div className="mt-5">{action}</div> : null}
     </motion.div>
   );
 }

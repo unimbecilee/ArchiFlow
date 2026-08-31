@@ -77,14 +77,19 @@ const config = {
         },
         "float-y": {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-6px)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        "aurora-drift": {
+          "0%, 100%": { transform: "translate3d(0, 0, 0) scale(1)" },
+          "50%": { transform: "translate3d(4%, -3%, 0) scale(1.08)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 2.4s ease-in-out infinite",
-        "float-y": "float-y 4s ease-in-out infinite",
+        "float-y": "float-y 5s ease-in-out infinite",
+        "aurora-drift": "aurora-drift 14s ease-in-out infinite",
       },
     },
   },

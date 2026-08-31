@@ -3,6 +3,8 @@ package services
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +13,7 @@ import (
 	"strings"
 
 	"archiflow/backend/internal/config"
+	"archiflow/backend/internal/jobqueue"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 )
@@ -18,6 +21,8 @@ import (
 type DocumentService struct {
 	repo            *repository.DocumentRepository
 	folderRepo      *repository.FolderRepository
+	retention       *RetentionService
+	search          *SearchService
 	documentsBucket string
 }
 
@@ -35,6 +40,9 @@ func NewDocumentService(
 		documentsBucket: documentsBucket,
 	}
 }
+
+func (s *DocumentService) SetRetention(r *RetentionService) { s.retention = r }
+func (s *DocumentService) SetSearch(search *SearchService)  { s.search = search }
 
 type UploadDocumentInput struct {
 	File        *multipart.FileHeader
@@ -102,6 +110,7 @@ func (s *DocumentService) Upload(ctx context.Context, in UploadDocumentInput) (*
 		CreatedByID:     in.OwnerID,
 		ModifiedByID:    in.OwnerID,
 		Status:          models.DocumentStatusDraft,
+		ContentSHA256:   sha256Hex(raw),
 	}
 	if doc.Classification == "" {
 		doc.Classification = models.ClassificationInternal
@@ -113,26 +122,77 @@ func (s *DocumentService) Upload(ctx context.Context, in UploadDocumentInput) (*
 		doc.OCRText = ocr
 		_ = s.repo.UpdateOCRText(doc.ID, ocr)
 	}
+	jobqueue.EnqueueAfterUpload(ctx, doc)
 	return doc, nil
+}
+
+func sha256Hex(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 func (s *DocumentService) ListMy(ownerID uint, isAdmin bool, folderID *uint) ([]models.Document, error) {
 	return s.repo.ListByOwner(ownerID, folderID, isAdmin)
 }
 
-func (s *DocumentService) Get(id uint, ownerID uint, isAdmin bool) (*models.Document, error) {
-	doc, err := s.repo.FindByID(id)
-	if err != nil {
-		return nil, err
+func (s *DocumentService) ListMyCursor(ownerID uint, isAdmin bool, folderID *uint, limit int, cursor *repository.Cursor) ([]models.Document, *repository.Cursor, error) {
+	return s.repo.ListByOwnerCursor(ownerID, folderID, isAdmin, limit, cursor)
+}
+
+func (s *DocumentService) ListTrash(ownerID uint, isAdmin bool) ([]models.Document, error) {
+	return s.repo.ListTrash(ownerID, isAdmin, 100)
+}
+
+func (s *DocumentService) ListTrashCursor(ownerID uint, isAdmin bool, limit int, cursor *repository.Cursor) ([]models.Document, *repository.Cursor, error) {
+	return s.repo.ListTrashCursor(ownerID, isAdmin, limit, cursor)
+}
+
+func (s *DocumentService) Search(ownerID uint, isAdmin bool, query string, fullText bool) ([]models.Document, error) {
+	query = strings.TrimSpace(query)
+	if len(query) < 2 {
+		return nil, fmt.Errorf("query must be at least 2 characters")
 	}
-	if !isAdmin && doc.OwnerID != ownerID {
-		return nil, errors.New("forbidden")
+	if s.search != nil {
+		docs, _, _, err := s.search.SearchWithFacets(context.Background(), ownerID, isAdmin, query, nil, 50, 0)
+		if err == nil {
+			return docs, nil
+		}
 	}
-	return doc, nil
+	if fullText {
+		rows, err := s.repo.SearchFullText(ownerID, isAdmin, query, 50)
+		if err == nil && len(rows) > 0 {
+			return rows, nil
+		}
+	}
+	return s.repo.Search(ownerID, isAdmin, query, 50)
+}
+
+func (s *DocumentService) SearchFacets(ownerID uint, isAdmin bool, query string, filters map[string]string, limit, offset int) ([]models.Document, int64, map[string]map[string]int64, error) {
+	if s.search != nil {
+		return s.search.SearchWithFacets(context.Background(), ownerID, isAdmin, query, filters, limit, offset)
+	}
+	docs, err := s.Search(ownerID, isAdmin, query, true)
+	return docs, int64(len(docs)), nil, err
+}
+
+func (s *DocumentService) SearchCursor(ownerID uint, isAdmin bool, query string, limit int, cursor *repository.Cursor, fullText bool) ([]models.Document, *repository.Cursor, error) {
+	return s.repo.SearchCursor(ownerID, isAdmin, query, limit, cursor, fullText)
+}
+
+func (s *DocumentService) ListRecent(ownerID uint, isAdmin bool) ([]models.Document, error) {
+	return s.repo.ListRecent(ownerID, isAdmin, 20)
+}
+
+func (s *DocumentService) ListRecentCursor(ownerID uint, isAdmin bool, limit int, cursor *repository.Cursor) ([]models.Document, *repository.Cursor, error) {
+	return s.repo.ListRecentCursor(ownerID, isAdmin, limit, cursor)
 }
 
 func (s *DocumentService) GetByID(id uint) (*models.Document, error) {
 	return s.repo.FindByID(id)
+}
+
+func (s *DocumentService) UpdateOCRText(id uint, text string) error {
+	return s.repo.UpdateOCRText(id, text)
 }
 
 func (s *DocumentService) OpenContentByID(ctx context.Context, id uint) (io.ReadCloser, string, string, error) {
@@ -151,30 +211,17 @@ func (s *DocumentService) OpenContentByID(ctx context.Context, id uint) (io.Read
 	return obj, doc.MimeType, filename, nil
 }
 
-func (s *DocumentService) ListTrash(ownerID uint, isAdmin bool) ([]models.Document, error) {
-	return s.repo.ListTrash(ownerID, isAdmin, 100)
-}
-
 func (s *DocumentService) Restore(id, ownerID uint, isAdmin bool) error {
-	return s.repo.Restore(id, ownerID, isAdmin)
-}
-
-func (s *DocumentService) Search(ownerID uint, isAdmin bool, query string, fullText bool) ([]models.Document, error) {
-	query = strings.TrimSpace(query)
-	if len(query) < 2 {
-		return nil, fmt.Errorf("query must be at least 2 characters")
-	}
-	if fullText {
-		rows, err := s.repo.SearchFullText(ownerID, isAdmin, query, 50)
-		if err == nil && len(rows) > 0 {
-			return rows, nil
+	if s.retention != nil {
+		onHold, err := s.retention.IsOnHold(context.Background(), id)
+		if err != nil {
+			return err
+		}
+		if onHold {
+			return errors.New("document sous conservation légale")
 		}
 	}
-	return s.repo.Search(ownerID, isAdmin, query, 50)
-}
-
-func (s *DocumentService) ListRecent(ownerID uint, isAdmin bool) ([]models.Document, error) {
-	return s.repo.ListRecent(ownerID, isAdmin, 20)
+	return s.repo.Restore(id, ownerID, isAdmin)
 }
 
 func (s *DocumentService) Lock(id, userID uint, isAdmin bool) error {
@@ -213,7 +260,44 @@ func (s *DocumentService) Delete(id, ownerID uint, isAdmin bool) error {
 	if !isAdmin && doc.OwnerID != ownerID {
 		return errors.New("forbidden")
 	}
-	return s.repo.SoftDelete(id, ownerID, isAdmin)
+	if s.retention != nil {
+		onHold, err := s.retention.IsOnHold(context.Background(), id)
+		if err != nil {
+			return err
+		}
+		if onHold {
+			return errors.New("document sous conservation légale : suppression interdite")
+		}
+	}
+	if err := s.repo.SoftDelete(id, ownerID, isAdmin); err != nil {
+		return err
+	}
+	jobqueue.EnqueueSearchDelete(context.Background(), id)
+	return nil
+}
+
+func (s *DocumentService) Purge(id, ownerID uint, isAdmin bool) error {
+	if s.retention != nil {
+		onHold, err := s.retention.IsOnHold(context.Background(), id)
+		if err != nil {
+			return err
+		}
+		if onHold {
+			return errors.New("document sous conservation légale : purge interdite")
+		}
+	}
+	if err := s.repo.HardDelete(id, ownerID, isAdmin); err != nil {
+		return err
+	}
+	jobqueue.EnqueueSearchDelete(context.Background(), id)
+	return nil
+}
+
+func (s *DocumentService) IsOnHold(ctx context.Context, id uint) (bool, error) {
+	if s.retention == nil {
+		return false, nil
+	}
+	return s.retention.IsOnHold(ctx, id)
 }
 
 // MoveToFolder assigne le document a un dossier (folderID nil = racine).
@@ -270,7 +354,7 @@ func (s *DocumentService) UpdateMACMetadata(id uint, classification, department 
 }
 
 func (s *DocumentService) OpenContent(ctx context.Context, id uint, ownerID uint, isAdmin bool) (io.ReadCloser, string, string, error) {
-	doc, err := s.Get(id, ownerID, isAdmin)
+	doc, err := s.GetByIDWithAuth(id, ownerID, isAdmin)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -286,11 +370,22 @@ func (s *DocumentService) OpenContent(ctx context.Context, id uint, ownerID uint
 }
 
 func (s *DocumentService) PresignedPreviewURL(ctx context.Context, id uint, ownerID uint, isAdmin bool) (string, error) {
-	doc, err := s.Get(id, ownerID, isAdmin)
+	doc, err := s.GetByIDWithAuth(id, ownerID, isAdmin)
 	if err != nil {
 		return "", err
 	}
 	return config.PresignedGetURL(ctx, doc.MinioBucket, doc.MinioObjectName)
+}
+
+func (s *DocumentService) GetByIDWithAuth(id uint, ownerID uint, isAdmin bool) (*models.Document, error) {
+	doc, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if !isAdmin && doc.OwnerID != ownerID {
+		return nil, errors.New("forbidden")
+	}
+	return doc, nil
 }
 
 type PydioSyncInput struct {

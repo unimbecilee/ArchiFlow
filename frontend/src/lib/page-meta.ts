@@ -28,7 +28,10 @@ function metaFromMenu(path: string): PageMeta | null {
   return {
     title: hit.title,
     section: hit.section,
-    crumbs: [{ label: hit.section }, { label: hit.title, href: path }],
+    crumbs:
+      path === "/" || path === "/mes-documents"
+        ? [{ label: hit.title, href: path }]
+        : [{ label: hit.section }, { label: hit.title, href: path }],
   };
 }
 

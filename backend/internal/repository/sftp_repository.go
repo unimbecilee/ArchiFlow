@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"context"
+	"errors"
+
 	"archiflow/backend/internal/models"
 
 	"gorm.io/gorm"
@@ -56,6 +59,49 @@ func (r *SftpRepository) ListServiceAccounts(userID uint) ([]models.ServiceAccou
 
 func (r *SftpRepository) CreateAudit(e *models.AuditEvent) error {
 	return r.db.Create(e).Error
+}
+
+const auditChainLockID int64 = 0x5A2D_0001
+
+func (r *SftpRepository) InsertAuditChained(e *models.AuditEvent, computeEntryHash func(prev string) string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", auditChainLockID).Error; err != nil {
+			return err
+		}
+		var prev string
+		if err := tx.Model(&models.AuditEvent{}).Select("entry_hash").Order("id DESC").Limit(1).Scan(&prev).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		if e.PrevHash == "" {
+			e.PrevHash = prev
+		}
+		e.EntryHash = computeEntryHash(e.PrevHash)
+		return tx.Create(e).Error
+	})
+}
+
+func (r *SftpRepository) AuditChainWalk(ctx context.Context, batchSize int, visit func(models.AuditEvent) error) error {
+	if batchSize <= 0 {
+		batchSize = 500
+	}
+	lastID := uint(0)
+	for {
+		var rows []models.AuditEvent
+		err := r.db.WithContext(ctx).Select("id", "source", "actor_id", "actor_email", "action", "resource_type", "resource_id", "ip", "correlation_id", "metadata", "created_at", "prev_hash", "entry_hash").
+			Where("id > ?", lastID).Order("id ASC").Limit(batchSize).Find(&rows).Error
+		if err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		for i := range rows {
+			if err := visit(rows[i]); err != nil {
+				return err
+			}
+		}
+		lastID = rows[len(rows)-1].ID
+	}
 }
 
 func (r *SftpRepository) ListAccessPolicies() ([]models.AccessPolicy, error) {

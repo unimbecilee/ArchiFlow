@@ -45,28 +45,28 @@ export default function RegisterPage() {
 
   return (
     <AuthSplitLayout
-      title="Creer un compte"
-      subtitle="Rejoignez votre espace GED securise."
+      title="Créer un compte"
+      subtitle="Rejoignez votre espace GED sécurisé."
       heroTitle="Onboarding documentaire en quelques minutes."
-      heroCopy="Creez votre acces, importez vos premiers fichiers et activez les workflows d'approbation des la connexion."
+      heroCopy="Créez votre accès, importez vos premiers fichiers et activez les workflows d’approbation dès la connexion."
       features={[
         {
           icon: UserPlus,
-          title: "Compte dedie",
-          copy: "Profil utilisateur avec droits et historique d'activite.",
+          title: "Compte dédié",
+          copy: "Profil utilisateur avec droits et historique d’activité.",
         },
         {
           icon: LockKey,
-          title: "Securite integree",
-          copy: "Authentification JWT et controle d'acces par role.",
+          title: "Sécurité intégrée",
+          copy: "Authentification JWT et contrôle d’accès par rôle.",
         },
       ]}
       footer={
         <>
-          Deja un compte ?{" "}
+          Déjà un compte ?{" "}
           <Link
             href="/login"
-            className="font-medium text-emerald-700 transition-colors hover:text-emerald-800"
+            className="font-medium text-primary transition-colors hover:underline"
           >
             Se connecter
           </Link>
@@ -75,9 +75,9 @@ export default function RegisterPage() {
     >
       {checkingConfig ? (
         <div className="space-y-3">
-          <div className="h-10 animate-shimmer rounded-xl" />
-          <div className="h-10 animate-shimmer rounded-xl" />
-          <div className="h-10 animate-shimmer rounded-xl" />
+          <div className="h-10 animate-pulse rounded-xl bg-muted" />
+          <div className="h-10 animate-pulse rounded-xl bg-muted" />
+          <div className="h-10 animate-pulse rounded-xl bg-muted" />
         </div>
       ) : !allowRegister ? (
         <div className="space-y-5">

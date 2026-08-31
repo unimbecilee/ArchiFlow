@@ -1,0 +1,4 @@
+-- River job queue tables (managed by River itself, but baseline for reference)
+-- River creates its own tables via migrations; this file is a placeholder
+-- Actual River tables: river_job, river_job_kind, river_client, river_leader
+-- Run River's own migrations at startup: river.NewMigrator(pool, nil).Migrate(ctx)

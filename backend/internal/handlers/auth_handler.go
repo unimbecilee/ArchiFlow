@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/dto"
@@ -12,10 +13,11 @@ import (
 
 type AuthHandler struct {
 	authService services.AuthService
+	audit       *services.AuditService
 }
 
-func NewAuthHandler(authService services.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService services.AuthService, audit *services.AuditService) *AuthHandler {
+	return &AuthHandler{authService: authService, audit: audit}
 }
 
 // PublicConfig GET /api/auth/config — flags for login UI (no auth).
@@ -39,6 +41,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 
 	resp, err := h.authService.Register(req, sessionMeta(c))
 	if err != nil {
+		logAudit(h.audit, newAuditEvent(c, "auth.register_failed", "user", req.Email))
 		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Success: false,
 			Message: err.Error(),
@@ -46,6 +49,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	setRefreshTokenCookie(c, resp.RefreshToken)
+	logAuditWithActor(h.audit, newAuditEvent(c, "auth.register", "user", ""), resp.User.ID, resp.User.Email)
 	return c.JSON(http.StatusCreated, dto.SuccessResponse{
 		Success: true,
 		Message: "User registered successfully",
@@ -67,19 +71,32 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	resp, err := h.authService.Login(req, sessionMeta(c))
 	if err != nil {
+		logAudit(h.audit, newAuditEvent(c, "auth.login_failed", "user", req.Email))
 		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
 			Success: false,
 			Message: err.Error(),
 		})
 	}
 
+	if resp.MFARequired {
+		return c.JSON(http.StatusOK, dto.SuccessResponse{
+			Success: true,
+			Message: "MFA required",
+			Data: map[string]any{
+				"mfa_required": true,
+			},
+		})
+	}
+
 	setRefreshTokenCookie(c, resp.RefreshToken)
+	logAuditWithActor(h.audit, newAuditEvent(c, "auth.login", "user", ""), resp.User.ID, resp.User.Email)
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Login successful",
 		Data: map[string]any{
-			"user":  resp.User,
-			"token": resp.Token,
+			"user":         resp.User,
+			"token":        resp.Token,
+			"mfa_required": false,
 		},
 	})
 }
@@ -113,6 +130,7 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	}
 
 	setRefreshTokenCookie(c, resp.RefreshToken)
+	logAudit(h.audit, newAuditEvent(c, "auth.token_refresh", "session", ""))
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Token refreshed successfully",
@@ -127,6 +145,7 @@ func (h *AuthHandler) ClearSession(c echo.Context) error {
 	refreshToken := readRefreshTokenCookie(c)
 	_ = h.authService.RevokeRefreshSession(refreshToken)
 	clearRefreshTokenCookie(c)
+	logAudit(h.audit, newAuditEvent(c, "auth.session_cleared", "session", ""))
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Session cleared",
@@ -145,6 +164,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	}
 
 	clearRefreshTokenCookie(c)
+	logAudit(h.audit, newAuditEvent(c, "auth.logout", "session", ""))
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Logout successful",
@@ -212,8 +232,37 @@ func (h *AuthHandler) ChangePassword(c echo.Context) error {
 		})
 	}
 
+	logAudit(h.audit, newAuditEvent(c, "auth.password_change", "user", strconv.FormatUint(uint64(userID), 10)))
 	return c.JSON(http.StatusOK, dto.SuccessResponse{
 		Success: true,
 		Message: "Password changed successfully",
+	})
+}
+
+func (h *AuthHandler) VerifyMFA(c echo.Context) error {
+	var req dto.MFAVerifyRequest
+	if err := bindJSONStrict(c, &req); err != nil {
+		return c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Success: false,
+			Message: "email and code required",
+		})
+	}
+
+	resp, err := h.authService.VerifyMFA(req.Email, req.Code, sessionMeta(c))
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+	}
+
+	setRefreshTokenCookie(c, resp.RefreshToken)
+	return c.JSON(http.StatusOK, dto.SuccessResponse{
+		Success: true,
+		Message: "MFA verified successfully",
+		Data: map[string]any{
+			"user":  resp.User,
+			"token": resp.Token,
+		},
 	})
 }

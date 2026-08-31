@@ -10,6 +10,7 @@ import (
 
 	"archiflow/backend/internal/config"
 	"archiflow/backend/internal/dto"
+	"archiflow/backend/internal/jobqueue"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 
@@ -300,6 +301,7 @@ func (s *UploadService) Complete(ctx context.Context, sessionID uuid.UUID, userI
 		ModifiedByID:    session.UserID,
 		Status:          models.DocumentStatusDraft,
 		Classification:  models.ClassificationInternal,
+		ContentSHA256:   session.FileSHA256,
 	}
 	if err := s.docRepo.Create(doc); err != nil {
 		session.Status = models.UploadStatusFailed
@@ -316,6 +318,7 @@ func (s *UploadService) Complete(ctx context.Context, sessionID uuid.UUID, userI
 	}
 	s.quota.ReleaseUploadLock(ctx, session.UserID, session.FileSHA256)
 	RecordUploadComplete()
+	jobqueue.EnqueueAfterUpload(ctx, doc)
 
 	if s.realtime != nil {
 		s.realtime.PublishDocumentEvent(session.UserID, "upload_completed", doc.ID, doc.Title)

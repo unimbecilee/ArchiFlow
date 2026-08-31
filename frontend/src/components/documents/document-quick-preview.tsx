@@ -40,7 +40,7 @@ export function DocumentQuickPreview({ doc, onClose }: DocumentQuickPreviewProps
           <motion.aside
             role="dialog"
             aria-labelledby="quick-preview-title"
-            className="fixed inset-y-0 right-0 z-[61] flex w-full max-w-xl flex-col border-l border-slate-200/80 bg-[#f9fafb] shadow-[0_0_48px_-12px_rgba(0,0,0,0.15)] md:max-w-2xl"
+            className="fixed inset-y-0 right-0 z-[61] flex w-full max-w-xl flex-col border-l border-border bg-background shadow-lg md:max-w-2xl"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}

@@ -52,18 +52,18 @@ export function DocumentCrudView({
           header: "Document",
           cell: (doc) => (
             <div className="flex min-w-0 items-start gap-3">
-              <span className="rounded-xl bg-emerald-500/10 p-2 text-emerald-700">
+              <span className="icon-well h-9 w-9">
                 <FileText className="h-4 w-4" weight="duotone" />
               </span>
               <div className="min-w-0">
                 <Link
                   href={`/documents/${doc.id}`}
-                  className="block truncate font-medium text-zinc-900 hover:text-emerald-700"
+                  className="block truncate font-medium hover:text-primary"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {doc.titre}
                 </Link>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {doc.taille_formatee || doc.taille} · {doc.mime_type}
                   {doc.status && ` · ${doc.status}`}
                 </p>
@@ -76,27 +76,27 @@ export function DocumentCrudView({
           header: "Statut",
           hideOnMobile: true,
           cell: (doc) => (
-            <span className="text-xs font-medium text-zinc-600">{doc.status || "—"}</span>
+            <span className="text-xs font-medium text-muted-foreground">{doc.status || "—"}</span>
           ),
         },
       ]}
       renderGridCard={(doc) => (
         <div className="space-y-2">
-          <span className="inline-flex rounded-xl bg-emerald-500/10 p-2.5 text-emerald-700">
+          <span className="icon-well">
             <FileText className="h-5 w-5" weight="duotone" />
           </span>
           <Link
             href={`/documents/${doc.id}`}
-            className="block font-medium text-zinc-900 hover:text-emerald-700"
+            className="block font-medium hover:text-primary"
             onClick={(e) => e.stopPropagation()}
           >
             {doc.titre}
           </Link>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             {doc.taille_formatee || doc.taille} · {doc.mime_type}
           </p>
           {doc.status && (
-            <span className="inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
+            <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
               {doc.status}
             </span>
           )}

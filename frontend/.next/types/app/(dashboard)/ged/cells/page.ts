@@ -1,4 +1,4 @@
-// File: C:\Users\Gilles_Dan\Desktop\dev\ArchiFlow\frontend\src\app\(dashboard)\ged\cells\page.tsx
+// File: /work/frontend/src/app/(dashboard)/ged/cells/page.tsx
 import * as entry from '../../../../../../src/app/(dashboard)/ged/cells/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

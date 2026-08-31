@@ -106,7 +106,7 @@ export default function DocumentsPartagesPage() {
                 header: "Document",
                 cell: (doc) => (
                   <div className="flex min-w-0 items-start gap-3">
-                    <span className="rounded-xl bg-emerald-500/10 p-2 text-emerald-700">
+                    <span className="icon-well h-9 w-9">
                       <FileText className="h-4 w-4" weight="duotone" />
                     </span>
                     <div className="min-w-0">
@@ -132,7 +132,7 @@ export default function DocumentsPartagesPage() {
             ]}
             renderGridCard={(doc) => (
               <div className="space-y-2">
-                <span className="inline-flex rounded-xl bg-emerald-500/10 p-2.5 text-emerald-700">
+                <span className="icon-well">
                   <FileText className="h-5 w-5" weight="duotone" />
                 </span>
                 <p className="font-medium text-zinc-900">{doc.titre}</p>

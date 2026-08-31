@@ -105,7 +105,7 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
           onClick={handleClose}
         >
           <motion.div
-            className="surface-bento w-full max-w-lg p-8"
+            className="surface-card w-full max-w-lg p-8"
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}

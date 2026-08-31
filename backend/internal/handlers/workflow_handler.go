@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/services"
@@ -11,10 +12,11 @@ import (
 
 type WorkflowHandler struct {
 	workflowService *services.WorkflowService
+	audit           *services.AuditService
 }
 
-func NewWorkflowHandler(workflowService *services.WorkflowService) *WorkflowHandler {
-	return &WorkflowHandler{workflowService: workflowService}
+func NewWorkflowHandler(workflowService *services.WorkflowService, audit *services.AuditService) *WorkflowHandler {
+	return &WorkflowHandler{workflowService: workflowService, audit: audit}
 }
 
 func instanceView(inst *models.WorkflowInstance) map[string]any {
@@ -92,6 +94,7 @@ func (h *WorkflowHandler) Start(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "workflow.start", "document", strconv.FormatUint(uint64(body.DocumentID), 10)))
 	return c.JSON(http.StatusCreated, map[string]any{"success": true, "data": instanceView(inst)})
 }
 
@@ -112,6 +115,7 @@ func (h *WorkflowHandler) StartValidation(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "workflow.validation_start", "document", strconv.FormatUint(uint64(body.DocumentID), 10)))
 	return c.JSON(http.StatusCreated, map[string]any{"success": true, "data": instanceView(inst)})
 }
 
@@ -132,6 +136,7 @@ func (h *WorkflowHandler) RestartValidation(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "workflow.validation_restart", "document", strconv.FormatUint(uint64(body.DocumentID), 10)))
 	return c.JSON(http.StatusCreated, map[string]any{"success": true, "data": instanceView(inst)})
 }
 
@@ -273,14 +278,17 @@ func (h *WorkflowHandler) decide(c echo.Context, approve bool) error {
 	}
 
 	var svcErr error
+	action := "workflow.approve"
 	if approve {
 		svcErr = h.workflowService.Approve(id, userID, role, body.Commentaire)
 	} else {
+		action = "workflow.reject"
 		svcErr = h.workflowService.Reject(id, userID, role, body.Commentaire)
 	}
 	if svcErr != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": svcErr.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, action, "workflow_instance", strconv.FormatUint(uint64(id), 10)))
 	inst, _ := h.workflowService.GetInstance(id)
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": instanceView(inst)})
 }
@@ -298,5 +306,6 @@ func (h *WorkflowHandler) Cancel(c echo.Context) error {
 	if err := h.workflowService.Cancel(id, userID, isAdminFromContext(c)); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]any{"success": false, "error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "workflow.cancel", "workflow_instance", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"success": true})
 }

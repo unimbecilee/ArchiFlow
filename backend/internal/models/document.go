@@ -36,6 +36,7 @@ type Document struct {
 	LockedByID      *uint      `gorm:"index" json:"locked_by_id,omitempty"`
 	LockedAt        *time.Time `json:"locked_at,omitempty"`
 	OCRText         string     `gorm:"type:text" json:"ocr_text,omitempty"`
+	ContentSHA256   string     `gorm:"size:64;index" json:"content_sha256,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

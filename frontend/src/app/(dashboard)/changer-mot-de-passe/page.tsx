@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { Key, ShieldCheck } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,13 +47,8 @@ export default function ChangerMotDePassePage() {
   };
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-[#f9fafb] px-4 py-10">
-      <motion.div
-        className="surface-bento w-full max-w-md p-8 sm:p-10"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-      >
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-10">
+      <div className="surface-card w-full max-w-md p-8">
         <span className="inline-flex rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
           <Key className="h-6 w-6" weight="duotone" />
         </span>
@@ -103,9 +97,9 @@ export default function ChangerMotDePassePage() {
           onClick={() => logout()}
           className="mt-6 w-full text-center text-sm text-zinc-500 hover:text-zinc-700"
         >
-          Se deconnecter
+          Se déconnecter
         </button>
-      </motion.div>
+      </div>
     </div>
   );
 }

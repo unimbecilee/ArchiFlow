@@ -1,4 +1,4 @@
-// File: C:\Users\Gilles_Dan\Desktop\dev\ArchiFlow\frontend\src\app\(public)\register\page.tsx
+// File: /work/frontend/src/app/(public)/register/page.tsx
 import * as entry from '../../../../../src/app/(public)/register/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

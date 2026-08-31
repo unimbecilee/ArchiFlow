@@ -38,9 +38,17 @@ export function useNavCommandPalette() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const typing =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((v) => !v);
+      } else if (e.key === "/" && !typing) {
+        e.preventDefault();
+        setOpen(true);
       }
     };
     window.addEventListener("keydown", onKey);

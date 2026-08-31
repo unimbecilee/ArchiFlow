@@ -72,16 +72,17 @@ Attendre que `postgres`, `minio`, `redis` et `backend` soient healthy, puis ouvr
 | MinIO Console | http://localhost:9001 | idem |
 | Redis | localhost:6379 | — |
 
-### Comptes seed (premier démarrage)
+### Compte seed (premier démarrage)
 
-| Rôle | Email | Mot de passe |
-|------|-------|--------------|
-| Admin | `admin@archiflow.local` | `Admin1234!` |
-| Manager | `manager@archiflow.local` | `Manager1234!` |
-| Validateur | `validator@archiflow.local` | `Validator1234!` |
-| Archiviste | `archivist@archiflow.local` | `Archivist1234!` |
+Un seul compte **superadmin** (`role=admin`) est créé au boot si aucun admin n’existe.
 
-Variables : `SEED_ADMIN_*`, `SEED_MANAGER_*`, `SEED_VALIDATOR_*`, `SEED_ARCHIVIST_*` dans `.env`.
+| Rôle | Email (défaut) | Mot de passe |
+|------|----------------|--------------|
+| Superadmin | `SEED_ADMIN_EMAIL` (déf. `admin@archiflow.local`) | `SEED_ADMIN_PASSWORD` (**obligatoire** dans `.env`) |
+
+Les autres comptes (manager, validateur, archiviste, utilisateur) se créent depuis **Admin → Utilisateurs**.
+
+Au premier login, le changement de mot de passe est forcé (`MustChangePassword`).
 
 ### Profils Docker optionnels
 

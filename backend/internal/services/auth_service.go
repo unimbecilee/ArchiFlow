@@ -20,6 +20,13 @@ type AuthService interface {
 	GetMe(userID uint) (*dto.UserResponse, error)
 	UpdateProfile(userID uint, req dto.UpdateProfileRequest) (*dto.UserResponse, error)
 	ChangePassword(userID uint, req dto.ChangePasswordRequest) error
+	VerifyPassword(userID uint, password string) error
+	EnableMFA(userID uint, secret, recoveryCodes string) error
+	StorePendingMFASecret(userID uint, secret string) error
+	DisableMFA(userID uint) error
+	UpdateRecoveryCodes(userID uint, encodedCodes string) error
+	GetUserByID(userID uint) (*models.User, error)
+	VerifyMFA(email, code string, meta SessionMeta) (*dto.LoginResponse, error)
 }
 
 type authService struct {
@@ -109,6 +116,15 @@ func (s *authService) Login(req dto.LoginRequest, meta SessionMeta) (*dto.LoginR
 		return nil, errors.New("invalid email or password")
 	}
 
+	if user.MFAEnabled {
+		return &dto.LoginResponse{
+			User:         toUserResponse(user),
+			Token:        dto.PublicTokenResponse{},
+			RefreshToken: "",
+			MFARequired:  true,
+		}, nil
+	}
+
 	s.userRepo.UpdateLastLogin(user.ID)
 
 	tokenPair, err := s.sessions.IssueTokens(user, meta)
@@ -120,6 +136,40 @@ func (s *authService) Login(req dto.LoginRequest, meta SessionMeta) (*dto.LoginR
 		User:         toUserResponse(user),
 		Token:        toPublicToken(tokenPair),
 		RefreshToken: tokenPair.RefreshToken,
+	}, nil
+}
+
+func (s *authService) VerifyMFA(email, code string, meta SessionMeta) (*dto.LoginResponse, error) {
+	user, err := s.userRepo.GetByEmail(email)
+	if err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	if !user.IsActive {
+		return nil, errors.New("account is deactivated")
+	}
+
+	if !user.MFAEnabled {
+		return nil, errors.New("MFA not enabled for this account")
+	}
+
+	mfaService := NewMFAService()
+	if !mfaService.ValidateCode(user.MFASecret, code) {
+		return nil, errors.New("invalid MFA code")
+	}
+
+	s.userRepo.UpdateLastLogin(user.ID)
+
+	tokenPair, err := s.sessions.IssueTokens(user, meta)
+	if err != nil {
+		return nil, errors.New("failed to generate tokens")
+	}
+
+	return &dto.LoginResponse{
+		User:         toUserResponse(user),
+		Token:        toPublicToken(tokenPair),
+		RefreshToken: tokenPair.RefreshToken,
+		MFARequired:  false,
 	}, nil
 }
 
@@ -244,4 +294,59 @@ func toPublicToken(pair *utils.TokenPair) dto.PublicTokenResponse {
 		AccessToken: pair.AccessToken,
 		ExpiresIn:   pair.ExpiresIn,
 	}
+}
+
+func (s *authService) VerifyPassword(userID uint, password string) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	if !utils.VerifyPassword(password, user.PasswordHash) {
+		return errors.New("invalid password")
+	}
+	return nil
+}
+
+func (s *authService) StorePendingMFASecret(userID uint, secret string) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	user.MFASecret = secret
+	return s.userRepo.Update(user)
+}
+
+func (s *authService) EnableMFA(userID uint, secret, recoveryCodes string) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	user.MFAEnabled = true
+	user.MFASecret = secret
+	user.MFARecoveryCodes = recoveryCodes
+	return s.userRepo.Update(user)
+}
+
+func (s *authService) DisableMFA(userID uint) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	user.MFAEnabled = false
+	user.MFASecret = ""
+	user.MFARecoveryCodes = ""
+	return s.userRepo.Update(user)
+}
+
+func (s *authService) UpdateRecoveryCodes(userID uint, encodedCodes string) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	user.MFARecoveryCodes = encodedCodes
+	return s.userRepo.Update(user)
+}
+
+func (s *authService) GetUserByID(userID uint) (*models.User, error) {
+	return s.userRepo.GetByID(userID)
 }

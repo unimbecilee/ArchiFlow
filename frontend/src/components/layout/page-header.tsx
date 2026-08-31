@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type PageHeaderProps = {
@@ -11,7 +8,6 @@ type PageHeaderProps = {
   badge?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
-  /** Titre deja affiche dans le shell — n'afficher que description + actions. */
   hideTitle?: boolean;
 };
 
@@ -26,46 +22,22 @@ export function PageHeader({
   hideTitle = false,
 }: PageHeaderProps) {
   return (
-    <motion.div
-      className={cn(
-        "grid gap-6 lg:grid-cols-[1.35fr_auto] lg:items-end",
-        className
-      )}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 20 }}
-    >
-      <motion.div className={cn("space-y-3", hideTitle ? "lg:pr-4" : "lg:pr-8")}>
+    <div className={cn("flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between", className)}>
+      <div className="min-w-0 space-y-1">
         {!hideTitle && eyebrow && (
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-700">
-            {eyebrow}
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{eyebrow}</p>
         )}
         {!hideTitle && (
-          <div className="flex flex-wrap items-center gap-3">
-            {icon && (
-              <span className="inline-flex rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
-                {icon}
-              </span>
-            )}
-            <h1 className="text-3xl font-semibold tracking-tighter text-zinc-900 md:text-4xl">
-              {title}
-            </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            {icon && <span className="text-muted-foreground">{icon}</span>}
+            <h2 className="text-xl font-semibold tracking-tight text-zinc-900">{title}</h2>
             {badge}
           </div>
         )}
         {hideTitle && badge && <div className="flex flex-wrap gap-2">{badge}</div>}
-        {description && (
-          <p className="max-w-[65ch] text-base leading-relaxed text-zinc-600">
-            {description}
-          </p>
-        )}
-      </motion.div>
-      {actions && (
-        <motion.div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          {actions}
-        </motion.div>
-      )}
-    </motion.div>
+        {description && <p className="max-w-[65ch] text-sm text-zinc-500">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
   );
 }

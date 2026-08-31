@@ -1,9 +1,8 @@
 "use client";
 
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   UploadSimple,
   ArrowLeft,
@@ -33,6 +32,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { uploadDocuments } from "@/services/documents.service";
 import { UploadRouteBanner } from "@/components/upload/upload-route-banner";
 import { toast } from "sonner";
+import { takePendingImportFiles } from "@/lib/pending-import";
 
 type QueuedFile = {
   id: string;
@@ -119,6 +119,17 @@ function ImporterForm() {
       return merged;
     });
   };
+
+  useEffect(() => {
+    const pending = takePendingImportFiles();
+    if (pending.length) addFiles(pending);
+    const onPending = () => {
+      const next = takePendingImportFiles();
+      if (next.length) addFiles(next);
+    };
+    window.addEventListener("archiflow:pending-import", onPending);
+    return () => window.removeEventListener("archiflow:pending-import", onPending);
+  }, []);
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
@@ -258,28 +269,26 @@ function ImporterForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <UploadRouteBanner files={queue.map((q) => q.file)} />
 
-          <motion.div
+          <div
             onDragOver={(e) => {
               e.preventDefault();
               setDragOver(true);
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => void handleDrop(e)}
-            className={`rounded-3xl border-2 border-dashed p-6 transition-colors ${
-              dragOver
-                ? "border-emerald-500 bg-emerald-50/70"
-                : "border-slate-200 bg-gradient-to-br from-white to-zinc-50"
+            className={`rounded-2xl border-2 border-dashed p-8 transition-colors duration-300 ${
+              dragOver ? "border-primary bg-accent" : "border-border bg-muted/30"
             }`}
           >
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
+              <div className="icon-well h-12 w-12">
                 <UploadSimple className="h-6 w-6" weight="duotone" />
               </div>
               <div>
-                <p className="text-sm font-medium text-zinc-900">
+                <p className="text-sm font-medium">
                   Glissez fichiers ou dossiers, ou parcourez
                 </p>
-                <p className="mt-1 text-xs text-zinc-600">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Video, audio, images, archives, Office — structure des dossiers preservee.
                 </p>
               </div>
@@ -321,11 +330,11 @@ function ImporterForm() {
                 </Button>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {loading && progress.total > 0 && (
-            <div className="space-y-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3">
-              <div className="flex justify-between gap-2 text-xs font-medium text-zinc-700">
+            <div className="space-y-2 rounded-2xl border border-border bg-muted/40 px-4 py-3">
+              <div className="flex justify-between gap-2 text-xs font-medium">
                 <span>
                   Envoi {progress.done}/{progress.total}
                 </span>
@@ -342,13 +351,8 @@ function ImporterForm() {
                   </Button>
                 </div>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white">
-                <motion.div
-                  className="h-full rounded-full bg-emerald-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPct}%` }}
-                  transition={{ type: "spring", stiffness: 120, damping: 22 }}
-                />
+              <div className="h-2 overflow-hidden rounded-full bg-background">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
               </div>
               {progress.name && (
                 <p className="truncate text-xs text-zinc-600">
@@ -361,22 +365,12 @@ function ImporterForm() {
             </div>
           )}
 
-          <AnimatePresence mode="popLayout">
-            {queue.length > 0 && (
-              <motion.ul
-                className="max-h-72 space-y-2 overflow-y-auto pr-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+          {queue.length > 0 && (
+              <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
                 {queue.map((item) => (
-                  <motion.li
+                  <li
                     key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center"
+                    className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <div className="shrink-0 rounded-xl bg-zinc-100 p-2">
@@ -402,15 +396,15 @@ function ImporterForm() {
                       size="sm"
                       className="shrink-0 text-zinc-500"
                       disabled={loading}
+                      aria-label={`Retirer ${item.file.name}`}
                       onClick={() => removeFile(item.id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                  </motion.li>
+                  </li>
                 ))}
-              </motion.ul>
-            )}
-          </AnimatePresence>
+              </ul>
+          )}
 
           {queue.length > 0 && (
             <p className="text-xs text-zinc-600">

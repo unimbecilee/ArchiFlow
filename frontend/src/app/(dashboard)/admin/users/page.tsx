@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
@@ -50,29 +51,22 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const confirm = useConfirm();
   const { user } = useAuthStore();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const { data: users = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: listUsers,
+    enabled: user?.role === "admin",
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setUsers(await listUsers());
-    } catch {
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = () => refetch();
 
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/");
-      return;
     }
-    load();
-  }, [user, router, load]);
+  }, [user, router]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -133,14 +127,14 @@ export default function AdminUsersPage() {
           try {
             await deleteUser(u.id);
             toast.success("Utilisateur supprime");
-            await load();
+            await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
           } catch {
             toast.error("Suppression impossible");
           }
         },
       },
     ],
-    [load, router, user?.id, confirm]
+    [load, router, user?.id, confirm, queryClient]
   );
 
   const bulkActions: CrudBulkAction<User>[] = useMemo(
@@ -190,15 +184,15 @@ export default function AdminUsersPage() {
           try {
             await Promise.all(targets.map((u) => deleteUser(u.id)));
             toast.success(`${targets.length} utilisateur(s) supprime(s)`);
-            await load();
+            await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
           } catch {
             toast.error("Suppression impossible pour au moins un compte");
-            await load();
+            await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
           }
         },
       },
     ],
-    [load, user?.id, confirm]
+    [load, user?.id, confirm, queryClient]
   );
 
   if (user?.role !== "admin") {

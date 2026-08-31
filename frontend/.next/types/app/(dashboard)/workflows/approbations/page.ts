@@ -1,4 +1,4 @@
-// File: C:\Users\Gilles_Dan\Desktop\dev\ArchiFlow\frontend\src\app\(dashboard)\workflows\approbations\page.tsx
+// File: /work/frontend/src/app/(dashboard)/workflows/approbations/page.tsx
 import * as entry from '../../../../../../src/app/(dashboard)/workflows/approbations/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -13,35 +13,31 @@ const STREAM = [
 
 function StreamRow() {
   return (
-  <>
-    {STREAM.map((item) => (
-      <motion.div
-        key={item.label}
-        className="flex min-w-[148px] flex-col gap-1 rounded-2xl border border-slate-200/70 bg-white px-4 py-3 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.12)]"
-      >
-        <span className="text-[11px] uppercase tracking-wide text-zinc-500">
-          {item.label}
-        </span>
-        <span className="font-mono text-lg font-semibold tracking-tight text-zinc-900">
-          {item.value}
-        </span>
-      </motion.div>
-    ))}
-  </>
+    <>
+      {STREAM.map((item) => (
+        <div
+          key={item.label}
+          className="flex min-w-[148px] flex-col gap-1 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-[var(--shadow-card)]"
+        >
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{item.label}</span>
+          <span className="font-mono text-lg font-semibold tracking-tight">{item.value}</span>
+        </div>
+      ))}
+    </>
   );
 }
 
 export const DashboardMetricStream = memo(function DashboardMetricStream() {
   return (
     <motion.div
-      className="relative overflow-hidden rounded-[2rem] border border-slate-200/60 bg-zinc-50 p-6"
+      className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-muted/40 p-6"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.2 }}
+      transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.12 }}
     >
       <div className="mb-4 flex items-center justify-end">
         <motion.span
-          className="inline-flex h-2 w-2 rounded-full bg-emerald-500"
+          className="inline-flex h-2 w-2 rounded-full bg-primary"
           animate={{ opacity: [1, 0.35, 1] }}
           transition={{ duration: 1.8, repeat: Infinity }}
           aria-label="Flux actif"

@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -12,11 +14,23 @@ import (
 var DB *gorm.DB
 
 func InitDatabase(databaseURL string) (*gorm.DB, error) {
+	dsn := strings.TrimSpace(databaseURL)
+	if dsn == "" {
+		return nil, fmt.Errorf("DATABASE_URL is required")
+	}
+
+	// Transaction pooling (PgBouncer) cannot reuse prepared statements.
+	simple := os.Getenv("PG_DISABLE_PREPARED_STATEMENTS") == "true" ||
+		strings.Contains(strings.ToLower(dsn), "pgbouncer")
+
 	config := &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	}
 
-	db, err := gorm.Open(postgres.Open(databaseURL), config)
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  dsn,
+		PreferSimpleProtocol: simple,
+	}), config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -26,7 +40,6 @@ func InitDatabase(databaseURL string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
 	}
 
-	// Connection pool settings
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 

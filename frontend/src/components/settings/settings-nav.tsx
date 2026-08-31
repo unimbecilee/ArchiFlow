@@ -13,7 +13,7 @@ export function SettingsNav() {
 
   return (
     <nav
-      className="rounded-2xl border border-slate-200/80 bg-white/80 p-2 shadow-[0_1px_0_rgba(15,23,42,0.04)]"
+      className="surface-card p-2"
       aria-label="Sections parametres"
     >
       <ul className="space-y-0.5">
@@ -27,12 +27,12 @@ export function SettingsNav() {
                 className={cn(
                   "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors",
                   active
-                    ? "bg-emerald-500/10 font-medium text-emerald-900"
-                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                    ? "bg-accent font-medium text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <Icon
-                  className={cn("h-4 w-4 shrink-0", active ? "text-emerald-700" : "text-zinc-400")}
+                  className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground")}
                   weight={active ? "fill" : "regular"}
                 />
                 {item.title}

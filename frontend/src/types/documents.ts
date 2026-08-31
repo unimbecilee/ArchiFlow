@@ -27,6 +27,8 @@ export interface Document {
   can_classify?: boolean;
   classification?: string;
   department?: string;
+  content_sha256?: string;
+  on_hold?: boolean;
 }
 
 export interface Folder {

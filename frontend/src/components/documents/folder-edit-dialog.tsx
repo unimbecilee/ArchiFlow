@@ -3,6 +3,13 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type FolderEditDialogProps = {
   open: boolean;
@@ -27,15 +34,14 @@ export function FolderEditDialog({
   onClose,
   onSave,
 }: FolderEditDialogProps) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm">
-      <div className="surface-bento w-full max-w-md p-6">
-        <h3 className="font-semibold text-zinc-900">{title}</h3>
-        <p className="mt-1 text-sm text-zinc-600">Nom et description du dossier.</p>
-        <div className="mt-4 space-y-3">
-          <div className="flex flex-col gap-2">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="editFolderName">Nom</Label>
             <Input
               id="editFolderName"
@@ -44,7 +50,7 @@ export function FolderEditDialog({
               placeholder="Nom du dossier"
             />
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="editFolderDesc">Description (optionnel)</Label>
             <Input
               id="editFolderDesc"
@@ -54,25 +60,25 @@ export function FolderEditDialog({
             />
           </div>
         </div>
-        <div className="mt-4 flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Annuler
           </Button>
-          <Button className="flex-1" onClick={onSave} disabled={saving || !name.trim()}>
+          <Button onClick={onSave} disabled={saving || !name.trim()}>
             {saving ? "Enregistrement…" : "Enregistrer"}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function mapFolderError(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("not empty")) {
-    return "Le dossier doit etre vide (aucun fichier ni sous-dossier).";
+    return "Le dossier doit être vide (aucun fichier ni sous-dossier).";
   }
-  if (lower.includes("forbidden")) return "Action non autorisee.";
+  if (lower.includes("forbidden")) return "Action non autorisée.";
   if (lower.includes("name is required")) return "Le nom est obligatoire.";
   return message;
 }

@@ -141,7 +141,8 @@ export function buildMesDocumentsActions(
 }
 
 export function buildTrashDocumentActions(
-  onRestore: (id: number) => Promise<void>
+  onRestore: (id: number) => Promise<void>,
+  onPurge?: (id: number) => Promise<void>
 ): {
   rowActions: CrudRowAction<Document>[];
   bulkActions: CrudBulkAction<Document>[];
@@ -154,6 +155,17 @@ export function buildTrashDocumentActions(
         icon: <ArrowCounterClockwise className="h-4 w-4" />,
         onClick: (doc) => void onRestore(doc.id),
       },
+      ...(onPurge
+        ? [
+            {
+              id: "purge",
+              label: "Purger définitivement",
+              icon: <Trash className="h-4 w-4" />,
+              destructive: true,
+              onClick: (doc: Document) => void onPurge(doc.id),
+            },
+          ]
+        : []),
     ],
     bulkActions: [
       {

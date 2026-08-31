@@ -67,6 +67,21 @@ func (r *DocumentRepository) SoftDelete(id uint, ownerID uint, admin bool) error
 	return q.Update("is_deleted", true).Error
 }
 
+func (r *DocumentRepository) HardDelete(id uint, ownerID uint, admin bool) error {
+	q := r.db.Where("id = ? AND is_deleted = ?", id, true)
+	if !admin {
+		q = q.Where("owner_id = ?", ownerID)
+	}
+	res := q.Delete(&models.Document{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 func (r *DocumentRepository) SoftDeleteByFolderIDs(folderIDs []uint, ownerID uint, admin bool) (int64, error) {
 	if len(folderIDs) == 0 {
 		return 0, nil
@@ -122,7 +137,10 @@ func (r *DocumentRepository) search(ownerID uint, admin bool, query string, limi
 	var rows []models.Document
 	q := r.db.Where("is_deleted = ?", false)
 	if !admin {
-		q = q.Where("owner_id = ?", ownerID)
+		q = q.Where(
+			`(owner_id = ? OR id IN (SELECT document_id FROM document_shares WHERE shared_with_id = ?))`,
+			ownerID, ownerID,
+		)
 	}
 	if fullText {
 		tsQuery := strings.TrimSpace(query)
@@ -250,4 +268,140 @@ func (r *DocumentRepository) SumSizeByOwner(ownerID uint) (int64, error) {
 		Select("COALESCE(SUM(size), 0)").
 		Scan(&total).Error
 	return total, err
+}
+
+// Cursor pagination helpers (keyset pagination on created_at DESC, id DESC)
+
+type Cursor struct {
+	CreatedAt string `json:"created_at"`
+	ID        uint   `json:"id"`
+}
+
+func (r *DocumentRepository) ListByOwnerCursor(ownerID uint, folderID *uint, admin bool, limit int, cursor *Cursor) ([]models.Document, *Cursor, error) {
+	var rows []models.Document
+	q := r.db.Where("is_deleted = ?", false)
+	if !admin {
+		q = q.Where("owner_id = ?", ownerID)
+	}
+	if folderID == nil {
+		q = q.Where("folder_id IS NULL")
+	} else {
+		q = q.Where("folder_id = ?", *folderID)
+	}
+	if cursor != nil && cursor.ID > 0 {
+		q = q.Where("(created_at, id) < (?, ?)", cursor.CreatedAt, cursor.ID)
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	err := q.Order("created_at DESC, id DESC").Limit(limit + 1).Find(&rows).Error
+	if err != nil {
+		return nil, nil, err
+	}
+	var nextCursor *Cursor
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[len(rows)-1]
+		nextCursor = &Cursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339Nano), ID: last.ID}
+	}
+	return rows, nextCursor, nil
+}
+
+func (r *DocumentRepository) ListTrashCursor(ownerID uint, admin bool, limit int, cursor *Cursor) ([]models.Document, *Cursor, error) {
+	var rows []models.Document
+	q := r.db.Where("is_deleted = ?", true)
+	if !admin {
+		q = q.Where("owner_id = ?", ownerID)
+	}
+	if cursor != nil && cursor.ID > 0 {
+		q = q.Where("(updated_at, id) < (?, ?)", cursor.CreatedAt, cursor.ID)
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	err := q.Order("updated_at DESC, id DESC").Limit(limit + 1).Find(&rows).Error
+	if err != nil {
+		return nil, nil, err
+	}
+	var nextCursor *Cursor
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[len(rows)-1]
+		nextCursor = &Cursor{CreatedAt: last.UpdatedAt.UTC().Format(time.RFC3339Nano), ID: last.ID}
+	}
+	return rows, nextCursor, nil
+}
+
+func (r *DocumentRepository) ListRecentCursor(ownerID uint, admin bool, limit int, cursor *Cursor) ([]models.Document, *Cursor, error) {
+	var rows []models.Document
+	q := r.db.Where("is_deleted = ?", false)
+	if !admin {
+		q = q.Where("owner_id = ?", ownerID)
+	}
+	if cursor != nil && cursor.ID > 0 {
+		q = q.Where("(updated_at, id) < (?, ?)", cursor.CreatedAt, cursor.ID)
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	err := q.Order("updated_at DESC, id DESC").Limit(limit + 1).Find(&rows).Error
+	if err != nil {
+		return nil, nil, err
+	}
+	var nextCursor *Cursor
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[len(rows)-1]
+		nextCursor = &Cursor{CreatedAt: last.UpdatedAt.UTC().Format(time.RFC3339Nano), ID: last.ID}
+	}
+	return rows, nextCursor, nil
+}
+
+func (r *DocumentRepository) SearchCursor(ownerID uint, admin bool, query string, limit int, cursor *Cursor, fullText bool) ([]models.Document, *Cursor, error) {
+	var rows []models.Document
+	q := r.db.Where("is_deleted = ?", false)
+	if !admin {
+		q = q.Where(
+			`(owner_id = ? OR id IN (SELECT document_id FROM document_shares WHERE shared_with_id = ?))`,
+			ownerID, ownerID,
+		)
+	}
+	if fullText {
+		tsQuery := strings.TrimSpace(query)
+		if tsQuery != "" {
+			q = q.Where(
+				`to_tsvector('french', coalesce(title,'') || ' ' || coalesce(description,'') || ' ' || coalesce(file_name,'') || ' ' || coalesce(ocr_text,''))
+				@@ plainto_tsquery('french', ?)`,
+				tsQuery,
+			)
+		}
+	} else {
+		pattern := "%" + query + "%"
+		q = q.Where(
+			`(title ILIKE ? OR description ILIKE ? OR file_name ILIKE ? OR category ILIKE ? OR ocr_text ILIKE ?
+			OR id IN (
+				SELECT dtl.document_id FROM document_tag_links dtl
+				JOIN document_tags dt ON dt.id = dtl.tag_id
+				WHERE dt.name ILIKE ?
+			))`,
+			pattern, pattern, pattern, pattern, pattern, pattern,
+		)
+	}
+	if cursor != nil && cursor.ID > 0 {
+		q = q.Where("(updated_at, id) < (?, ?)", cursor.CreatedAt, cursor.ID)
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	err := q.Order("updated_at DESC, id DESC").Limit(limit + 1).Find(&rows).Error
+	if err != nil {
+		return nil, nil, err
+	}
+	var nextCursor *Cursor
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[len(rows)-1]
+		nextCursor = &Cursor{CreatedAt: last.UpdatedAt.UTC().Format(time.RFC3339Nano), ID: last.ID}
+	}
+	return rows, nextCursor, nil
 }

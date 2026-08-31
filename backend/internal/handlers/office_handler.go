@@ -13,10 +13,11 @@ import (
 
 type OfficeHandler struct {
 	office *services.OfficeService
+	audit  *services.AuditService
 }
 
-func NewOfficeHandler(office *services.OfficeService) *OfficeHandler {
-	return &OfficeHandler{office: office}
+func NewOfficeHandler(office *services.OfficeService, audit *services.AuditService) *OfficeHandler {
+	return &OfficeHandler{office: office, audit: audit}
 }
 
 // EditorConfig GET /api/documents/:id/office/config
@@ -60,6 +61,7 @@ func (h *OfficeHandler) DownloadFile(c echo.Context) error {
 	if cd := utils.ContentDispositionAttachment(name); cd != "" {
 		c.Response().Header().Set("Content-Disposition", cd)
 	}
+	logAudit(h.audit, newAuditEvent(c, "office.download", "document", strconv.FormatUint(uint64(id), 10)))
 	return c.Stream(http.StatusOK, mime, rc)
 }
 
@@ -84,6 +86,7 @@ func (h *OfficeHandler) Callback(c echo.Context) error {
 	if err := h.office.ProcessCallback(c.Request().Context(), id, userID, token, body); err != nil {
 		return c.JSON(http.StatusOK, map[string]any{"error": 1, "message": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "office.callback", "document", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{"error": 0})
 }
 
@@ -123,6 +126,7 @@ func (h *OfficeHandler) WopiGetFile(c echo.Context) error {
 	if size > 0 {
 		c.Response().Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	}
+	logAudit(h.audit, newAuditEvent(c, "office.wopi_get", "document", strconv.FormatUint(uint64(id), 10)))
 	return c.Stream(http.StatusOK, mime, rc)
 }
 
@@ -139,5 +143,6 @@ func (h *OfficeHandler) WopiPutFile(c echo.Context) error {
 	if err := h.office.WopiPutFile(c.Request().Context(), id, token, c.Request().Body); err != nil {
 		return c.JSON(http.StatusForbidden, map[string]any{"error": err.Error()})
 	}
+	logAudit(h.audit, newAuditEvent(c, "office.wopi_put", "document", strconv.FormatUint(uint64(id), 10)))
 	return c.JSON(http.StatusOK, map[string]any{})
 }

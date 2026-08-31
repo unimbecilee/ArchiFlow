@@ -8,6 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-archiflow_secret}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres-init.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -17,9 +18,43 @@ services:
       retries: 5
     networks:
       - archiflow
+    command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.1-p0
+    container_name: archiflow-pgbouncer
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB:-archiflow}
+      DB_USER: ${POSTGRES_USER:-archiflow}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-archiflow_secret}
+      # Postgres 14+ stores SCRAM secrets; default AUTH_TYPE=md5 → 08P01 wrong password type
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "200"
+      DEFAULT_POOL_SIZE: "25"
+      MIN_POOL_SIZE: "5"
+      RESERVE_POOL_SIZE: "5"
+      RESERVE_POOL_TIMEOUT: "5"
+      IGNORE_STARTUP_PARAMETERS: "extra_float_digits,application_name,prefer_simple_protocol"
+    ports:
+      # Image écoute sur 5432 ; on expose 6432 sur l'hôte (convention PgBouncer)
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432", "-U", "${POSTGRES_USER:-archiflow}", "-d", "${POSTGRES_DB:-archiflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - archiflow
 
   minio:
-    image: minio/minio:latest
+    # Épinglé (évite :latest) — remonter volontairement via Renovate/manuel
+    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
     container_name: archiflow-minio
     command: server /data --console-address ":9001"
     environment:
@@ -41,7 +76,7 @@ services:
       - archiflow
 
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2024-09-16T17-43-14Z
     container_name: archiflow-minio-init
     depends_on:
       minio:
@@ -49,7 +84,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-    entrypoint: ["/bin/sh", "-c", "sh /minio-init.sh"]
+    entrypoint: ["/bin/sh", "-c", "sed 's/\\r$//' /minio-init.sh | sh"]
     volumes:
       - ./deploy/minio-init.sh:/minio-init.sh:ro,z
     networks:
@@ -58,7 +93,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: archiflow-redis
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    # Persistance activée (AOF) : nécessaire pour l'état temps réel et,
+    # à terme, la file de jobs ; +volume redis_data.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -70,13 +109,65 @@ services:
     networks:
       - archiflow
 
+  clamav:
+    image: clamav/clamav:1.4
+    container_name: archiflow-clamav
+    environment:
+      CLAMD_STARTUP_TIMEOUT: 180
+    volumes:
+      - clamav_data:/var/lib/clamav
+    ports:
+      - "3310:3310"
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - archiflow
+
+  ocrmypdf:
+    image: jbarlow83/ocrmypdf:v17.10.0
+    container_name: archiflow-ocrmypdf
+    entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - ocrmypdf_data:/data
+    restart: unless-stopped
+    networks:
+      - archiflow
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: archiflow-meili
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-archiflow_meili_master_key_change_me}
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - archiflow
+
   backend:
     build: ./backend
     container_name: archiflow-backend
     env_file:
       - .env
     environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-archiflow}:${POSTGRES_PASSWORD:-archiflow_secret}@pgbouncer:5432/${POSTGRES_DB:-archiflow}?sslmode=disable"
+      PG_DISABLE_PREPARED_STATEMENTS: "true"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      MEILISEARCH_HOST: "${MEILISEARCH_HOST:-http://meilisearch:7700}"
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:-archiflow_meili_master_key_change_me}"
       MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-localhost:9000}"
       MINIO_PUBLIC_USE_SSL: "${MINIO_PUBLIC_USE_SSL:-false}"
       SFTPGO_INTERNAL_URL: "${SFTPGO_INTERNAL_URL:-http://sftpgo:8080}"
@@ -88,10 +179,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      pgbouncer:
+        condition: service_started
       minio:
         condition: service_healthy
       redis:
         condition: service_healthy
+      meilisearch:
+        condition: service_started
     restart: unless-stopped
     networks:
       - archiflow
@@ -119,9 +214,43 @@ services:
     networks:
       - archiflow
 
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: archiflow-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-archiflow}:${POSTGRES_PASSWORD:-archiflow_secret}@pgbouncer:5432/${POSTGRES_DB:-archiflow}?sslmode=disable"
+      PG_DISABLE_PREPARED_STATEMENTS: "true"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/0}"
+      MEILISEARCH_HOST: "${MEILISEARCH_HOST:-http://meilisearch:7700}"
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:-archiflow_meili_master_key_change_me}"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f worker >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - archiflow
+
   cells_db:
     image: mysql:8
     container_name: archiflow-cells-db
+    profiles: ["cells"]
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: P@ssw0rd
@@ -170,11 +299,14 @@ services:
     cap_add:
       - MKNOD
 
+  # Pydio Cells : profil opt-in. Le dossier de build ./pydio_cells (dépôt vendored)
+  # doit être présent ; sinon fournir CELLS_* via l'image officielle avant d'activer.
   cells:
     build:
       context: ./pydio_cells
       dockerfile: cells.dockerfile
     container_name: archiflow-cells
+    profiles: ["cells"]
     restart: unless-stopped
     ports:
       - "4001:8080"
@@ -226,12 +358,12 @@ services:
       SFTPGO_SFTPD__BINDINGS__0__ADDRESS: "0.0.0.0"
       SFTPGO_COMMON__DEFENDER__ENABLED: "true"
       SFTPGO_COMMON__ACTIONS__EXECUTE_ON: "upload,pre-upload,login"
-      SFTPGO_COMMON__ACTIONS__HOOK: ${SFTPGO_HOOK_URL}
-      SFTPGO_COMMON__ACTIONS__HTTP_HEADERS: "X-SFTPGO-Secret:${SFTPGO_WEBHOOK_SECRET}"
-      SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_HOOK: ${SFTPGO_AUTH_HOOK_URL}
+      SFTPGO_COMMON__ACTIONS__HOOK: ${SFTPGO_HOOK_URL:-http://backend:5000/api/integrations/sftpgo/hooks}
+      SFTPGO_COMMON__ACTIONS__HTTP_HEADERS: "X-SFTPGO-Secret:${SFTPGO_WEBHOOK_SECRET:-change-me-sftpgo-webhook-secret-32chars}"
+      SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_HOOK: ${SFTPGO_AUTH_HOOK_URL:-http://backend:5000/api/integrations/sftpgo/auth}
       SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_SCOPE: 0
       SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER:-admin}
-      SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD}
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:-changeme-sftpgo-admin}
       SFTPGO_CONFIG_DIR: /etc/sftpgo
     volumes:
       - sftpgo_data:/var/lib/sftpgo
@@ -263,6 +395,10 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  redis_data:
+  clamav_data:
+  ocrmypdf_data:
+  meili_data:
   cells_db_data:
   cells_data:
   sftpgo_data:
