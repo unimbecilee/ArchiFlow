@@ -50,9 +50,8 @@ export default function RecherchePage() {
     <PageFrame>
       <PageHeader
         title="Recherche"
-        hideTitle
-        description="Titre, description, nom de fichier, catégorie et texte OCR indexé — documents possédés et partagés."
-        icon={<MagnifyingGlass className="h-6 w-6" weight="duotone" />}
+        description="Titre, nom de fichier et contenu indexé — y compris les documents partagés."
+        icon={<MagnifyingGlass className="h-5 w-5" weight="duotone" />}
       />
 
       <PagePanel title="Requête" subtitle="Minimum 2 caractères">

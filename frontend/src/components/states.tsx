@@ -79,18 +79,18 @@ export function EmptyState({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white/60 px-6 py-16 text-center",
+        "flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50/70 px-6 py-12 text-center",
         className
       )}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
-        <Icon className="h-7 w-7" weight="duotone" />
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+        <Icon className="h-6 w-6" weight="duotone" />
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-zinc-900">{title}</h3>
+      <h3 className="mt-3 text-sm font-semibold text-zinc-900">{title}</h3>
       <p className="mt-1 max-w-sm text-sm text-zinc-500">{description}</p>
-      {action}
+      {action ? <div className="mt-4">{action}</div> : null}
       {actionLabel && onAction && (
-        <Button variant="primary" size="sm" onClick={onAction} className="mt-5">
+        <Button variant="primary" size="sm" onClick={onAction} className="mt-4">
           {actionLabel}
           <ArrowRight className="h-3.5 w-3.5" />
         </Button>
@@ -103,8 +103,8 @@ export function EmptyDocs({ onImport }: { onImport: () => void }) {
   return (
     <EmptyState
       icon={FileArrowUp}
-      title="Votre coffre est vide"
-      description="Importez votre premier document ou créez un dossier pour commencer. Vos fichiers seront analysés automatiquement."
+      title="Aucun document pour le moment"
+      description="Importez un fichier ou créez un dossier pour commencer."
       actionLabel="Importer un document"
       onAction={onImport}
     />
@@ -116,7 +116,7 @@ export function EmptySearch({ query }: { query: string }) {
     <EmptyState
       icon={MagnifyingGlass}
       title={`Aucun résultat pour « ${query} »`}
-      description="Vérifiez l’orthographe, essayez un terme plus court, ou élargissez la recherche aux contenus OCR et aux documents partagés."
+      description="Essayez un autre nom, ou un terme plus court."
     />
   );
 }

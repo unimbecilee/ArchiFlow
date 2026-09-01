@@ -43,9 +43,8 @@ export default function ApprobationsPage() {
     <PageFrame>
       <PageHeader
         title="Approbations"
-        hideTitle
-        description="File d'attente : approuvez ou rejetez depuis la vue compacte, ou ouvrez la fiche avec apercu."
-        icon={<CheckCircle className="h-6 w-6" weight="duotone" />}
+        description="Circuits en attente de votre décision."
+        icon={<CheckCircle className="h-5 w-5" weight="duotone" />}
         actions={
           <div className="flex gap-2">
             <Button

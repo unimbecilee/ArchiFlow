@@ -3,6 +3,7 @@
 import { Archive } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
+import { AuthHeroBackground, DotGridLight } from "@/components/backgrounds";
 
 type AuthFeature = {
   icon: Icon;
@@ -31,8 +32,9 @@ export function AuthSplitLayout({
 }: AuthSplitLayoutProps) {
   return (
     <div className="grid min-h-[100dvh] bg-[#f6f7f9] lg:grid-cols-2">
-      <section className="relative hidden bg-zinc-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div>
+      <section className="relative hidden overflow-hidden bg-zinc-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <AuthHeroBackground />
+        <div className="relative z-10">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-zinc-950">
               <Archive className="h-5 w-5" weight="bold" />
@@ -42,7 +44,7 @@ export function AuthSplitLayout({
           <h1 className="mt-10 max-w-lg text-4xl font-semibold tracking-tight">{heroTitle}</h1>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">{heroCopy}</p>
         </div>
-        <div className="mt-12 grid gap-3">
+        <div className="relative z-10 mt-12 grid gap-3">
           {features.map((item, i) => (
             <motion.div
               key={item.title}
@@ -59,9 +61,10 @@ export function AuthSplitLayout({
         </div>
       </section>
 
-      <section className="flex items-center justify-center px-4 py-10 sm:px-8">
+      <section className="relative flex items-center justify-center overflow-hidden px-4 py-10 sm:px-8">
+        <DotGridLight />
         <motion.div
-          className="w-full max-w-md"
+          className="relative z-10 w-full max-w-md"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}

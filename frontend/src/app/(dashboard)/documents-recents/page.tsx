@@ -25,10 +25,9 @@ export default function DocumentsRecentsPage() {
   return (
     <PageFrame>
       <PageHeader
-        title="Documents recents"
-        hideTitle
-        description="Retrouvez les fichiers modifies recemment dans votre espace."
-        icon={<Clock className="h-6 w-6" weight="duotone" />}
+        title="Documents récents"
+        description="Fichiers ouverts ou modifiés récemment."
+        icon={<Clock className="h-5 w-5" weight="duotone" />}
         actions={
           <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
             <ArrowsClockwise className="h-4 w-4" />
@@ -41,8 +40,8 @@ export default function DocumentsRecentsPage() {
         title="Historique"
         subtitle={
           loading
-            ? "Chargement..."
-            : `${docs.length} document(s) · clic sur une ligne pour l'apercu`
+            ? "Chargement…"
+            : `${docs.length === 1 ? "1 document" : `${docs.length} documents`} · clic pour l’aperçu`
         }
       >
         {loading ? (
@@ -50,7 +49,7 @@ export default function DocumentsRecentsPage() {
         ) : (
           <DocumentList
             documents={docs}
-            emptyMessage="Aucun document recent"
+            emptyMessage="Aucun document récent"
             rowActions={[openAction]}
             storageKey="archiflow-recent-view"
             onQuickPreview={setPreviewDoc}

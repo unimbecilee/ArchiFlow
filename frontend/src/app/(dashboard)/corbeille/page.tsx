@@ -58,9 +58,8 @@ export default function CorbeillePage() {
     <PageFrame>
       <PageHeader
         title="Corbeille"
-        hideTitle
-        description="Documents supprimes recemment, recuperables avant purge definitive."
-        icon={<Trash className="h-6 w-6" weight="duotone" />}
+        description="Documents supprimés, récupérables avant purge définitive."
+        icon={<Trash className="h-5 w-5" weight="duotone" />}
         actions={
           <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
             <ArrowsClockwise className="h-4 w-4" />
@@ -70,8 +69,14 @@ export default function CorbeillePage() {
       />
       {error ? <ErrorBanner message={error} /> : null}
       <PagePanel
-        title="Elements supprimes"
-        subtitle={loading ? "Chargement..." : `${docs.length} element(s)`}
+        title="Éléments supprimés"
+        subtitle={
+          loading
+            ? "Chargement…"
+            : docs.length === 1
+              ? "1 élément"
+              : `${docs.length} éléments`
+        }
       >
         {loading ? (
           <ListSkeleton />

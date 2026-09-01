@@ -17,6 +17,7 @@ import {
   Trash,
   TreeStructure,
   UploadSimple,
+  UsersThree,
 } from "@phosphor-icons/react";
 import { COLLABORATION_MENU_LABEL } from "@/lib/branding";
 
@@ -38,7 +39,7 @@ export const MENU_ARCHIFLOW: MenuSection[] = [
   {
     heading: "GED",
     items: [
-      { title: "Vue d'ensemble", path: "/", icon: SquaresFour },
+      { title: "Tableau de bord", path: "/", icon: SquaresFour },
       { title: "Mes documents", path: "/mes-documents", icon: FolderOpen },
       { title: "Partages", path: "/documents-partages", icon: ShareNetwork },
       { title: "Récents", path: "/documents-recents", icon: Clock },
@@ -47,7 +48,7 @@ export const MENU_ARCHIFLOW: MenuSection[] = [
       { title: "Corbeille", path: "/corbeille", icon: Trash },
       { title: "Importer", path: "/importer", icon: UploadSimple, requiresWrite: true },
       { title: "Notifications", path: "/notifications", icon: Bell },
-      { title: COLLABORATION_MENU_LABEL, path: "/ged/cells", icon: ShareNetwork },
+      { title: COLLABORATION_MENU_LABEL, path: "/ged/cells", icon: UsersThree },
     ],
   },
   {

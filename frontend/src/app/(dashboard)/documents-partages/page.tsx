@@ -57,14 +57,13 @@ export default function DocumentsPartagesPage() {
   return (
     <PageFrame>
       <PageHeader
-        title="Documents partages"
-        hideTitle
-        description="Fichiers que d'autres utilisateurs ont partages avec vous."
-        icon={<ShareNetwork className="h-6 w-6" weight="duotone" />}
+        title="Documents partagés"
+        description="Fichiers que d’autres personnes ont partagés avec vous."
+        icon={<ShareNetwork className="h-5 w-5" weight="duotone" />}
         badge={
           unreadShares > 0 ? (
-            <span className="rounded-full bg-sky-500/15 px-2.5 py-0.5 text-xs font-medium text-sky-700">
-              {unreadShares} partage(s) non lu(s)
+            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-sky-100">
+              {unreadShares === 1 ? "1 non lu" : `${unreadShares} non lus`}
             </span>
           ) : undefined
         }
@@ -77,11 +76,11 @@ export default function DocumentsPartagesPage() {
       />
       {error && <ErrorBanner message={error} />}
       <PagePanel
-        title="Partages recus"
+        title="Reçus"
         subtitle={
           loading
-            ? "Chargement..."
-            : `${docs.length} document(s) · clic sur une ligne pour l'apercu`
+            ? "Chargement…"
+            : `${docs.length === 1 ? "1 document" : `${docs.length} documents`} · clic pour l’aperçu`
         }
       >
         {loading ? (
@@ -89,7 +88,7 @@ export default function DocumentsPartagesPage() {
         ) : docs.length === 0 ? (
           <EmptyState
             title="Aucun partage pour le moment"
-            description="Lorsqu'un collegue partagera un document, il apparaitra ici avec ses permissions."
+            description="Lorsqu’un collègue partagera un document, il apparaîtra ici."
             icon={<ShareNetwork className="h-6 w-6" weight="duotone" />}
           />
         ) : (

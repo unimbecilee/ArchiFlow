@@ -279,29 +279,45 @@ export default function DocumentDetailPage() {
     );
   }
 
+  const kindIcon = isOfficeDocument(doc.mime_type, doc.file_name) ? FileArchive : FileArchive;
   return (
     <PageFrame className="max-w-[min(1680px,100%)]">
       <Link
         href="/mes-documents"
-        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800"
+        className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-3.5 w-3.5" />
         Mes documents
       </Link>
 
-      <PageHeader
-        eyebrow="Fiche document"
-        title={doc.titre}
-        description={`${doc.taille_formatee || doc.taille} · ${doc.mime_type}${doc.status ? ` · ${doc.status}` : ""}`}
-        badge={
-          <div className="flex flex-wrap items-center gap-2">
-            {onHold && <Badge className="border-amber-300 bg-amber-50 text-amber-900">Conservation</Badge>}
-            <IntegrityHash hash={doc.content_sha256} />
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+              Fiche document
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-start gap-3">
+              <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 sm:flex">
+                <FileArchive className="h-5 w-5" weight="duotone" />
+              </span>
+              <h1 className="min-w-0 flex-1 break-words text-[20px] font-semibold leading-tight tracking-tight text-zinc-900 sm:text-[22px]">
+                {doc.titre}
+              </h1>
+            </div>
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {doc.taille_formatee || doc.taille} · {doc.mime_type}
+                {doc.status ? ` · ${doc.status}` : " · BROUILLON"}
+              </span>
+              {onHold && <Badge className="border-amber-300 bg-amber-50 text-amber-900">Conservation</Badge>}
+            </p>
+            <div className="mt-2">
+              <IntegrityHash hash={doc.content_sha256} />
+            </div>
           </div>
-        }
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <IconTooltipButton label="Telecharger" onClick={handleDownload}>
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5 lg:justify-end">
+            <IconTooltipButton label="Télécharger" onClick={handleDownload} className="h-9 w-9 rounded-xl">
               <DownloadSimple className="h-4 w-4" />
             </IconTooltipButton>
             <IconTooltipButton
@@ -315,6 +331,7 @@ export default function DocumentDetailPage() {
                   setFavorited(true);
                 }
               }}
+              className="h-9 w-9 rounded-xl"
             >
               <Star
                 className={`h-4 w-4 ${favorited ? "text-amber-500" : ""}`}
@@ -323,11 +340,12 @@ export default function DocumentDetailPage() {
             </IconTooltipButton>
             {doc.is_locked ? (
               <IconTooltipButton
-                label="Deverrouiller"
+                label="Déverrouiller"
                 onClick={async () => {
                   await unlockDocument(docId);
                   load();
                 }}
+                className="h-9 w-9 rounded-xl"
               >
                 <LockOpen className="h-4 w-4" />
               </IconTooltipButton>
@@ -338,16 +356,21 @@ export default function DocumentDetailPage() {
                   await lockDocument(docId);
                   load();
                 }}
+                className="h-9 w-9 rounded-xl"
               >
                 <Lock className="h-4 w-4" />
               </IconTooltipButton>
             )}
-            <IconTooltipButton label="Partager" onClick={() => setShowShare(!showShare)}>
+            <IconTooltipButton
+              label="Partager"
+              onClick={() => setShowShare(!showShare)}
+              className={`h-9 w-9 rounded-xl ${showShare ? "border-emerald-300 bg-emerald-50 text-emerald-700" : ""}`}
+            >
               <ShareNetwork className="h-4 w-4" />
             </IconTooltipButton>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       {validationCtx && tab === "workflow" && (
         <WorkflowStatusBanner
@@ -361,6 +384,7 @@ export default function DocumentDetailPage() {
       <Tabs
         value={tab}
         onValueChange={setTab}
+        className="bg-white border border-zinc-200 shadow-sm"
         tabs={[
           { id: "apercu", label: "Aperçu" },
           { id: "versions", label: "Versions" },
@@ -372,7 +396,8 @@ export default function DocumentDetailPage() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex min-w-0 flex-col gap-6">
-          {tab === "apercu" && showOfficeEditor && (
+          {/* Aperçu persistant — reste visible quel que soit l'onglet, comble l'espace vide */}
+          {showOfficeEditor && (
             <PagePanel
               title="Edition bureautique"
               subtitle="Collabora / OnlyOffice — sauvegarde = nouvelle version"
@@ -382,7 +407,7 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {tab === "apercu" && showTextEditor && (
+          {showTextEditor && (
             <PagePanel
               title="Edition"
               subtitle="Texte, markdown, JSON — sauvegarde = nouvelle version"
@@ -392,17 +417,22 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {tab === "apercu" && showPreviewPanel && (
-            <PagePanel
-              title="Apercu"
-              subtitle={
-                versionSelection.kind === "current"
-                  ? `Version courante v${currentVersionNumber}`
-                  : `Version archivee v${versionSelection.version.version_number}`
-              }
-              delay={0.1}
-              className="min-h-0 flex-1"
-            >
+          {showPreviewPanel && (
+            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-4 py-3 sm:px-5">
+                <div>
+                  <p className="text-[13px] font-semibold tracking-tight text-zinc-900">Aperçu</p>
+                  <p className="text-xs text-zinc-500">
+                    {versionSelection.kind === "current"
+                      ? `Version courante · v${currentVersionNumber}`
+                      : `Version archivée · v${versionSelection.version.version_number}`}
+                  </p>
+                </div>
+                <span className="hidden rounded-full bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 sm:inline-flex">
+                  {doc.mime_type}
+                </span>
+              </div>
+              <div className="p-2 sm:p-3">
               {versionSelection.kind === "current" ? (
                 <DocumentPreviewPane
                   doc={doc}
@@ -416,10 +446,11 @@ export default function DocumentDetailPage() {
                   selection={versionSelection}
                 />
               )}
-            </PagePanel>
+              </div>
+            </div>
           )}
 
-          {tab === "apercu" && !hasMainWorkspace && (
+          {!hasMainWorkspace && (
             <PagePanel
               title="Fichier"
               subtitle={`${doc.file_name || doc.titre} — pas d'apercu inline pour ce format`}
@@ -445,7 +476,7 @@ export default function DocumentDetailPage() {
           )}
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-0.5">
+        <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-[68px] lg:max-h-[calc(100dvh-4.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           {(tab === "partage" || showShare) && (
             <PagePanel compact title="Partage" subtitle="Compte ArchiFlow requis">
               <div className="space-y-3">
@@ -565,11 +596,11 @@ export default function DocumentDetailPage() {
           </>
           )}
 
-          {tab === "apercu" && doc.can_classify && (
+          {doc.can_classify && (
             <PagePanel
               compact
               title="Classement MAC"
-              subtitle="Classification et departement"
+              subtitle="Classification et département"
               delay={0.15}
             >
               <div className="space-y-3">
@@ -605,7 +636,7 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {tab === "apercu" && (
+          {(
             <PagePanel compact title="Conservation" subtitle="Legal hold — bloque suppression et purge">
               {onHold ? (
                 <div className="space-y-2">

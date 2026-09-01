@@ -19,16 +19,16 @@ export function EmptyState({ title, description, action, icon, className }: Empt
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white/60 px-6 py-16 text-center",
+        "flex flex-col items-center justify-center rounded-2xl border border-zinc-200 bg-white px-6 py-12 text-center shadow-sm",
         className
       )}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
         {icon ?? <FolderOpen className="h-7 w-7" weight="duotone" />}
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-zinc-900">{title}</h3>
+      <h3 className="mt-3 text-sm font-semibold text-zinc-900">{title}</h3>
       <p className="mt-1 max-w-sm text-sm text-zinc-500">{description}</p>
-      {action ? <div className="mt-5">{action}</div> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </motion.div>
   );
 }

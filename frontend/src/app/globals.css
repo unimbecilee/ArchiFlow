@@ -27,6 +27,30 @@
     --sidebar: 240 6% 4%;
     --sidebar-fg: 240 5% 65%;
   }
+
+  .dark {
+    --background: 240 6% 6%;
+    --foreground: 0 0% 96%;
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 14%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 4% 64%;
+    --accent: 160 36% 16%;
+    --accent-foreground: 152 76% 82%;
+    --destructive: 0 62% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 16%;
+    --input: 240 6% 16%;
+    --ring: 160 84% 39%;
+    --sidebar: 240 6% 4%;
+    --sidebar-fg: 240 5% 65%;
+  }
 }
 
 @layer base {
@@ -40,10 +64,16 @@
   }
 
   body {
-    background: #f6f7f9;
-    color: #18181b;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
     @apply antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Dark : fond zinc-950 profond, conserve l’émeraude en accent */
+  .dark body {
+    background: #09090b;
+    color: #fafafa;
   }
 }
 
@@ -57,11 +87,11 @@
   }
 
   .surface-card {
-    @apply rounded-xl border border-zinc-200 bg-white;
+    @apply rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900;
   }
 
   .icon-well {
-    @apply flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100;
+    @apply flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900;
   }
 }
 

@@ -18,9 +18,9 @@ for (const block of MENU_ARCHIFLOW) {
 }
 
 for (const item of SETTINGS_NAV) {
-  menuByPath.set(item.path, { title: item.title, section: "Parametres" });
+  menuByPath.set(item.path, { title: item.title, section: "Paramètres" });
 }
-menuByPath.set("/parametres", { title: "Parametres", section: "Parametres" });
+menuByPath.set("/parametres", { title: "Paramètres", section: "Paramètres" });
 
 function metaFromMenu(path: string): PageMeta | null {
   const hit = menuByPath.get(path);
@@ -42,7 +42,7 @@ function dynamicMeta(pathname: string): PageMeta | null {
       section: "Documents",
       crumbs: [
         { label: "Documents" },
-        { label: "Mes Documents", href: "/mes-documents" },
+        { label: "Mes documents", href: "/mes-documents" },
         { label: "Fiche document" },
       ],
     };
@@ -71,12 +71,12 @@ function dynamicMeta(pathname: string): PageMeta | null {
   }
   if (/^\/admin\/workflows\/[^/]+$/.test(pathname)) {
     return {
-      title: "Editer workflow",
+      title: "Éditer le workflow",
       section: "Administration",
       crumbs: [
         { label: "Administration" },
         { label: "Workflows", href: "/admin/workflows" },
-        { label: "Edition" },
+        { label: "Édition" },
       ],
     };
   }

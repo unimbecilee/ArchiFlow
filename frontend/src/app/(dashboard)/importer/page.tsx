@@ -247,11 +247,9 @@ function ImporterForm() {
   return (
     <PageFrame className="max-w-4xl">
       <PageHeader
-        eyebrow="Documents"
         title="Importer"
-        hideTitle
-        description="Depot de fichiers ou dossiers entiers — tous formats (video, audio, archives…)."
-        icon={<UploadSimple className="h-6 w-6" weight="duotone" />}
+        description="Déposez des fichiers ou des dossiers — tous formats acceptés."
+        icon={<UploadSimple className="h-5 w-5" weight="duotone" />}
         actions={
           <Button variant="outline" size="sm" asChild className="gap-1.5">
             <Link href={backHref}>
@@ -276,8 +274,10 @@ function ImporterForm() {
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => void handleDrop(e)}
-            className={`rounded-2xl border-2 border-dashed p-8 transition-colors duration-300 ${
-              dragOver ? "border-primary bg-accent" : "border-border bg-muted/30"
+            className={`rounded-2xl border-2 border-dashed p-8 shadow-sm transition-all duration-200 ${
+              dragOver
+                ? "border-emerald-400 bg-emerald-50 shadow-md"
+                : "border-zinc-200 bg-zinc-50/60 hover:border-zinc-300 hover:bg-white"
             }`}
           >
             <div className="flex flex-col items-center gap-3 text-center">

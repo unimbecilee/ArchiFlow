@@ -26,9 +26,8 @@ export default function FavorisPage() {
     <PageFrame>
       <PageHeader
         title="Favoris"
-        hideTitle
-        description="Acces direct aux dossiers que vous suivez au quotidien."
-        icon={<Star className="h-6 w-6" weight="duotone" />}
+        description="Documents que vous avez marqués pour y revenir vite."
+        icon={<Star className="h-5 w-5" weight="duotone" />}
         actions={
           <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
             <ArrowsClockwise className="h-4 w-4" />
@@ -38,9 +37,11 @@ export default function FavorisPage() {
       />
       {error ? <ErrorBanner message={error} /> : null}
       <PagePanel
-        title="Selection"
+        title="Sélection"
         subtitle={
-          loading ? "Chargement..." : `${docs.length} favori(s) · clic pour apercu rapide`
+          loading
+            ? "Chargement…"
+            : `${docs.length === 1 ? "1 favori" : `${docs.length} favoris`} · clic pour l’aperçu`
         }
       >
         {loading ? (
@@ -49,7 +50,7 @@ export default function FavorisPage() {
           <DocumentList
             documents={docs}
             emptyMessage="Aucun favori"
-            emptyDescription="Marquez un document depuis sa fiche detail pour le retrouver ici."
+            emptyDescription="Marquez un document depuis sa fiche pour le retrouver ici."
             rowActions={rowActions}
             bulkActions={bulkActions}
             storageKey="archiflow-favorites-view"

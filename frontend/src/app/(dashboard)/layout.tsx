@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AppBackgroundLight } from "@/components/backgrounds";
 import { ArchiFlowShell } from "@/components/layout/archiflow-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/store/auth-store";
@@ -49,8 +50,11 @@ export default function DashboardLayout({
 
   if (isInitializing) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
-        <LoadingSkeleton />
+      <div className="relative flex min-h-[100dvh] items-center justify-center">
+        <AppBackgroundLight />
+        <div className="relative z-10">
+          <LoadingSkeleton />
+        </div>
       </div>
     );
   }

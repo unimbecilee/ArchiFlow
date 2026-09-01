@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +14,6 @@ import {
   FileXls,
   Folder,
   FolderPlus,
-  HardDrives,
   MagnifyingGlass,
   ShareNetwork,
   Star,
@@ -38,16 +38,17 @@ import {
   EmptySearch,
   ErrorState,
   SkeletonDocuments,
-  SkeletonStats,
 } from "@/components/states";
 import { getDashboardStats } from "@/services/dashboard.service";
 import {
   createFolder,
   deleteDocument,
+  getFolderBreadcrumb,
   getFolders,
   getMyDocuments,
   restoreDocument,
 } from "@/services/documents.service";
+import { pluralFr } from "@/lib/fr";
 import { addFavorite, getFavorites, removeFavorite } from "@/services/favorites.service";
 import { getLastCorrelationId } from "@/lib/api";
 import { documentBadge } from "@/lib/document-badge";
@@ -127,6 +128,11 @@ export function DocumentsVaultView() {
     queryKey: ["favorites"],
     queryFn: getFavorites,
   });
+  const crumbQuery = useQuery({
+    queryKey: ["vault-breadcrumb", folderId],
+    queryFn: () => getFolderBreadcrumb(folderId!),
+    enabled: folderId != null,
+  });
 
   React.useEffect(() => {
     if (favoritesQuery.data) {
@@ -178,8 +184,8 @@ export function DocumentsVaultView() {
     );
   }, [rows, query]);
 
-  const totalSize = documents.reduce((sum, doc) => sum + (doc.taille ?? 0), 0);
-  const stats = statsQuery.data;
+  const pending = statsQuery.data?.workflows_pending ?? 0;
+  const folderCrumbs = crumbQuery.data ?? [];
   const isEmpty = !loading && !error && rows.length === 0 && !query;
 
   function navigateFolder(id: number | null) {
@@ -298,31 +304,81 @@ export function DocumentsVaultView() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900">Mes documents</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">
-            Votre coffre — versions, recherche OCR et workflows inclus.
-          </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="rounded-2xl border border-zinc-200 bg-white/88 px-5 py-5 shadow-sm backdrop-blur-[6px] dark:border-zinc-800 dark:bg-zinc-900/88 sm:px-6 sm:py-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-500">
+              Espace documentaire
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/20">
+                <Folder className="h-5 w-5" weight="fill" />
+              </span>
+              <h1 className="text-[24px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-[26px]">Mes documents</h1>
+            </div>
+          {folderId != null && folderCrumbs.length > 0 ? (
+            <nav
+              className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-zinc-500"
+              aria-label="Dossier"
+            >
+              <button
+                type="button"
+                onClick={() => navigateFolder(null)}
+                className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-white hover:text-zinc-900 hover:shadow-sm"
+              >
+                Racine
+              </button>
+              {folderCrumbs.map((crumb) => (
+                <span key={crumb.id} className="flex items-center gap-1.5">
+                  <span className="text-zinc-300">/</span>
+                  <button
+                    type="button"
+                    onClick={() => navigateFolder(crumb.id)}
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 transition-colors",
+                      crumb.id === folderId
+                        ? "bg-white font-medium text-zinc-900 shadow-sm ring-1 ring-zinc-200"
+                        : "hover:bg-white hover:text-zinc-900 hover:shadow-sm"
+                    )}
+                  >
+                    {crumb.name}
+                  </button>
+                </span>
+              ))}
+            </nav>
+          ) : (
+            <p className="mt-1.5 max-w-[60ch] text-sm font-medium leading-relaxed text-zinc-600">
+              Dossiers et fichiers de votre espace. Le fond habille les goulottes, vos cartes restent nettes.
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setCreateOpen(true)}>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setCreateOpen(true)} className="h-9">
             <FolderPlus /> Nouveau dossier
           </Button>
-          <Button variant="primary" size="sm" onClick={openUploader}>
+          <Button variant="primary" size="sm" onClick={openUploader} className="h-9 shadow-sm shadow-emerald-600/20">
             <UploadSimple /> Importer
           </Button>
         </div>
       </div>
+      </div>
 
-      <div className="mt-5 space-y-4 pb-24">
-        {loading && (
-          <>
-            <SkeletonStats />
-            <SkeletonDocuments rows={8} />
-          </>
+      <div className="mt-4 space-y-3 pb-16">
+        {pending > 0 && (
+          <Link
+            href="/workflows/approbations"
+            className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900 hover:bg-amber-100/80"
+          >
+            <Warning className="h-4 w-4 shrink-0" weight="duotone" />
+            <span className="font-medium">
+              {pluralFr(pending, "approbation en attente", "approbations en attente")}
+            </span>
+            <span className="ml-auto text-xs font-medium text-amber-800">Traiter →</span>
+          </Link>
         )}
+
+        {loading && <SkeletonDocuments rows={8} />}
 
         {error && (
           <ErrorState
@@ -338,66 +394,14 @@ export function DocumentsVaultView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.25 }}
-            className="space-y-4"
+            className="space-y-3"
           >
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {[
-                {
-                  icon: Folder,
-                  label: "Documents",
-                  value: String(stats?.documents ?? documents.length),
-                  sub: "dans votre coffre",
-                  tone: "bg-amber-50 text-amber-600",
-                },
-                {
-                  icon: Warning,
-                  label: "En attente",
-                  value: String(stats?.workflows_pending ?? 0),
-                  sub: "approbations à traiter",
-                  tone: "bg-amber-50 text-amber-600",
-                },
-                {
-                  icon: ShareNetwork,
-                  label: "Partagés",
-                  value: String(stats?.documents_shared ?? 0),
-                  sub: "avec votre équipe",
-                  tone: "bg-sky-50 text-sky-600",
-                },
-                {
-                  icon: HardDrives,
-                  label: "Stockage",
-                  value: formatBytes(totalSize),
-                  sub: "sur votre coffre",
-                  tone: "bg-emerald-50 text-emerald-600",
-                },
-              ].map((card, i) => (
-                <motion.div
-                  key={card.label}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: Math.min(i * 0.06, 0.3), ease: "easeOut" }}
-                  className="rounded-xl border border-zinc-200 bg-white p-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", card.tone)}>
-                      <card.icon className="h-4 w-4" weight="duotone" />
-                    </span>
-                    <p className="text-xs font-medium text-zinc-500">{card.label}</p>
-                  </div>
-                  <p className="tnum mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
-                    {card.value}
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-400">{card.sub}</p>
-                </motion.div>
-              ))}
-            </div>
-
             <div className="relative">
               <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher par nom, propriétaire, statut… (OCR inclus)"
+                placeholder="Filtrer par nom…"
                 className="h-10 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm outline-none transition-shadow placeholder:text-zinc-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
@@ -422,10 +426,9 @@ export function DocumentsVaultView() {
                   </button>
                   <p className="text-xs font-medium text-zinc-500">
                     {selected.size > 0
-                      ? `${selected.size} sélectionné(s)`
-                      : `${filtered.length} élément(s)`}
+                      ? pluralFr(selected.size, "sélectionné")
+                      : pluralFr(filtered.length, "élément")}
                   </p>
-                  <div className="ml-auto text-xs text-zinc-400">Trié par date de modification</div>
                 </div>
 
                 <motion.ul
@@ -483,10 +486,10 @@ export function DocumentsVaultView() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-2xl shadow-zinc-900/10"
+            className="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-900/10"
           >
             <span className="px-2.5 text-sm font-medium text-zinc-700">
-              {selected.size} sélectionné(s)
+              {pluralFr(selected.size, "sélectionné")}
             </span>
             <Button variant="ghost" size="sm" onClick={() => router.push("/documents-partages")}>
               <ShareNetwork /> Partager

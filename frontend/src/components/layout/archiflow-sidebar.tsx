@@ -13,7 +13,7 @@ export function ArchiFlowSidebar() {
         </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold tracking-tight text-white">ArchiFlow</p>
-          <p className="text-[11px] text-zinc-500">GED &amp; approbations</p>
+          <p className="text-[11px] text-zinc-500">Espace documentaire</p>
         </div>
       </div>
 

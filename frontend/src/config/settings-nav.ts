@@ -18,14 +18,14 @@ export const SETTINGS_NAV: SettingsNavItem[] = [
     icon: UserCircle,
   },
   {
-    title: "Securite",
+    title: "Sécurité",
     description: "Mot de passe",
     path: "/parametres/securite",
     icon: Key,
   },
   {
     title: "Politiques ABAC",
-    description: "Acces",
+    description: "Accès",
     path: "/parametres/politiques-abac",
     icon: LockKey,
     adminOnly: true,

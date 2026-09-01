@@ -1,0 +1,13 @@
+---
+description: "Règles UI/UX, design system et états d'écran pour ArchiFlow"
+globs: ["frontend/src/**/*.tsx", "frontend/src/**/*.css", "frontend/src/app/**"]
+alwaysApply: true
+---
+
+Respecter `@docs/ArchiFlow_Cursor_Brief_UI.md` et le starter de référence (`app-shell`, `states`, `documents-view`).
+
+- Ton professionnel, libellés FR, émeraude + zinc-950, fond `#f6f7f9`.
+- Animation 150–400 ms easeOut uniquement pour l'état / le feedback. Pas d'aurora, particules, parallaxe dans l'app.
+- Chaque écran data : skeleton calqué / succès stagger / vide contextuel / erreur + correlation ID + réessai / toast Annuler.
+- Chiffres tabulaires (`.tnum`), focus `ring-emerald-500/60`, `prefers-reduced-motion`.
+- Phosphor acceptable. Pas de MUI/Ant Design.

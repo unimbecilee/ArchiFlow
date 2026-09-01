@@ -172,42 +172,52 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
-        <DialogHeader className="border-b border-slate-200/80 px-4 py-3 text-left">
-          <DialogTitle className="text-base">Rechercher</DialogTitle>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="border-b border-zinc-100 bg-white px-5 pb-3 pt-5 text-left">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+              <MagnifyingGlass className="h-4 w-4" weight="duotone" />
+            </span>
+            <DialogTitle className="text-[15px] font-semibold">Rechercher</DialogTitle>
+          </div>
           <DialogDescription className="sr-only">
             Navigation et documents ArchiFlow
           </DialogDescription>
+          <p className="mt-1 text-xs text-zinc-500">Pages, documents et actions — 2+ caractères pour les documents</p>
         </DialogHeader>
-        <div className="border-b border-slate-200/80 px-3 py-2">
+        <div className="border-b border-zinc-100 bg-zinc-50/50 px-3 py-3">
           <div className="relative">
-            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" weight="bold" />
             <Input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Pages, documents (2+ caracteres)..."
-              className="border-0 pl-9 shadow-none focus-visible:ring-0"
+              placeholder="Pages, documents (2+ caractères)… tapez / ou Ctrl K"
+              className="h-10 rounded-xl border-zinc-200 bg-white pl-10 shadow-sm placeholder:text-zinc-400 focus-visible:border-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
             />
           </div>
         </div>
-        <ul className="max-h-[min(52vh,360px)] overflow-y-auto py-2" role="listbox">
+        <ul className="max-h-[min(56vh,380px)] overflow-y-auto bg-white px-2 py-2" role="listbox">
           {rows.length === 0 ? (
-            <li className="px-4 py-6 text-center text-sm text-zinc-500">Aucun resultat</li>
+            <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/70 px-4 py-8 text-center">
+              <p className="text-sm font-medium text-zinc-700">Aucun résultat</p>
+              <p className="mt-1 text-xs text-zinc-500">Essayez un autre mot-clé</p>
+            </li>
           ) : (
             rows.map((row, index) => {
               if (row.kind === "doc-loading") {
                 return (
-                  <li key="doc-loading" className="px-4 py-3 text-sm text-zinc-500">
-                    Recherche de documents...
+                  <li key="doc-loading" className="flex items-center gap-3 rounded-xl px-3 py-3">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                    <span className="text-sm text-zinc-500">Recherche de documents…</span>
                   </li>
                 );
               }
               if (row.kind === "doc-empty") {
                 return (
-                  <li key="doc-empty" className="px-4 py-3 text-sm text-zinc-500">
-                    Aucun document pour cette requete
+                  <li key="doc-empty" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                    Aucun document pour cette requête
                   </li>
                 );
               }
@@ -218,22 +228,34 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                 return (
                   <li key={`nav-${row.entry.path}`} role="option" aria-selected={isActive}>
                     {index === 0 && (
-                      <p className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                      <p className="px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                         Pages
                       </p>
                     )}
                     <button
                       type="button"
                       className={cn(
-                        "flex w-full flex-col gap-0.5 px-4 py-2.5 text-left transition-colors",
-                        isActive ? "bg-emerald-50 text-zinc-900" : "hover:bg-zinc-50"
+                        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
+                        isActive
+                          ? "bg-emerald-50 text-zinc-900 shadow-sm ring-1 ring-emerald-200"
+                          : "hover:bg-zinc-50"
                       )}
                       onMouseEnter={() => setActiveIndex(selectableCursor)}
                       onClick={() => activate(row)}
                     >
-                      <span className="text-sm font-medium">{row.entry.title}</span>
-                      <span className="text-xs text-zinc-500">
-                        {row.entry.section} · {row.entry.path}
+                      <span
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
+                          isActive ? "bg-white text-emerald-700 ring-emerald-200" : "bg-zinc-50 text-zinc-500 ring-zinc-200"
+                        )}
+                      >
+                        <MagnifyingGlass className="h-3.5 w-3.5" weight="duotone" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium leading-tight">{row.entry.title}</span>
+                        <span className="block truncate text-xs leading-tight text-zinc-500">
+                          {row.entry.section} · {row.entry.path}
+                        </span>
                       </span>
                     </button>
                   </li>
@@ -248,25 +270,27 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                 return (
                   <li key={`doc-${row.doc.id}`} role="option" aria-selected={isActive}>
                     {showDocHeading && (
-                      <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                      <p className="px-2 pb-1.5 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                         Documents
                       </p>
                     )}
                     <button
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors",
-                        isActive ? "bg-emerald-50 text-zinc-900" : "hover:bg-zinc-50"
+                        "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
+                        isActive
+                          ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
+                          : "hover:bg-zinc-50"
                       )}
                       onMouseEnter={() => setActiveIndex(selectableCursor)}
                       onClick={() => activate(row)}
                     >
-                      <span className="mt-0.5 rounded-lg bg-zinc-100 p-1.5 text-zinc-600">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-zinc-600 shadow-sm ring-1 ring-zinc-200">
                         <FileText className="h-4 w-4" weight="duotone" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{row.doc.titre}</span>
-                        <span className="block truncate text-xs text-zinc-500">
+                        <span className="block truncate text-sm font-medium leading-tight">{row.doc.titre}</span>
+                        <span className="block truncate text-xs leading-tight text-zinc-500">
                           {row.doc.file_name || row.doc.mime_type || "Document"} · /documents/{row.doc.id}
                         </span>
                       </span>
@@ -279,9 +303,18 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
             })
           )}
         </ul>
-        <p className="border-t border-slate-200/80 px-4 py-2 text-[11px] text-zinc-500">
-          Fleches · Entree · {SEARCH_MIN}+ caracteres pour les documents
-        </p>
+        <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/60 px-3 py-2.5">
+          <p className="text-[11px] leading-none text-zinc-500">
+            <span className="hidden sm:inline">Flèches</span>
+            <span className="sm:hidden">↑↓</span> · Entrée · Esc
+          </p>
+          <p className="hidden text-[11px] leading-none text-zinc-400 sm:block">
+            {SEARCH_MIN}+ caractères pour les documents
+          </p>
+          <kbd className="rounded-md border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-medium leading-none text-zinc-500 shadow-sm">
+            ⌘K
+          </kbd>
+        </div>
       </DialogContent>
     </Dialog>
   );

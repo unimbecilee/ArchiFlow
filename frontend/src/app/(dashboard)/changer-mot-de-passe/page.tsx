@@ -6,6 +6,7 @@ import { Key, ShieldCheck } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AppBackgroundLight, DotGridLight } from "@/components/backgrounds";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
@@ -47,8 +48,12 @@ export default function ChangerMotDePassePage() {
   };
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-10">
-      <div className="surface-card w-full max-w-md p-8">
+    <div className="relative flex min-h-[100dvh] items-center justify-center px-4 py-10">
+      <AppBackgroundLight />
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <DotGridLight />
+      </div>
+      <div className="relative z-10 surface-card w-full max-w-md p-8">
         <span className="inline-flex rounded-2xl bg-emerald-500/10 p-3 text-emerald-700">
           <Key className="h-6 w-6" weight="duotone" />
         </span>
