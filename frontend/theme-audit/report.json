@@ -1,0 +1,1029 @@
+[
+  {
+    "route": "/",
+    "url": "http://localhost:3000/",
+    "theme": "light",
+    "htmlScheme": "light",
+    "hasDarkClass": false,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\root-light.png"
+  },
+  {
+    "route": "/",
+    "url": "http://localhost:3000/",
+    "theme": "dark",
+    "htmlScheme": "dark",
+    "hasDarkClass": true,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\root-dark.png"
+  },
+  {
+    "route": "/mes-documents",
+    "url": "http://localhost:3000/mes-documents",
+    "theme": "light",
+    "htmlScheme": "light",
+    "hasDarkClass": false,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\mes-documents-light.png"
+  },
+  {
+    "route": "/mes-documents",
+    "url": "http://localhost:3000/mes-documents",
+    "theme": "dark",
+    "htmlScheme": "dark",
+    "hasDarkClass": true,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\mes-documents-dark.png"
+  },
+  {
+    "route": "/workflows",
+    "url": "http://localhost:3000/workflows",
+    "theme": "light",
+    "htmlScheme": "light",
+    "hasDarkClass": false,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\workflows-light.png"
+  },
+  {
+    "route": "/workflows",
+    "url": "http://localhost:3000/workflows",
+    "theme": "dark",
+    "htmlScheme": "dark",
+    "hasDarkClass": true,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\workflows-dark.png"
+  },
+  {
+    "route": "/approbations",
+    "url": "http://localhost:3000/approbations",
+    "theme": "light",
+    "htmlScheme": "light",
+    "hasDarkClass": false,
+    "issues": {
+      "surfaces": [],
+      "contrast": [],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col",
+          "classes": "border-zinc-200 bg-zinc-50/70"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col > h3.mt-3.text-sm",
+          "classes": "text-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col > p.mt-1.max-w-sm",
+          "classes": "text-zinc-500"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 0,
+      "hardcoded": 3,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\approbations-light.png"
+  },
+  {
+    "route": "/approbations",
+    "url": "http://localhost:3000/approbations",
+    "theme": "dark",
+    "htmlScheme": "dark",
+    "hasDarkClass": true,
+    "issues": {
+      "surfaces": [
+        {
+          "kind": "SURFACE_CLAIR_EN_SOMBRE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh]",
+          "color": "rgb(246, 247, 249)",
+          "areaPx": 1282500,
+          "text": "Ce document n’existe pas ou a été déplacéVérifiez le lien, o"
+        },
+        {
+          "kind": "SURFACE_CLAIR_EN_SOMBRE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col",
+          "color": "rgba(250, 250, 250, 0.7)",
+          "areaPx": 136192,
+          "text": "Ce document n’existe pas ou a été déplacéVérifiez le lien, o"
+        }
+      ],
+      "contrast": [],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col",
+          "classes": "border-zinc-200 bg-zinc-50/70"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col > h3.mt-3.text-sm",
+          "classes": "text-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.flex.min-h-[100dvh] > div.w-full.max-w-lg > div.flex.flex-col > p.mt-1.max-w-sm",
+          "classes": "text-zinc-500"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 2,
+      "contrast": 0,
+      "hardcoded": 3,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\approbations-dark.png"
+  },
+  {
+    "route": "/parametres",
+    "url": "http://localhost:3000/parametres",
+    "theme": "light",
+    "htmlScheme": "light",
+    "hasDarkClass": false,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\parametres-light.png"
+  },
+  {
+    "route": "/parametres",
+    "url": "http://localhost:3000/parametres",
+    "theme": "dark",
+    "htmlScheme": "dark",
+    "hasDarkClass": true,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\parametres-dark.png"
+  },
+  {
+    "route": "/login",
+    "url": "http://localhost:3000/login",
+    "theme": "light",
+    "htmlScheme": "light",
+    "hasDarkClass": false,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\login-light.png"
+  },
+  {
+    "route": "/login",
+    "url": "http://localhost:3000/login",
+    "theme": "dark",
+    "htmlScheme": "dark",
+    "hasDarkClass": true,
+    "issues": {
+      "surfaces": [],
+      "contrast": [
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > p.text-sm.font-semibold",
+          "ratio": 1,
+          "min": 4.5,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "ArchiFlow"
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > h1.mt-10.max-w-lg",
+          "ratio": 1,
+          "min": 3,
+          "color": "rgb(255, 255, 255)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "Vos documents, classés et trouvables."
+        },
+        {
+          "kind": "CONTRASTE_FAIBLE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "ratio": 2.56,
+          "min": 4.5,
+          "color": "rgb(161, 161, 170)",
+          "bg": "rgb(255, 255, 255)",
+          "text": "GED auto-hébergée pour ETI et administrations : métadonnées,"
+        }
+      ],
+      "hardcoded": [
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "html.__variable_8adcd2.__variable_46451f > body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.flex.items-center > div.flex.h-9",
+          "classes": "text-zinc-950"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > p.mt-4.max-w-md",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "body.min-h-[100dvh].bg-background > div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border",
+          "classes": "border-zinc-800 bg-zinc-900"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-3.text-sm",
+          "classes": "text-white"
+        },
+        {
+          "kind": "COULEUR_HARDCODEE",
+          "selector": "div.grid.min-h-[100dvh] > section.relative.hidden > div.relative.z-10 > div.rounded-xl.border > p.mt-1.text-sm",
+          "classes": "text-zinc-400"
+        }
+      ],
+      "colorScheme": []
+    },
+    "counts": {
+      "surfaces": 0,
+      "contrast": 3,
+      "hardcoded": 9,
+      "colorScheme": 0
+    },
+    "screenshot": "C:\\Users\\Gilles_Dan\\Desktop\\dev\\ArchiFlow\\frontend\\theme-audit\\login-dark.png"
+  }
+]

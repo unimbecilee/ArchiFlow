@@ -1,0 +1,451 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   ArchiFlow — globals.css
+   SOURCE UNIQUE DE VÉRITÉ des couleurs, élévations, rayons et décors.
+   Compatible Tailwind v4 (@theme inline) — voir tailwind.v3.* pour la v3.
+   ==========================================================================
+   RÈGLE ABSOLUE : un composant ne connaît JAMAIS une couleur littérale.
+   Interdit dans les composants : bg-white, bg-black, bg-zinc-*, text-zinc-*,
+   border-zinc-*, bg-[#...], dark:bg-*, dark:text-*.
+   Autorisé : bg-background, bg-card, text-foreground, text-muted-foreground,
+   border-border, bg-primary, text-primary-foreground, bg-accent-soft, ...
+   Un seul endroit change de thème : ce fichier.
+   ========================================================================== */
+
+/* Le mode sombre est piloté par la classe .dark posée sur <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --------------------------------------------------------------------------
+   1) THÈME CLAIR
+   Stratégie : canvas légèrement teinté, surfaces blanches, hairlines, ombres
+   douces. La profondeur vient de l'OMBRE.
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  /* --- Surfaces --- */
+  --background: oklch(0.9769 0.0027 264);          /* ≈ #f7f8fa  canvas */
+  --foreground: oklch(0.2100 0.0060 285.9);        /* ≈ #18181b */
+  --card: oklch(1 0 0);                            /* #ffffff    carte                  */
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);                         /* menus, dropdowns, modales          */
+  --popover-foreground: var(--foreground);
+  --plane: oklch(1 0 0 / 55%);                     /* plan de contenu translucide (option) */
+  --muted: oklch(0.9674 0.0013 286.4);             /* ≈ #f4f4f5  fonds secondaires       */
+  --muted-foreground: oklch(0.5517 0.0138 285.9);  /* ≈ #71717a  texte secondaire (AA)   */
+  --subtle-foreground: oklch(0.7052 0.0145 286.1); /* ≈ #a1a1aa  méta non essentiel      */
+  --overlay: oklch(0.2100 0.0060 285.9 / 44%);     /* scrim des modales                  */
+
+  /* --- Bordures / champs --- */
+  --border: oklch(0.9293 0.0026 286.3);            /* ≈ #e4e4e7  hairline                */
+  --border-strong: oklch(0.8766 0.0046 286.2);     /* ≈ #d4d4d8  séparateurs marqués     */
+  --input: oklch(0.9293 0.0026 286.3);             /* bordure de champ                   */
+  --input-bg: oklch(1 0 0);                        /* fond de champ                      */
+  --ring: oklch(0.5960 0.1450 163.2);              /* focus visible (emerald-600)        */
+
+  /* --- Marque / actions --- */
+  --primary: oklch(0.5960 0.1450 163.2);           /* ≈ #059669  emerald-600             */
+  --primary-hover: oklch(0.5080 0.1180 165.6);     /* ≈ #047857  emerald-700             */
+  --primary-foreground: oklch(1 0 0);              /* texte sur primary                  */
+  --secondary: oklch(0.9674 0.0013 286.4);
+  --secondary-foreground: oklch(0.2100 0.0060 285.9);
+  --accent: oklch(0.9674 0.0013 286.4);            /* survol neutre                      */
+  --accent-foreground: oklch(0.2100 0.0060 285.9);
+  --accent-soft: oklch(0.9790 0.0210 166.1);       /* ≈ #ecfdf5  tuile teintée émeraude  */
+  --accent-soft-foreground: oklch(0.4320 0.0950 166.9); /* ≈ #065f46                     */
+
+  /* --- Sémantique --- */
+  --success: oklch(0.5960 0.1450 163.2);
+  --success-soft: oklch(0.9790 0.0210 166.1);
+  --success-soft-foreground: oklch(0.4320 0.0950 166.9);
+  --warning: oklch(0.6660 0.1790 58.3);            /* ≈ #d97706 */
+  --warning-soft: oklch(0.9870 0.0220 95.3);       /* ≈ #fffbeb */
+  --warning-soft-foreground: oklch(0.5550 0.1630 49.0);
+  --info: oklch(0.5880 0.1580 242.0);              /* ≈ #0284c7 */
+  --info-soft: oklch(0.9770 0.0130 236.6);         /* ≈ #f0f9ff */
+  --info-soft-foreground: oklch(0.5000 0.1340 242.7);
+  --destructive: oklch(0.5770 0.2450 27.3);        /* ≈ #dc2626 */
+  --destructive-soft: oklch(0.9710 0.0130 17.4);   /* ≈ #fef2f2 */
+  --destructive-soft-foreground: oklch(0.5050 0.2130 27.5);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* --- Navigation latérale (elle suit le thème : claire en clair) --- */
+  --sidebar: oklch(0.9900 0.0015 286);             /* ≈ #fbfbfc */
+  --sidebar-foreground: oklch(0.3200 0.0070 286.0);/* ≈ #3f3f46 */
+  --sidebar-muted: oklch(0.5517 0.0138 285.9);
+  --sidebar-accent: oklch(0.9550 0.0040 286.0);    /* survol */
+  --sidebar-accent-foreground: oklch(0.2100 0.0060 285.9);
+  --sidebar-active: oklch(0.9580 0.0320 165.5);    /* item actif : teinte émeraude */
+  --sidebar-active-foreground: oklch(0.4320 0.0950 166.9);
+  --sidebar-border: oklch(0.9293 0.0026 286.3);
+  --sidebar-brand: oklch(0.5960 0.1450 163.2);
+
+  /* --- Décors de fond (façon Haikei) --- */
+  --deco-halo-a: oklch(0.6960 0.1700 162.5);       /* emerald-500 */
+  --deco-halo-a-op: 0.10;
+  --deco-halo-b: oklch(0.7040 0.1400 182.5);       /* teal-500    */
+  --deco-halo-b-op: 0.08;
+  --deco-dot: oklch(0.5080 0.1180 165.6);          /* emerald-700 */
+  --deco-dot-op: 0.05;
+  --deco-line: oklch(0.7052 0.0145 286.1);
+  --deco-line-op: 0.30;
+
+  /* --- Élévations : en clair, la profondeur = OMBRE --- */
+  --elevation-1: 0 1px 2px 0 rgb(24 24 27 / 0.05);
+  --elevation-2: 0 1px 3px 0 rgb(24 24 27 / 0.06), 0 8px 24px -12px rgb(24 24 27 / 0.14);
+  --elevation-3: 0 2px 6px -2px rgb(24 24 27 / 0.08), 0 16px 40px -16px rgb(24 24 27 / 0.18);
+  --elevation-pop: 0 2px 8px -4px rgb(24 24 27 / 0.10), 0 24px 64px -24px rgb(24 24 27 / 0.30);
+  --elevation-modal: 0 40px 96px -32px rgb(24 24 27 / 0.40);
+
+  /* --- Divers --- */
+  --radius: 0.75rem;                               /* 12px, base du design system */
+  --skeleton: oklch(0.9293 0.0026 286.3);
+  --skeleton-shine: oklch(1 0 0 / 0.75);
+  --scrollbar-thumb: oklch(0.8710 0.0060 286.2);
+  --scrollbar-thumb-hover: oklch(0.7052 0.0145 286.1);
+  --selection-bg: oklch(0.9050 0.0930 164.2);      /* emerald-200 */
+  --selection-fg: oklch(0.2620 0.0510 172.6);      /* emerald-950 */
+}
+
+/* --------------------------------------------------------------------------
+   2) THÈME SOMBRE
+   Stratégie inverse : canvas le plus sombre, les surfaces MONTENT en
+   luminosité avec l'élévation, et la profondeur vient d'une hairline
+   blanche + un reflet interne (inset). Pas d'ombre portée lourde.
+   Aucun #000 pur, aucun #fff pur.
+   -------------------------------------------------------------------------- */
+.dark {
+  color-scheme: dark;
+
+  /* --- Surfaces : échelle stricte, on ne saute jamais une marche --- */
+  --background: oklch(0.1450 0.0050 285.9);        /* ≈ #0a0a0c  canvas */
+  --foreground: oklch(0.9600 0.0016 286.4);        /* ≈ #f2f2f3  (jamais 100%) */
+  --card: oklch(0.1900 0.0055 286.0);              /* ≈ #131316  +1 marche */
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2250 0.0060 286.0);           /* ≈ #1a1a1e  +2 marches */
+  --popover-foreground: var(--foreground);
+  --plane: oklch(0.1900 0.0055 286.0 / 58%);
+  --muted: oklch(0.2500 0.0065 286.0);             /* ≈ #1e1e23 */
+  --muted-foreground: oklch(0.7052 0.0145 286.1);  /* ≈ #a1a1aa */
+  --subtle-foreground: oklch(0.6100 0.0150 286.0); /* ≈ #8a8a93  (pas #71717a : illisible) */
+  --overlay: oklch(0.1000 0.0040 286.0 / 74%);
+
+  /* --- Bordures / champs : hairlines BLANCHES translucides --- */
+  --border: oklch(1 0 0 / 9%);
+  --border-strong: oklch(1 0 0 / 15%);
+  --input: oklch(1 0 0 / 12%);
+  --input-bg: oklch(0.2300 0.0060 286.0);
+  --ring: oklch(0.7650 0.1700 163.2);              /* emerald-400 : lisible sur sombre */
+
+  /* --- Marque / actions --- */
+  --primary: oklch(0.6960 0.1700 162.5);           /* ≈ #10b981  emerald-500 */
+  --primary-hover: oklch(0.7650 0.1700 163.2);     /* ≈ #34d399 */
+  --primary-foreground: oklch(0.2000 0.0250 165.0);/* ≈ #04231a  texte SOMBRE sur émeraude */
+  --secondary: oklch(0.2500 0.0065 286.0);
+  --secondary-foreground: oklch(0.9600 0.0016 286.4);
+  --accent: oklch(0.2700 0.0070 286.0);
+  --accent-foreground: oklch(0.9600 0.0016 286.4);
+  --accent-soft: oklch(0.3000 0.0450 168.0);       /* ≈ #0d2a21  tuile émeraude sombre */
+  --accent-soft-foreground: oklch(0.8450 0.1430 164.9); /* ≈ #6ee7b7 */
+
+  /* --- Sémantique : les variantes -400/-500 sont les seules lisibles --- */
+  --success: oklch(0.7650 0.1770 163.2);
+  --success-soft: oklch(0.3000 0.0450 168.0);
+  --success-soft-foreground: oklch(0.8450 0.1430 164.9);
+  --warning: oklch(0.7690 0.1650 70.1);
+  --warning-soft: oklch(0.3200 0.0700 70.0);
+  --warning-soft-foreground: oklch(0.8700 0.1150 84.0);
+  --info: oklch(0.7460 0.1400 233.0);
+  --info-soft: oklch(0.3000 0.0600 240.0);
+  --info-soft-foreground: oklch(0.8400 0.1000 232.0);
+  --destructive: oklch(0.6370 0.2370 25.3);
+  --destructive-soft: oklch(0.3000 0.0800 20.0);
+  --destructive-soft-foreground: oklch(0.8080 0.1140 19.6);
+  --destructive-foreground: oklch(0.2000 0.0250 20.0);
+
+  /* --- Navigation latérale : PLUS CLAIRE que le canvas (le rail existe) --- */
+  --sidebar: oklch(0.1750 0.0055 286.0);           /* ≈ #0f0f12 */
+  --sidebar-foreground: oklch(0.8500 0.0050 286.0);
+  --sidebar-muted: oklch(0.6100 0.0150 286.0);
+  --sidebar-accent: oklch(1 0 0 / 6%);
+  --sidebar-accent-foreground: oklch(0.9800 0.0016 286.4);
+  --sidebar-active: oklch(1 0 0 / 9%);
+  --sidebar-active-foreground: oklch(0.9800 0.0016 286.4);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-brand: oklch(0.6960 0.1700 162.5);
+
+  /* --- Décors : un peu plus dosés, sinon invisibles sur noir --- */
+  --deco-halo-a: oklch(0.6960 0.1700 162.5);
+  --deco-halo-a-op: 0.15;
+  --deco-halo-b: oklch(0.7040 0.1400 182.5);
+  --deco-halo-b-op: 0.11;
+  --deco-dot: oklch(0.7650 0.1770 163.2);          /* emerald-400 */
+  --deco-dot-op: 0.055;
+  --deco-line: oklch(1 0 0);
+  --deco-line-op: 0.05;
+
+  /* --- Élévations : en sombre, la profondeur = HAIRLINE + REFLET --- */
+  --elevation-1: inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+  --elevation-2: inset 0 1px 0 0 rgb(255 255 255 / 0.05), 0 1px 2px 0 rgb(0 0 0 / 0.55);
+  --elevation-3: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.65);
+  --elevation-pop: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 24px 64px -24px rgb(0 0 0 / 0.80);
+  --elevation-modal: inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 40px 96px -32px rgb(0 0 0 / 0.90);
+
+  --skeleton: oklch(0.2500 0.0065 286.0);
+  --skeleton-shine: oklch(1 0 0 / 0.05);
+  --scrollbar-thumb: oklch(1 0 0 / 14%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 24%);
+  --selection-bg: oklch(0.3780 0.0770 168.9);      /* emerald-900 */
+  --selection-fg: oklch(0.9500 0.0520 163.1);      /* emerald-100 */
+}
+
+/* --------------------------------------------------------------------------
+   3) EXPOSITION À TAILWIND
+   Chaque token devient une classe utilitaire : bg-card, text-muted-foreground,
+   border-border, shadow-e2, rounded-lg, ease-flow...
+   -------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-plane: var(--plane);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-overlay: var(--overlay);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-input-bg: var(--input-bg);
+  --color-ring: var(--ring);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-soft-foreground: var(--destructive-soft-foreground);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-brand: var(--sidebar-brand);
+
+  --color-deco-halo-a: var(--deco-halo-a);
+  --color-deco-halo-b: var(--deco-halo-b);
+  --color-deco-dot: var(--deco-dot);
+  --color-deco-line: var(--deco-line);
+
+  --shadow-e1: var(--elevation-1);
+  --shadow-e2: var(--elevation-2);
+  --shadow-e3: var(--elevation-3);
+  --shadow-pop: var(--elevation-pop);
+  --shadow-modal: var(--elevation-modal);
+
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Courbe d'animation maison : rapide au départ, jamais linéaire */
+  --ease-flow: cubic-bezier(0.22, 0.68, 0, 1);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+/* --------------------------------------------------------------------------
+   4) SOCLE
+   -------------------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    /* le scrollbar suit le thème + pas de saut de layout quand il apparaît */
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* chiffres alignés partout + alternates typographiques */
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "cv11" 1, "ss01" 1, "calt" 1;
+  }
+
+  /* Titres : tracking négatif léger, équilibrage des lignes.
+     PIÈGE : ne JAMAIS mettre `color` ici. Une règle de base sur h1/h2/h3
+     écrase l'héritage d'un parent (`text-white` sur un hero sombre) et, en
+     thème clair, le titre devient noir sur fond noir — exactement le bug
+     qu'on veut éliminer. La couleur vient de <body> et par héritage. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  /* Focus : jamais supprimé, toujours visible, jamais criard */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 6px);
+  }
+
+  ::selection {
+    background: var(--selection-bg);
+    color: var(--selection-fg);
+  }
+
+  /* Les contrôles natifs suivent le thème (date, select, scrollbar…) */
+  input,
+  textarea,
+  select,
+  button {
+    color-scheme: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--subtle-foreground);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5) UTILITAIRES
+   -------------------------------------------------------------------------- */
+
+/* Plan de contenu : la grande surface qui porte les cartes (option A du brief) */
+@utility plane {
+  background-color: var(--plane);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-1);
+}
+
+/* Chiffres tabulaires (tailles, dates, montants) */
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairline de séparation interne à une carte */
+@utility hairline {
+  border-color: var(--border);
+}
+
+/* Scrollbar fine et discrète */
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: content-box;
+  }
+}
+
+/* Squelette de chargement — thémable */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton);
+  border-radius: var(--radius-md);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-shine),
+    transparent
+  );
+  animation: af-shimmer 1.6s var(--ease-flow) infinite;
+}
+
+@keyframes af-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Apparition en fondu au changement de route (léger, jamais un show) */
+@keyframes af-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.af-rise {
+  animation: af-rise 260ms var(--ease-flow) both;
+}
+
+/* --------------------------------------------------------------------------
+   6) ACCESSIBILITÉ — mouvement réduit
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton::after {
+    animation: none;
+    background: none;
+  }
+}

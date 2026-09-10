@@ -13,13 +13,13 @@ import { cn } from "@/lib/utils";
 
 export function SkeletonDocuments({ rows = 8 }: { rows?: number }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-      <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <div className="skeleton h-4 w-4" />
         <div className="skeleton h-3.5 w-32" />
         <div className="skeleton ml-auto h-3.5 w-24" />
       </div>
-      <ul className="divide-y divide-zinc-100">
+      <ul className="divide-y divide-border">
         {Array.from({ length: rows }).map((_, i) => (
           <li key={i} className="flex items-center gap-3 px-4 py-3">
             <div className="skeleton h-4 w-4" />
@@ -44,7 +44,7 @@ export function SkeletonStats() {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="rounded-xl border border-zinc-200 bg-white p-4">
+        <div key={i} className="rounded-lg border border-border bg-card p-4">
           <div className="skeleton h-3.5 w-24" />
           <div className="skeleton mt-3 h-7 w-16" />
           <div className="skeleton mt-2 h-2.5 w-28" />
@@ -79,18 +79,18 @@ export function EmptyState({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50/70 px-6 py-12 text-center",
+        "flex flex-col items-center justify-center rounded-lg border border-border bg-muted/40 px-6 py-12 text-center",
         className
       )}
     >
-      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground ring-1 ring-primary/30">
         <Icon className="h-6 w-6" weight="duotone" />
       </div>
-      <h3 className="mt-3 text-sm font-semibold text-zinc-900">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-zinc-500">{description}</p>
+      <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
       {action ? <div className="mt-4">{action}</div> : null}
       {actionLabel && onAction && (
-        <Button variant="primary" size="sm" onClick={onAction} className="mt-4">
+        <Button variant="default" size="sm" onClick={onAction} className="mt-4">
           {actionLabel}
           <ArrowRight className="h-3.5 w-3.5" />
         </Button>
@@ -149,17 +149,17 @@ export function ErrorState({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50/50 px-6 py-16 text-center"
+      className="flex flex-col items-center justify-center rounded-lg border border-destructive/25 bg-destructive-soft/40 px-6 py-16 text-center"
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/20 text-destructive">
         <CloudSlash className="h-7 w-7" weight="duotone" />
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-zinc-900">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-zinc-500">{description}</p>
-      <p className="tnum mt-3 rounded-md bg-white px-2.5 py-1 font-mono text-[11px] text-zinc-400 ring-1 ring-zinc-200">
+      <h3 className="mt-4 text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      <p className="tnum mt-3 rounded bg-muted px-2.5 py-1 font-mono text-[11px] text-muted-foreground ring-1 ring-border">
         Référence : {correlationId || "af-inconnu"}
       </p>
-      <Button variant="secondary" size="sm" onClick={onRetry} className="mt-5">
+      <Button variant="outline" size="sm" onClick={onRetry} className="mt-5">
         Réessayer
       </Button>
     </motion.div>

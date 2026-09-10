@@ -173,36 +173,36 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <DialogHeader className="border-b border-zinc-100 bg-white px-5 pb-3 pt-5 text-left">
+        <DialogHeader className="border-b border-zinc-100 bg-white px-5 pb-3 pt-5 text-left dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:ring-emerald-800">
               <MagnifyingGlass className="h-4 w-4" weight="duotone" />
             </span>
-            <DialogTitle className="text-[15px] font-semibold">Rechercher</DialogTitle>
+            <DialogTitle className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Rechercher</DialogTitle>
           </div>
           <DialogDescription className="sr-only">
             Navigation et documents ArchiFlow
           </DialogDescription>
-          <p className="mt-1 text-xs text-zinc-500">Pages, documents et actions — 2+ caractères pour les documents</p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Pages, documents et actions — 2+ caractères pour les documents</p>
         </DialogHeader>
-        <div className="border-b border-zinc-100 bg-zinc-50/50 px-3 py-3">
+        <div className="border-b border-zinc-100 bg-zinc-50/50 px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900/50">
           <div className="relative">
-            <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" weight="bold" />
+            <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" weight="bold" />
             <Input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Pages, documents (2+ caractères)… tapez / ou Ctrl K"
-              className="h-10 rounded-xl border-zinc-200 bg-white pl-10 shadow-sm placeholder:text-zinc-400 focus-visible:border-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+              className="h-10 rounded-xl border-zinc-200 bg-white pl-10 shadow-sm placeholder:text-zinc-400 focus-visible:border-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
           </div>
         </div>
-        <ul className="max-h-[min(56vh,380px)] overflow-y-auto bg-white px-2 py-2" role="listbox">
+        <ul className="max-h-[min(56vh,380px)] overflow-y-auto bg-white px-2 py-2 dark:bg-zinc-900" role="listbox">
           {rows.length === 0 ? (
-            <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/70 px-4 py-8 text-center">
-              <p className="text-sm font-medium text-zinc-700">Aucun résultat</p>
-              <p className="mt-1 text-xs text-zinc-500">Essayez un autre mot-clé</p>
+            <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/70 px-4 py-8 text-center dark:border-zinc-800 dark:bg-zinc-800/40">
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Aucun résultat</p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Essayez un autre mot-clé</p>
             </li>
           ) : (
             rows.map((row, index) => {
@@ -237,8 +237,8 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                       className={cn(
                         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
                         isActive
-                          ? "bg-emerald-50 text-zinc-900 shadow-sm ring-1 ring-emerald-200"
-                          : "hover:bg-zinc-50"
+                          ? "bg-emerald-50 text-zinc-900 shadow-sm ring-1 ring-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-100 dark:ring-emerald-800"
+                          : "hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
                       )}
                       onMouseEnter={() => setActiveIndex(selectableCursor)}
                       onClick={() => activate(row)}
@@ -246,14 +246,14 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                       <span
                         className={cn(
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
-                          isActive ? "bg-white text-emerald-700 ring-emerald-200" : "bg-zinc-50 text-zinc-500 ring-zinc-200"
+                          isActive ? "bg-white text-emerald-700 ring-emerald-200 dark:bg-zinc-800 dark:text-emerald-300 dark:ring-emerald-700" : "bg-zinc-50 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700"
                         )}
                       >
                         <MagnifyingGlass className="h-3.5 w-3.5" weight="duotone" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium leading-tight">{row.entry.title}</span>
-                        <span className="block truncate text-xs leading-tight text-zinc-500">
+                        <span className="block truncate text-xs leading-tight text-zinc-500 dark:text-zinc-400">
                           {row.entry.section} · {row.entry.path}
                         </span>
                       </span>
@@ -279,18 +279,18 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                       className={cn(
                         "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
                         isActive
-                          ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
-                          : "hover:bg-zinc-50"
+                          ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-zinc-700"
+                          : "hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
                       )}
                       onMouseEnter={() => setActiveIndex(selectableCursor)}
                       onClick={() => activate(row)}
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-zinc-600 shadow-sm ring-1 ring-zinc-200">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-zinc-600 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700">
                         <FileText className="h-4 w-4" weight="duotone" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium leading-tight">{row.doc.titre}</span>
-                        <span className="block truncate text-xs leading-tight text-zinc-500">
+                        <span className="block truncate text-xs leading-tight text-zinc-500 dark:text-zinc-400">
                           {row.doc.file_name || row.doc.mime_type || "Document"} · /documents/{row.doc.id}
                         </span>
                       </span>
@@ -303,15 +303,15 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
             })
           )}
         </ul>
-        <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/60 px-3 py-2.5">
-          <p className="text-[11px] leading-none text-zinc-500">
+        <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/60 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/80">
+          <p className="text-[11px] leading-none text-zinc-500 dark:text-zinc-400">
             <span className="hidden sm:inline">Flèches</span>
             <span className="sm:hidden">↑↓</span> · Entrée · Esc
           </p>
-          <p className="hidden text-[11px] leading-none text-zinc-400 sm:block">
+          <p className="hidden text-[11px] leading-none text-zinc-400 dark:text-zinc-500 sm:block">
             {SEARCH_MIN}+ caractères pour les documents
           </p>
-          <kbd className="rounded-md border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-medium leading-none text-zinc-500 shadow-sm">
+          <kbd className="rounded-md border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-medium leading-none text-zinc-500 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
             ⌘K
           </kbd>
         </div>

@@ -171,7 +171,7 @@ export default function DocumentDetailPage() {
         department: department.trim(),
       });
       setDoc(updated);
-      toast.success("Classement enregistre");
+      toast.success("Classement enregistré");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Enregistrement impossible");
     } finally {
@@ -225,7 +225,7 @@ export default function DocumentDetailPage() {
   const handleRestartValidation = async () => {
     setRestarting(true);
     try {
-      await restartValidation(docId, "Relance apres correction");
+      await restartValidation(docId, "Relance après correction");
       router.push("/workflows/en-cours");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Impossible de relancer");
@@ -269,7 +269,7 @@ export default function DocumentDetailPage() {
       <PageFrame>
         <Link
           href="/mes-documents"
-          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-emerald-700"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
           Mes documents
@@ -279,45 +279,44 @@ export default function DocumentDetailPage() {
     );
   }
 
-  const kindIcon = isOfficeDocument(doc.mime_type, doc.file_name) ? FileArchive : FileArchive;
   return (
     <PageFrame className="max-w-[min(1680px,100%)]">
       <Link
         href="/mes-documents"
-        className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft className="h-3.5 w-3.5" />
+        <ArrowLeft className="h-4 w-4" />
         Mes documents
       </Link>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="overflow-hidden rounded-lg border border-border bg-card p-5 shadow-e1 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Fiche document
             </p>
             <div className="mt-1.5 flex flex-wrap items-start gap-3">
-              <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 sm:flex">
+              <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-soft-foreground ring-1 ring-primary/30 sm:flex">
                 <FileArchive className="h-5 w-5" weight="duotone" />
               </span>
-              <h1 className="min-w-0 flex-1 break-words text-[20px] font-semibold leading-tight tracking-tight text-zinc-900 sm:text-[22px]">
+              <h1 className="min-w-0 flex-1 break-words text-[20px] font-semibold leading-tight tracking-tight text-foreground sm:text-[22px]">
                 {doc.titre}
               </h1>
             </div>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                 {doc.taille_formatee || doc.taille} · {doc.mime_type}
                 {doc.status ? ` · ${doc.status}` : " · BROUILLON"}
               </span>
-              {onHold && <Badge className="border-amber-300 bg-amber-50 text-amber-900">Conservation</Badge>}
+              {onHold && <Badge tone="warning">Conservation</Badge>}
             </p>
             <div className="mt-2">
               <IntegrityHash hash={doc.content_sha256} />
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1.5 lg:justify-end">
-            <IconTooltipButton label="Télécharger" onClick={handleDownload} className="h-9 w-9 rounded-xl">
+            <IconTooltipButton label="Télécharger" onClick={handleDownload} className="h-9 w-9 rounded-lg">
               <DownloadSimple className="h-4 w-4" />
             </IconTooltipButton>
             <IconTooltipButton
@@ -331,10 +330,10 @@ export default function DocumentDetailPage() {
                   setFavorited(true);
                 }
               }}
-              className="h-9 w-9 rounded-xl"
+              className="h-9 w-9 rounded-lg"
             >
               <Star
-                className={`h-4 w-4 ${favorited ? "text-amber-500" : ""}`}
+                className={`h-4 w-4 ${favorited ? "text-warning" : ""}`}
                 weight={favorited ? "fill" : "regular"}
               />
             </IconTooltipButton>
@@ -345,7 +344,7 @@ export default function DocumentDetailPage() {
                   await unlockDocument(docId);
                   load();
                 }}
-                className="h-9 w-9 rounded-xl"
+                className="h-9 w-9 rounded-lg"
               >
                 <LockOpen className="h-4 w-4" />
               </IconTooltipButton>
@@ -356,7 +355,7 @@ export default function DocumentDetailPage() {
                   await lockDocument(docId);
                   load();
                 }}
-                className="h-9 w-9 rounded-xl"
+                className="h-9 w-9 rounded-lg"
               >
                 <Lock className="h-4 w-4" />
               </IconTooltipButton>
@@ -364,7 +363,7 @@ export default function DocumentDetailPage() {
             <IconTooltipButton
               label="Partager"
               onClick={() => setShowShare(!showShare)}
-              className={`h-9 w-9 rounded-xl ${showShare ? "border-emerald-300 bg-emerald-50 text-emerald-700" : ""}`}
+              className={`h-9 w-9 rounded-lg ${showShare ? "border-primary/30 bg-accent-soft text-accent-soft-foreground" : ""}`}
             >
               <ShareNetwork className="h-4 w-4" />
             </IconTooltipButton>
@@ -384,7 +383,7 @@ export default function DocumentDetailPage() {
       <Tabs
         value={tab}
         onValueChange={setTab}
-        className="bg-white border border-zinc-200 shadow-sm"
+        className="bg-card border border-border shadow-e1"
         tabs={[
           { id: "apercu", label: "Aperçu" },
           { id: "versions", label: "Versions" },
@@ -396,10 +395,9 @@ export default function DocumentDetailPage() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,320px)] xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex min-w-0 flex-col gap-6">
-          {/* Aperçu persistant — reste visible quel que soit l'onglet, comble l'espace vide */}
           {showOfficeEditor && (
             <PagePanel
-              title="Edition bureautique"
+              title="Édition bureautique"
               subtitle="Collabora / OnlyOffice — sauvegarde = nouvelle version"
               delay={0.08}
             >
@@ -409,7 +407,7 @@ export default function DocumentDetailPage() {
 
           {showTextEditor && (
             <PagePanel
-              title="Edition"
+              title="Édition"
               subtitle="Texte, markdown, JSON — sauvegarde = nouvelle version"
               delay={0.08}
             >
@@ -418,17 +416,17 @@ export default function DocumentDetailPage() {
           )}
 
           {showPreviewPanel && (
-            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-4 py-3 sm:px-5">
+            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-e1">
+              <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3 sm:px-5">
                 <div>
-                  <p className="text-[13px] font-semibold tracking-tight text-zinc-900">Aperçu</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-[13px] font-semibold tracking-tight text-foreground">Aperçu</p>
+                  <p className="text-xs text-muted-foreground">
                     {versionSelection.kind === "current"
                       ? `Version courante · v${currentVersionNumber}`
                       : `Version archivée · v${versionSelection.version.version_number}`}
                   </p>
                 </div>
-                <span className="hidden rounded-full bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 sm:inline-flex">
+                <span className="hidden rounded-full bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border sm:inline-flex">
                   {doc.mime_type}
                 </span>
               </div>
@@ -453,23 +451,23 @@ export default function DocumentDetailPage() {
           {!hasMainWorkspace && (
             <PagePanel
               title="Fichier"
-              subtitle={`${doc.file_name || doc.titre} — pas d'apercu inline pour ce format`}
+              subtitle={`${doc.file_name || doc.titre} — pas d'aperçu inline pour ce format`}
               delay={0.08}
             >
-              <div className="flex min-h-[min(52dvh,520px)] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200/80 bg-zinc-50/60 px-6 py-12 text-center">
-                <span className="rounded-2xl bg-emerald-500/10 p-4 text-emerald-700">
+              <div className="flex min-h-[min(52dvh,520px)] flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-border/50 bg-muted/40 px-6 py-12 text-center">
+                <span className="rounded-2xl bg-primary/10 p-4 text-primary">
                   <FileArchive className="h-10 w-10" weight="duotone" />
                 </span>
                 <div className="max-w-md space-y-1">
-                  <p className="text-sm font-medium text-zinc-800">{doc.mime_type || "Type inconnu"}</p>
-                  <p className="text-sm leading-relaxed text-zinc-600">
-                    Utilisez le panneau de droite pour commenter, etiqueter et gerer les versions. Telechargez le
-                    fichier pour l&apos;ouvrir localement.
+                  <p className="text-sm font-medium text-foreground">{doc.mime_type || "Type inconnu"}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Utilisez le panneau de droite pour commenter, étiqueter et gérer les versions. Téléchargez le
+                    fichier pour l'ouvrir localement.
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
                   <DownloadSimple className="h-4 w-4" />
-                  Telecharger
+                  Télécharger
                 </Button>
               </div>
             </PagePanel>
@@ -507,93 +505,93 @@ export default function DocumentDetailPage() {
           )}
 
           {tab === "activite" && (
-          <>
-          <PagePanel compact title="Commentaires" subtitle={`${comments.length} message(s)`}>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ajouter un commentaire..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-                />
-                <Button size="sm" onClick={handleAddComment} aria-label="Envoyer">
-                  <PaperPlaneTilt className="h-4 w-4" weight="bold" />
-                </Button>
-              </div>
-              <ul className="max-h-48 space-y-2 overflow-y-auto lg:max-h-56">
-                {comments.length === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucun commentaire.</p>
-                ) : (
-                  comments.map((c) => (
-                    <li
-                      key={c.id}
-                      className="rounded-xl border border-slate-200/70 bg-zinc-50/80 p-2.5 text-sm"
-                    >
-                      <p className="text-zinc-800">{c.content}</p>
-                      <p className="mt-1.5 flex items-center justify-between gap-2 text-xs text-zinc-500">
-                        <span className="min-w-0 truncate">
-                          {c.author?.email || `#${c.author_id}`} ·{" "}
-                          {new Date(c.created_at).toLocaleString("fr-FR", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 shrink-0 p-0"
-                          onClick={() => deleteComment(docId, c.id).then(load)}
+            <>
+              <PagePanel compact title="Commentaires" subtitle={`${comments.length} message(s)`}>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ajouter un commentaire..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                    />
+                    <Button size="sm" onClick={handleAddComment} aria-label="Envoyer">
+                      <PaperPlaneTilt className="h-4 w-4" weight="bold" />
+                    </Button>
+                  </div>
+                  <ul className="max-h-48 space-y-2 overflow-y-auto lg:max-h-56">
+                    {comments.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Aucun commentaire.</p>
+                    ) : (
+                      comments.map((c) => (
+                        <li
+                          key={c.id}
+                          className="rounded-lg border border-border/50 bg-muted/40 p-2.5 text-sm"
                         >
-                          <Trash className="h-3 w-3" />
-                        </Button>
-                      </p>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-          </PagePanel>
+                          <p className="text-foreground">{c.content}</p>
+                          <p className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                            <span className="min-w-0 truncate">
+                              {c.author?.email || `#${c.author_id}`} ·{" "}
+                              {new Date(c.created_at).toLocaleString("fr-FR", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              })}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 shrink-0 p-0"
+                              onClick={() => deleteComment(docId, c.id).then(load)}
+                            >
+                              <Trash className="h-3 w-3" />
+                            </Button>
+                          </p>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </PagePanel>
 
-          <PagePanel compact title="Étiquettes" subtitle="Classification libre" delay={0.14}>
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-1.5">
-                {tags.length === 0 ? (
-                  <p className="text-sm text-zinc-500">Aucune etiquette.</p>
-                ) : (
-                  tags.map((t) => (
-                    <span
-                      key={t.id}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                      style={{ backgroundColor: t.color || "#059669" }}
-                    >
-                      {t.name}
-                      <button
-                        type="button"
-                        className="opacity-80 hover:opacity-100"
-                        onClick={() => removeDocumentTag(docId, t.id).then(load)}
-                        aria-label={`Retirer ${t.name}`}
-                      >
-                        x
-                      </button>
-                    </span>
-                  ))
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nouvelle etiquette"
-                  value={tagName}
-                  onChange={(e) => setTagName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-                />
-                <Button size="sm" onClick={handleAddTag}>
-                  Ajouter
-                </Button>
-              </div>
-            </div>
-          </PagePanel>
-          </>
+              <PagePanel compact title="Étiquettes" subtitle="Classification libre" delay={0.14}>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Aucune étiquette.</p>
+                    ) : (
+                      tags.map((t) => (
+                        <span
+                          key={t.id}
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-primary-foreground"
+                          style={{ backgroundColor: t.color || "var(--primary)" }}
+                        >
+                          {t.name}
+                          <button
+                            type="button"
+                            className="opacity-80 hover:opacity-100"
+                            onClick={() => removeDocumentTag(docId, t.id).then(load)}
+                            aria-label={`Retirer ${t.name}`}
+                          >
+                            x
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Nouvelle étiquette"
+                      value={tagName}
+                      onChange={(e) => setTagName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                    />
+                    <Button size="sm" onClick={handleAddTag}>
+                      Ajouter
+                    </Button>
+                  </div>
+                </div>
+              </PagePanel>
+              </>
           )}
 
           {doc.can_classify && (
@@ -617,7 +615,7 @@ export default function DocumentDetailPage() {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="docDepartment">Departement</Label>
+                  <Label htmlFor="docDepartment">Département</Label>
                   <Input
                     id="docDepartment"
                     value={department}
@@ -640,7 +638,7 @@ export default function DocumentDetailPage() {
             <PagePanel compact title="Conservation" subtitle="Legal hold — bloque suppression et purge">
               {onHold ? (
                 <div className="space-y-2">
-                  <Badge className="border-amber-300 bg-amber-50 text-amber-900">En conservation</Badge>
+                  <Badge tone="warning">En conservation</Badge>
                   <Button
                     size="sm"
                     variant="outline"
@@ -685,74 +683,74 @@ export default function DocumentDetailPage() {
           )}
 
           {tab === "versions" && (
-          <PagePanel
-            compact
-            title="Versions"
-            subtitle={`${versions.length} révision(s)`}
-            delay={0.16}
-          >
-            <div ref={versionsRef} className="space-y-3">
-              <VersionSwitcher
-                docId={docId}
-                currentVersionNumber={currentVersionNumber}
-                rejectedAtVersion={rejectedAtVersion}
-                versions={versions}
-                selection={versionSelection}
-                onSelect={setVersionSelection}
-              />
-              <div className="space-y-2 border-t border-slate-100 pt-3">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="versionFile">Nouvelle version</Label>
-                  <Input
-                    id="versionFile"
-                    type="file"
-                    className="text-xs"
-                    onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)}
-                  />
+            <PagePanel
+              compact
+              title="Versions"
+              subtitle={`${versions.length} révision(s)`}
+              delay={0.16}
+            >
+              <div ref={versionsRef} className="space-y-3">
+                <VersionSwitcher
+                  docId={docId}
+                  currentVersionNumber={currentVersionNumber}
+                  rejectedAtVersion={rejectedAtVersion}
+                  versions={versions}
+                  selection={versionSelection}
+                  onSelect={setVersionSelection}
+                />
+                <div className="space-y-2 border-t border-border pt-3">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="versionFile">Nouvelle version</Label>
+                    <Input
+                      id="versionFile"
+                      type="file"
+                      className="text-xs"
+                      onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="versionComment">Commentaire</Label>
+                    <Input
+                      id="versionComment"
+                      placeholder="Optionnel"
+                      value={versionComment}
+                      onChange={(e) => setVersionComment(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={handleUploadVersion}
+                    disabled={!versionFile}
+                  >
+                    Déposer la version
+                  </Button>
+                  {versions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Pas encore d'historique.</p>
+                  ) : (
+                    <ul className="max-h-40 divide-y divide-border overflow-y-auto text-xs">
+                      {versions.map((v) => (
+                        <li key={v.id} className="flex flex-col gap-0.5 py-2">
+                          <span className="font-medium text-foreground">
+                            v{v.version_number} — {v.file_name}
+                          </span>
+                          {v.comment && <span className="text-muted-foreground">{v.comment}</span>}
+                          <span className="font-mono text-muted-foreground">
+                            {new Date(v.created_at).toLocaleDateString("fr-FR")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="versionComment">Commentaire</Label>
-                  <Input
-                    id="versionComment"
-                    placeholder="Optionnel"
-                    value={versionComment}
-                    onChange={(e) => setVersionComment(e.target.value)}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={handleUploadVersion}
-                  disabled={!versionFile}
-                >
-                  Deposer la version
-                </Button>
               </div>
-              {versions.length === 0 ? (
-                <p className="text-sm text-zinc-500">Pas encore d&apos;historique.</p>
-              ) : (
-                <ul className="max-h-40 divide-y divide-slate-100 overflow-y-auto text-xs">
-                  {versions.map((v) => (
-                    <li key={v.id} className="flex flex-col gap-0.5 py-2">
-                      <span className="font-medium text-zinc-800">
-                        v{v.version_number} — {v.file_name}
-                      </span>
-                      {v.comment && <span className="text-zinc-600">{v.comment}</span>}
-                      <span className="font-mono text-zinc-500">
-                        {new Date(v.created_at).toLocaleDateString("fr-FR")}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </PagePanel>
+            </PagePanel>
           )}
 
           {tab === "workflow" && !validationCtx && (
             <PagePanel compact title="Workflow" subtitle="Aucun circuit actif">
               <p className="text-sm text-muted-foreground">
-                Ce document n&apos;est pas dans un workflow d&apos;approbation.
+                Ce document n'est pas dans un workflow d'approbation.
               </p>
             </PagePanel>
           )}

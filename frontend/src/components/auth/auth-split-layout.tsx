@@ -3,7 +3,7 @@
 import { Archive } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
-import { AuthHeroBackground, DotGridLight } from "@/components/backgrounds";
+import { HeroDecor, PanelDecor } from "@/components/backgrounds";
 
 type AuthFeature = {
   icon: Icon;
@@ -31,9 +31,9 @@ export function AuthSplitLayout({
   footer,
 }: AuthSplitLayoutProps) {
   return (
-    <div className="grid min-h-[100dvh] bg-[#f6f7f9] lg:grid-cols-2">
-      <section className="relative hidden overflow-hidden bg-zinc-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <AuthHeroBackground />
+    <div className="grid min-h-[100dvh] bg-background lg:grid-cols-2">
+      <section className="relative hidden overflow-hidden px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between" data-theme-allow-dark>
+        <HeroDecor />
         <div className="relative z-10">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-zinc-950">
@@ -62,7 +62,7 @@ export function AuthSplitLayout({
       </section>
 
       <section className="relative flex items-center justify-center overflow-hidden px-4 py-10 sm:px-8">
-        <DotGridLight />
+        <PanelDecor />
         <motion.div
           className="relative z-10 w-full max-w-md"
           initial={{ opacity: 0, y: 8 }}
@@ -70,16 +70,16 @@ export function AuthSplitLayout({
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
           <div className="mb-6 lg:hidden">
-            <p className="text-xs font-medium text-zinc-500">ArchiFlow</p>
-            <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">{title}</h1>
+            <p className="text-xs font-medium text-muted-foreground">ArchiFlow</p>
+            <h1 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{title}</h1>
           </div>
-          <div className="rounded-xl border border-zinc-200 bg-white p-7 sm:p-8">
+          <div className="rounded-lg border border-border bg-card p-7 sm:p-8 shadow-e1">
             <div className="mb-6 hidden lg:block">
-              <h2 className="text-xl font-semibold tracking-tight text-zinc-900">{title}</h2>
-              <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">{title}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
             </div>
             {children}
-            <div className="mt-6 text-center text-sm text-zinc-500">{footer}</div>
+            <div className="mt-6 text-center text-sm text-muted-foreground">{footer}</div>
           </div>
         </motion.div>
       </section>

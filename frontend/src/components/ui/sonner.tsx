@@ -11,13 +11,12 @@ export function Toaster() {
       closeButton
       toastOptions={{
         classNames: {
-          toast: "rounded-xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10 font-sans",
-          title: "text-sm font-semibold text-zinc-900",
-          description: "text-sm text-zinc-500",
-          actionButton:
-            "rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500",
-          cancelButton: "rounded-lg bg-zinc-100 text-zinc-700 text-xs",
-          closeButton: "border-zinc-200 bg-white text-zinc-500",
+          toast: "rounded-lg border border-border bg-popover text-popover-foreground shadow-pop font-sans",
+          title: "text-sm font-semibold text-foreground",
+          description: "text-sm text-muted-foreground",
+          actionButton: "bg-primary text-primary-foreground rounded-md text-xs font-medium",
+          cancelButton: "bg-muted text-muted-foreground rounded-md text-xs",
+          closeButton: "border-border bg-card text-muted-foreground",
         },
       }}
     />

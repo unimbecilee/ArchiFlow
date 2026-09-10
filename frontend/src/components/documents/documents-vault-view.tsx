@@ -305,41 +305,41 @@ export function DocumentsVaultView() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="rounded-2xl border border-zinc-200 bg-white/88 px-5 py-5 shadow-sm backdrop-blur-[6px] dark:border-zinc-800 dark:bg-zinc-900/88 sm:px-6 sm:py-6">
+      <div className="rounded-lg border border-border bg-card/88 px-5 py-5 shadow-e1 backdrop-blur-[6px] sm:px-6 sm:py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-500">
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Espace documentaire
             </p>
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-600/20">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-e1">
                 <Folder className="h-5 w-5" weight="fill" />
               </span>
-              <h1 className="text-[24px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-[26px]">Mes documents</h1>
+              <h1 className="text-[24px] font-bold tracking-tight text-foreground sm:text-[26px]">Mes documents</h1>
             </div>
           {folderId != null && folderCrumbs.length > 0 ? (
             <nav
-              className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-zinc-500"
+              className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
               aria-label="Dossier"
             >
               <button
                 type="button"
                 onClick={() => navigateFolder(null)}
-                className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-white hover:text-zinc-900 hover:shadow-sm"
+                className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground"
               >
                 Racine
               </button>
               {folderCrumbs.map((crumb) => (
                 <span key={crumb.id} className="flex items-center gap-1.5">
-                  <span className="text-zinc-300">/</span>
+                  <span className="text-subtle-foreground">/</span>
                   <button
                     type="button"
                     onClick={() => navigateFolder(crumb.id)}
                     className={cn(
                       "rounded-md px-1.5 py-0.5 transition-colors",
                       crumb.id === folderId
-                        ? "bg-white font-medium text-zinc-900 shadow-sm ring-1 ring-zinc-200"
-                        : "hover:bg-white hover:text-zinc-900 hover:shadow-sm"
+                        ? "bg-card font-medium text-foreground shadow-e1 ring-1 ring-border"
+                        : "hover:bg-accent hover:text-foreground"
                     )}
                   >
                     {crumb.name}
@@ -348,16 +348,16 @@ export function DocumentsVaultView() {
               ))}
             </nav>
           ) : (
-            <p className="mt-1.5 max-w-[60ch] text-sm font-medium leading-relaxed text-zinc-600">
+            <p className="mt-1.5 max-w-[60ch] text-sm font-medium leading-relaxed text-muted-foreground">
               Dossiers et fichiers de votre espace. Le fond habille les goulottes, vos cartes restent nettes.
             </p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setCreateOpen(true)} className="h-9">
+          <Button variant="soft" size="sm" onClick={() => setCreateOpen(true)} className="h-9">
             <FolderPlus /> Nouveau dossier
           </Button>
-          <Button variant="primary" size="sm" onClick={openUploader} className="h-9 shadow-sm shadow-emerald-600/20">
+          <Button variant="default" size="sm" onClick={openUploader} className="h-9 shadow-e1">
             <UploadSimple /> Importer
           </Button>
         </div>
@@ -368,13 +368,13 @@ export function DocumentsVaultView() {
         {pending > 0 && (
           <Link
             href="/workflows/approbations"
-            className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900 hover:bg-amber-100/80"
+            className="flex items-center gap-2 rounded-lg border border-warning/25 bg-warning-soft px-3.5 py-2.5 text-sm text-warning-soft-foreground hover:bg-warning-soft/80"
           >
             <Warning className="h-4 w-4 shrink-0" weight="duotone" />
             <span className="font-medium">
               {pluralFr(pending, "approbation en attente", "approbations en attente")}
             </span>
-            <span className="ml-auto text-xs font-medium text-amber-800">Traiter →</span>
+            <span className="ml-auto text-xs font-medium text-warning-soft-foreground">Traiter →</span>
           </Link>
         )}
 
@@ -397,20 +397,20 @@ export function DocumentsVaultView() {
             className="space-y-3"
           >
             <div className="relative">
-              <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle-foreground" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Filtrer par nom…"
-                className="h-10 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm outline-none transition-shadow placeholder:text-zinc-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
+                className="h-10 w-full rounded-lg border border-input bg-input-bg pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
               />
             </div>
 
             {filtered.length === 0 ? (
               <EmptySearch query={query} />
             ) : (
-              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-                <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-2.5">
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="flex items-center gap-3 border-b border-border px-4 py-2.5">
                   <button
                     type="button"
                     onClick={toggleSelectAll}
@@ -418,13 +418,13 @@ export function DocumentsVaultView() {
                     className={cn(
                       "flex h-4 w-4 items-center justify-center rounded border transition-colors",
                       allChecked
-                        ? "border-emerald-600 bg-emerald-600 text-white"
-                        : "border-zinc-300 bg-white hover:border-emerald-500"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:border-primary"
                     )}
                   >
                     {allChecked && <Check className="h-3 w-3" weight="bold" />}
                   </button>
-                  <p className="text-xs font-medium text-zinc-500">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {selected.size > 0
                       ? pluralFr(selected.size, "sélectionné")
                       : pluralFr(filtered.length, "élément")}
@@ -433,7 +433,7 @@ export function DocumentsVaultView() {
 
                 <motion.ul
                   layout
-                  className="divide-y divide-zinc-100"
+                  className="divide-y divide-border"
                   onDragOver={(e) => {
                     e.preventDefault();
                     setDragging(true);
@@ -467,10 +467,10 @@ export function DocumentsVaultView() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="pointer-events-none flex items-center justify-center gap-2 border-t-2 border-dashed border-emerald-400 bg-emerald-50/60 py-6 text-sm font-medium text-emerald-700"
+                    className="pointer-events-none flex items-center justify-center gap-2 border-t-2 border-dashed border-primary/60 bg-accent-soft/40 py-6 text-sm font-medium text-primary-foreground"
                   >
                     <UploadSimple className="h-4 w-4" />
-                    Déposez les fichiers pour lancer l’import
+                    Déposez les fichiers pour lancer l'import
                   </motion.div>
                 )}
               </div>
@@ -486,12 +486,12 @@ export function DocumentsVaultView() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-900/10"
+            className="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-lg border border-border bg-card p-1.5 shadow-pop"
           >
-            <span className="px-2.5 text-sm font-medium text-zinc-700">
+            <span className="px-2.5 text-sm font-medium text-foreground">
               {pluralFr(selected.size, "sélectionné")}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => router.push("/documents-partages")}>
+            <Button variant="soft" size="sm" onClick={() => router.push("/documents-partages")}>
               <ShareNetwork /> Partager
             </Button>
             <Button variant="danger" size="sm" onClick={() => void removeSelected()}>
@@ -528,7 +528,7 @@ export function DocumentsVaultView() {
             />
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setCreateOpen(false)} disabled={creating}>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
               Annuler
             </Button>
             <Button onClick={() => void handleCreateFolder()} disabled={creating || !folderName.trim()}>
@@ -567,8 +567,8 @@ function VaultRowItem({
       exit={{ opacity: 0, x: -24, transition: { duration: 0.18 } }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.3), ease: "easeOut" }}
       className={cn(
-        "group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-50",
-        checked && "bg-emerald-50/50"
+        "group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50",
+        checked && "bg-accent-soft/50"
       )}
     >
       <button
@@ -579,8 +579,8 @@ function VaultRowItem({
           "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
           row.kind === "folder" && "invisible",
           checked
-            ? "border-emerald-600 bg-emerald-600 text-white"
-            : "border-zinc-300 bg-white opacity-0 group-hover:opacity-100 hover:border-emerald-500"
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border bg-card opacity-0 group-hover:opacity-100 hover:border-primary"
         )}
       >
         {checked && <Check className="h-3 w-3" weight="bold" />}
@@ -597,7 +597,7 @@ function VaultRowItem({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-zinc-900">{row.name}</p>
+            <p className="truncate text-sm font-medium text-foreground">{row.name}</p>
             {row.kind === "file" && row.badge && (
               <Badge tone={row.badge.tone} className="shrink-0">
                 {row.badge.tone === "amber" && <Warning />}
@@ -605,19 +605,19 @@ function VaultRowItem({
               </Badge>
             )}
           </div>
-          <p className="mt-0.5 truncate text-xs text-zinc-400">
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {row.owner} · {row.updatedAt}
           </p>
         </div>
       </button>
 
       {row.shared && (
-        <span className="hidden shrink-0 text-zinc-300 sm:block" title="Partagé">
+        <span className="hidden shrink-0 text-subtle-foreground sm:block" title="Partagé">
           <ShareNetwork className="h-4 w-4" />
         </span>
       )}
 
-      <span className="tnum hidden w-16 shrink-0 text-right text-xs text-zinc-400 sm:block">
+      <span className="tnum hidden w-16 shrink-0 text-right text-xs text-muted-foreground sm:block">
         {formatBytes(row.size)}
       </span>
 
@@ -629,11 +629,11 @@ function VaultRowItem({
           className={cn(
             "shrink-0 rounded-md p-1.5 transition-colors",
             row.favorite
-              ? "text-amber-500 hover:bg-amber-50"
-              : "text-zinc-300 opacity-0 hover:bg-zinc-100 hover:text-amber-500 group-hover:opacity-100"
+              ? "text-warning hover:bg-warning-soft/30"
+              : "text-subtle-foreground opacity-0 hover:bg-accent/30 hover:text-warning group-hover:opacity-100"
           )}
         >
-          <Star className={cn("h-4 w-4", row.favorite && "fill-amber-400 text-amber-400")} weight={row.favorite ? "fill" : "regular"} />
+          <Star className={cn("h-4 w-4", row.favorite && "fill-warning text-warning")} weight={row.favorite ? "fill" : "regular"} />
         </button>
       )}
     </motion.li>

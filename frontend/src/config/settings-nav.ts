@@ -1,5 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
-import { UserCircle, Key, LockKey } from "@phosphor-icons/react";
+import { UserCircle, Key } from "@phosphor-icons/react";
 
 export type SettingsNavItem = {
   title: string;
@@ -22,12 +22,5 @@ export const SETTINGS_NAV: SettingsNavItem[] = [
     description: "Mot de passe",
     path: "/parametres/securite",
     icon: Key,
-  },
-  {
-    title: "Politiques ABAC",
-    description: "Accès",
-    path: "/parametres/politiques-abac",
-    icon: LockKey,
-    adminOnly: true,
   },
 ];

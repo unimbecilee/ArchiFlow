@@ -3,14 +3,14 @@ import { cn } from "@/lib/utils";
 
 export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="relative w-full overflow-auto">
-      <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <div className="relative w-full overflow-hidden rounded-lg border border-border bg-card shadow-e1">
+      <table className={cn("w-full border-separate border-spacing-0 text-sm", className)} {...props} />
     </div>
   );
 }
 
 export function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("border-b bg-muted/50", className)} {...props} />;
+  return <thead className={cn("border-b border-border", className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
@@ -20,7 +20,12 @@ export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTabl
 export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn("border-b border-zinc-100 transition-colors hover:bg-zinc-50 data-[state=selected]:bg-emerald-50/50", className)}
+      className={cn(
+        "border-b border-border last:border-0 transition-colors duration-150",
+        "hover:bg-accent/60",
+        "data-[state=selected]:bg-accent-soft/60",
+        className
+      )}
       {...props}
     />
   );
@@ -30,12 +35,16 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
   return (
     <th
       scope="col"
-      className={cn("h-9 px-3 text-left align-middle text-xs font-medium text-muted-foreground", className)}
+      className={cn(
+        "sticky top-0 z-10 border-b border-border bg-card/95 px-4 py-2.5 text-left",
+        "text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground backdrop-blur",
+        className
+      )}
       {...props}
     />
   );
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("px-3 py-2 align-middle", className)} {...props} />;
+  return <td className={cn("px-4 py-2.5 align-middle text-foreground", className)} {...props} />;
 }

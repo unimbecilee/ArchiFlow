@@ -138,7 +138,7 @@ function ImporterForm() {
       const files = await filesFromDataTransfer(e.dataTransfer);
       addFiles(files);
     } catch {
-      setError("Impossible de lire le depot.");
+      setError("Impossible de lire le dépôt.");
     }
   };
 
@@ -154,7 +154,7 @@ function ImporterForm() {
     uploadAbortRef.current?.abort();
     uploadAbortRef.current = null;
     setLoading(false);
-    toast.message("Import annule");
+    toast.message("Import annulé");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -218,19 +218,19 @@ function ImporterForm() {
       }
       if (failed.length < summary.length) {
         setError(
-          `${summary.length - failed.length} importe(s), ${failed.length} echec(s). Voir liste.`
+          `${summary.length - failed.length} importé(s), ${failed.length} échec(s). Voir liste.`
         );
         setQueue((prev) =>
           prev.filter((q) => failed.some((f) => f.name === q.file.name))
         );
       } else {
-        setError("Aucun fichier importe. Verifiez formats et taille.");
+        setError("Aucun fichier importé. Vérifiez formats et taille.");
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
       }
-      setError(getApiErrorMessage(err, "Echec import"));
+      setError(getApiErrorMessage(err, "Échec import"));
     } finally {
       uploadAbortRef.current = null;
       setLoading(false);
@@ -262,7 +262,7 @@ function ImporterForm() {
 
       <PagePanel
         title="Import par lot"
-        subtitle={`Jusqu'a ${MAX_IMPORT_FILES} fichiers · tous types · ${MAX_IMPORT_FILE_MB} Mo (HTTP) ou ${MAX_RESUMABLE_FILE_GB} Go (MPU).`}
+        subtitle={`Jusqu'à ${MAX_IMPORT_FILES} fichiers · tous types · ${MAX_IMPORT_FILE_MB} Mo (HTTP) ou ${MAX_RESUMABLE_FILE_GB} Go (MPU).`}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <UploadRouteBanner files={queue.map((q) => q.file)} />
@@ -274,22 +274,23 @@ function ImporterForm() {
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => void handleDrop(e)}
-            className={`rounded-2xl border-2 border-dashed p-8 shadow-sm transition-all duration-200 ${
+            className={`rounded-xl border-2 border-dashed p-8 shadow-sm transition-all duration-200 ${
               dragOver
-                ? "border-emerald-400 bg-emerald-50 shadow-md"
-                : "border-zinc-200 bg-zinc-50/60 hover:border-zinc-300 hover:bg-white"
+                ? "border-primary/60 bg-accent-soft/40"
+                : "border-border-strong bg-card/60 hover:border-border hover:bg-card"
             }`}
+            data-drag={dragOver ? "on" : ""}
           >
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="icon-well h-12 w-12">
                 <UploadSimple className="h-6 w-6" weight="duotone" />
               </div>
               <div>
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium text-foreground">
                   Glissez fichiers ou dossiers, ou parcourez
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Video, audio, images, archives, Office — structure des dossiers preservee.
+                  Vidéo, audio, images, archives, Office — structure des dossiers préservée.
                 </p>
               </div>
               <input
@@ -333,7 +334,7 @@ function ImporterForm() {
           </div>
 
           {loading && progress.total > 0 && (
-            <div className="space-y-2 rounded-2xl border border-border bg-muted/40 px-4 py-3">
+            <div className="space-y-2 rounded-lg border border-border bg-muted/40 px-4 py-3">
               <div className="flex justify-between gap-2 text-xs font-medium">
                 <span>
                   Envoi {progress.done}/{progress.total}
@@ -355,7 +356,7 @@ function ImporterForm() {
                 <div className="h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
               </div>
               {progress.name && (
-                <p className="truncate text-xs text-zinc-600">
+                <p className="truncate text-xs text-muted-foreground">
                   {progress.name}
                   {progress.bytesTotal > 0
                     ? ` · ${formatBytes(progress.bytesUploaded)} / ${formatBytes(progress.bytesTotal)}`
@@ -366,63 +367,63 @@ function ImporterForm() {
           )}
 
           {queue.length > 0 && (
-              <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                {queue.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center"
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="shrink-0 rounded-xl bg-zinc-100 p-2">
-                        <FileText className="h-4 w-4 text-zinc-700" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-zinc-900">
-                          {displayPath(item.file)}
-                        </p>
-                        <p className="text-xs text-zinc-500">{formatBytes(item.file.size)}</p>
-                      </div>
+            <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {queue.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="shrink-0 rounded-xl bg-accent-soft p-2">
+                      <FileText className="h-4 w-4 text-accent-soft-foreground" />
                     </div>
-                    <Input
-                      value={item.titre}
-                      onChange={(e) => updateTitre(item.id, e.target.value)}
-                      placeholder="Titre"
-                      className="h-9 sm:max-w-[14rem]"
-                      disabled={loading}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 text-zinc-500"
-                      disabled={loading}
-                      aria-label={`Retirer ${item.file.name}`}
-                      onClick={() => removeFile(item.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {displayPath(item.file)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
+                    </div>
+                  </div>
+                  <Input
+                    value={item.titre}
+                    onChange={(e) => updateTitre(item.id, e.target.value)}
+                    placeholder="Titre"
+                    className="h-9 sm:max-w-[14rem]"
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 text-muted-foreground"
+                    disabled={loading}
+                    aria-label={`Retirer ${item.file.name}`}
+                    onClick={() => removeFile(item.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
 
           {queue.length > 0 && (
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-muted-foreground">
               {queue.length} fichier(s) · {formatBytes(totalSize)} au total
               {queue.length >= MAX_IMPORT_FILES ? ` · limite ${MAX_IMPORT_FILES} atteinte` : ""}
             </p>
           )}
 
           {lastResults.length > 0 && (
-            <ul className="space-y-1 rounded-2xl border border-slate-200 bg-zinc-50 p-3 text-sm">
+            <ul className="space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-sm">
               {lastResults.map((r) => (
                 <li key={r.name} className="flex items-start gap-2">
                   {r.ok ? (
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" weight="fill" />
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" weight="fill" />
                   ) : (
-                    <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" weight="fill" />
+                    <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" weight="fill" />
                   )}
-                  <span className={r.ok ? "text-zinc-700" : "text-red-700"}>
+                  <span className={r.ok ? "text-foreground" : "text-destructive-foreground"}>
                     {r.name}
                     {r.error ? ` — ${r.error}` : ""}
                   </span>
@@ -444,7 +445,7 @@ function ImporterForm() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="type">Categorie (commune)</Label>
+                <Label htmlFor="type">Catégorie (commune)</Label>
                 <Input
                   id="type"
                   value={typeDocument}
@@ -453,8 +454,8 @@ function ImporterForm() {
                 />
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-zinc-50 p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            <div className="rounded-lg border border-border bg-muted/40 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Destination
               </p>
               <FolderPicker value={folderId} onChange={setFolderId} />
@@ -462,7 +463,11 @@ function ImporterForm() {
           </div>
 
           {error && <ErrorBanner message={error} />}
-          <Button type="submit" disabled={loading || queue.length === 0} className="h-11 w-full">
+          <Button
+            type="submit"
+            disabled={loading || queue.length === 0}
+            className="h-11 w-full"
+          >
             {loading
               ? `Import ${progress.done}/${progress.total}...`
               : queue.length <= 1
@@ -480,7 +485,7 @@ export default function ImporterPage() {
     <Suspense
       fallback={
         <PageFrame className="max-w-3xl">
-          <p className="text-sm text-zinc-500">Chargement...</p>
+          <p className="text-sm text-muted-foreground">Chargement...</p>
         </PageFrame>
       }
     >

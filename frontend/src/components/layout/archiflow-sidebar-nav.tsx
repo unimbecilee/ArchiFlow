@@ -33,7 +33,7 @@ export function ArchiFlowSidebarNav({
         return (
           <div key={idx}>
             {section.heading && (
-              <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+              <p className="px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-sidebar-muted">
                 {section.heading}
               </p>
             )}
@@ -54,29 +54,33 @@ export function ArchiFlowSidebarNav({
                     <Link
                       href={item.path}
                       onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      data-active={active}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-zinc-900 text-white"
-                          : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+                        "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-150",
+                        "text-sidebar-foreground/80",
+                        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        active &&
+                          "bg-sidebar-active text-sidebar-active-foreground"
                       )}
                     >
                       {active && (
                         <motion.span
                           layoutId={`nav-indicator-${indicatorId}`}
-                          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-emerald-400"
+                          className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-sidebar-brand"
                         />
                       )}
                       <Icon
                         className={cn(
-                          "h-4 w-4 shrink-0",
-                          active ? "text-emerald-400" : "text-zinc-500 group-hover:text-zinc-300"
+                          "h-4 w-4 shrink-0 text-sidebar-muted",
+                          active && "text-sidebar-brand",
+                          !active && "group-hover:text-sidebar-accent-foreground"
                         )}
                         weight={active ? "fill" : "regular"}
                       />
                       <span className="flex-1">{item.title}</span>
                       {badgeCount > 0 && (
-                        <span className="tnum min-w-[1.25rem] rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-center text-[10px] font-semibold text-emerald-300">
+                        <span className="tnum min-w-[1.25rem] rounded-full bg-sidebar-brand/15 px-1.5 py-0.5 text-center text-[10px] font-semibold text-sidebar-brand">
                           {badgeCount > 99 ? "99+" : badgeCount}
                         </span>
                       )}

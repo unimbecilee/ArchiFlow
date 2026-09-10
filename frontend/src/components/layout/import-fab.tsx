@@ -58,14 +58,14 @@ export function ImportFab() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15"
+            className="w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15 dark:border-zinc-800 dark:bg-zinc-900"
           >
-            <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
-              <p className="text-sm font-semibold text-zinc-900">Importer</p>
+            <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Importer</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+                className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                 aria-label="Fermer"
               >
                 <X className="h-4 w-4" />
@@ -79,13 +79,13 @@ export function ImportFab() {
                 e.preventDefault();
                 if (e.dataTransfer.files.length) sendFiles(e.dataTransfer.files);
               }}
-              className="mx-4 mb-4 mt-3 flex w-[calc(100%-2rem)] flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-5 text-center hover:border-emerald-400 hover:bg-emerald-50"
+              className="mx-4 mb-4 mt-3 flex w-[calc(100%-2rem)] flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-5 text-center hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/60"
             >
-              <FileArrowUp className="h-6 w-6 text-emerald-600" />
-              <span className="text-sm font-medium text-emerald-800">
+              <FileArrowUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
                 Glissez vos fichiers ou cliquez pour parcourir
               </span>
-              <span className="text-[11px] text-emerald-700/70">
+              <span className="text-[11px] text-emerald-700/70 dark:text-emerald-400/80">
                 Reprise automatique en cas de coupure réseau
               </span>
             </button>

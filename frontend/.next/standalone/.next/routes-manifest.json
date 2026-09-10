@@ -78,6 +78,12 @@
       "namedRegex": "^/admin/access\\-policies(?:/)?$"
     },
     {
+      "page": "/admin/conservation",
+      "regex": "^/admin/conservation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/conservation(?:/)?$"
+    },
+    {
       "page": "/admin/users",
       "regex": "^/admin/users(?:/)?$",
       "routeKeys": {},
@@ -168,16 +174,16 @@
       "namedRegex": "^/parametres/compte(?:/)?$"
     },
     {
-      "page": "/parametres/politiques-abac",
-      "regex": "^/parametres/politiques\\-abac(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/parametres/politiques\\-abac(?:/)?$"
-    },
-    {
       "page": "/parametres/securite",
       "regex": "^/parametres/securite(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/parametres/securite(?:/)?$"
+    },
+    {
+      "page": "/preview-haikei",
+      "regex": "^/preview\\-haikei(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/preview\\-haikei(?:/)?$"
     },
     {
       "page": "/recherche",
