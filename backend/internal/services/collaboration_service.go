@@ -171,19 +171,26 @@ func (s *CollaborationService) ListSharedWithMe(userID uint) ([]map[string]any, 
 		if doc == nil {
 			continue
 		}
+		perms := decodePerms(sh.Permissions)
+		canWrite := s.requirePerm(perms, models.PermWrite)
 		out = append(out, map[string]any{
-			"id":                doc.ID,
-			"titre":             doc.Title,
-			"description":       doc.Description,
-			"taille":            doc.Size,
-			"taille_formatee":   FormatFileSize(doc.Size),
-			"mime_type":         doc.MimeType,
-			"file_name":         doc.FileName,
-			"previewable":       IsPreviewableMime(doc.MimeType),
-			"date_creation":     doc.CreatedAt,
-			"permissions":       decodePerms(sh.Permissions),
-			"date_partage":      sh.CreatedAt,
-			"proprietaire_id":   doc.OwnerID,
+			"id":                 doc.ID,
+			"titre":              doc.Title,
+			"description":        doc.Description,
+			"taille":             doc.Size,
+			"taille_formatee":    FormatFileSize(doc.Size),
+			"mime_type":          doc.MimeType,
+			"file_name":          doc.FileName,
+			"previewable":        IsPreviewableMime(doc.MimeType),
+			"editable":           IsEditableDocument(doc.MimeType, doc.FileName),
+			"office_editable":    IsOfficeDocument(doc.MimeType, doc.FileName),
+			"status":             doc.Status,
+			"is_locked":          doc.LockedByID != nil,
+			"can_write":          canWrite,
+			"date_creation":      doc.CreatedAt,
+			"permissions":        perms,
+			"date_partage":       sh.CreatedAt,
+			"proprietaire_id":    doc.OwnerID,
 		})
 	}
 	return out, nil

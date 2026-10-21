@@ -202,6 +202,14 @@ func (h *DocumentHandler) documentsJSON(docs []models.Document) []map[string]any
 	return views
 }
 
+func (h *DocumentHandler) documentsJSONForUser(c echo.Context, docs []models.Document) []map[string]any {
+	views := make([]map[string]any, 0, len(docs))
+	for _, d := range docs {
+		views = append(views, h.documentToViewForUser(c, d))
+	}
+	return views
+}
+
 // ListMy GET /api/documents/my
 func (h *DocumentHandler) ListMy(c echo.Context) error {
 	userID, err := userIDFromContext(c)
@@ -217,7 +225,7 @@ func (h *DocumentHandler) ListMy(c echo.Context) error {
 	}
 	resp := map[string]any{
 		"success":   true,
-		"documents": h.documentsJSON(docs),
+		"documents": h.documentsJSONForUser(c, docs),
 		"total":     len(docs),
 	}
 	if nextCursor != nil {
@@ -255,7 +263,7 @@ func (h *DocumentHandler) Search(c echo.Context) error {
 	}
 	resp := map[string]any{
 		"success":   true,
-		"documents": h.documentsJSON(docs),
+		"documents": h.documentsJSONForUser(c, docs),
 		"total":     total,
 		"query":     q,
 		"fulltext":  fullText,
@@ -278,7 +286,7 @@ func (h *DocumentHandler) ListRecent(c echo.Context) error {
 	}
 	resp := map[string]any{
 		"success":   true,
-		"documents": h.documentsJSON(docs),
+		"documents": h.documentsJSONForUser(c, docs),
 		"total":     len(docs),
 	}
 	if nextCursor != nil {
@@ -301,7 +309,7 @@ func (h *DocumentHandler) ListTrash(c echo.Context) error {
 	}
 	resp := map[string]any{
 		"success":   true,
-		"documents": h.documentsJSON(docs),
+		"documents": h.documentsJSONForUser(c, docs),
 		"total":     len(docs),
 	}
 	if nextCursor != nil {

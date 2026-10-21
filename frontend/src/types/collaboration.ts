@@ -7,6 +7,11 @@ export interface SharedDocument {
   mime_type?: string;
   file_name?: string;
   previewable?: boolean;
+  editable?: boolean;
+  office_editable?: boolean;
+  status?: string;
+  is_locked?: boolean;
+  can_write?: boolean;
   date_creation: string;
   permissions: string[];
   date_partage: string;

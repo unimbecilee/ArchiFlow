@@ -64,12 +64,13 @@ export function DocumentPreviewPane({
           return;
         }
 
-        objectUrl = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         if (ac.signal.aborted) {
-          URL.revokeObjectURL(objectUrl);
+          URL.revokeObjectURL(url);
           return;
         }
-        setState({ status: "ready", src: objectUrl, blobType });
+        objectUrl = url;
+        setState({ status: "ready", src: url, blobType });
       })
       .catch((err: unknown) => {
         if (ac.signal.aborted) return;
@@ -81,7 +82,12 @@ export function DocumentPreviewPane({
 
     return () => {
       ac.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      // Drop UI off the blob URL before revoking (avoids broken-image flash).
+      setState({ status: "loading" });
+      const toRevoke = objectUrl;
+      if (toRevoke) {
+        queueMicrotask(() => URL.revokeObjectURL(toRevoke));
+      }
     };
   }, [doc.id, doc.mime_type, doc.file_name, isOffice, officeSlot]);
 

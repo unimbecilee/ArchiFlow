@@ -24,20 +24,35 @@ func SecurityWarnings() []string {
 	if isDefaultMinioCreds() {
 		out = append(out, "MinIO credentials missing or still using weak defaults")
 	}
-	if OfficeEnabled() && weakOfficeSecret() {
-		out = append(out, "ONLYOFFICE enabled but OFFICE_FILE_TOKEN_SECRET is weak, missing, or equals JWT_SECRET")
+	if (OfficeEnabled() || CollaboraEnabled()) && weakOfficeSecret() {
+		out = append(out, "Office/Collabora enabled but OFFICE_FILE_TOKEN_SECRET is weak, missing, or equals JWT_SECRET")
 	}
-	if wh := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET")); wh == "" {
-		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") {
-			out = append(out, "SFTPGO_WEBHOOK_SECRET is empty while SFTPGO_INTEGRATION_ENABLED=true")
+	if sftpGoIntegrationEnabled() {
+		if wh := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET")); wh == "" || weakSecret(wh) {
+			out = append(out, "SFTPGO_WEBHOOK_SECRET is empty or weak while SFTPGo integration enabled")
 		}
-	}
-	if pwd := strings.TrimSpace(os.Getenv("SFTPGO_USER_PASSWORD_SECRET")); pwd == "" || weakSecret(pwd) {
-		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") {
+		if pwd := strings.TrimSpace(os.Getenv("SFTPGO_USER_PASSWORD_SECRET")); pwd == "" || weakSecret(pwd) {
 			out = append(out, "SFTPGO_USER_PASSWORD_SECRET is missing or weak while SFTPGo upload enabled")
+		}
+		if strings.TrimSpace(os.Getenv("MINIO_SFTP_ACCESS_KEY")) == "" || strings.TrimSpace(os.Getenv("MINIO_SFTP_SECRET_KEY")) == "" {
+			out = append(out, "MINIO_SFTP_ACCESS_KEY/SECRET unset — auth hook will not embed root MinIO creds (set scoped keys)")
+		}
+		if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_ALLOW_ROOT_MINIO_CREDS")), "true") ||
+			os.Getenv("SFTPGO_ALLOW_ROOT_MINIO_CREDS") == "1" {
+			out = append(out, "SFTPGO_ALLOW_ROOT_MINIO_CREDS=1: auth hook may return root MinIO credentials — never use in shared/staging")
 		}
 	}
 	return out
+}
+
+func sftpGoIntegrationEnabled() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") ||
+		os.Getenv("SFTPGO_INTEGRATION_ENABLED") == "1"
+}
+
+// CollaboraEnabled reports COLLABORA_ENABLED=true.
+func CollaboraEnabled() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("COLLABORA_ENABLED")), "true")
 }
 
 func weakOfficeSecret() bool {
@@ -66,12 +81,12 @@ func officeFileTokenSecret() string {
 }
 
 func validateOfficeProduction() error {
-	if !IsProduction() || !OfficeEnabled() {
+	if !IsProduction() || (!OfficeEnabled() && !CollaboraEnabled()) {
 		return nil
 	}
 	secret := officeFileTokenSecret()
 	if secret == "" || weakSecret(secret) {
-		return fmt.Errorf("set a strong OFFICE_FILE_TOKEN_SECRET (>= 32 chars, unique) when ONLYOFFICE_ENABLED=true in production")
+		return fmt.Errorf("set a strong OFFICE_FILE_TOKEN_SECRET (>= 32 chars, unique) when ONLYOFFICE or Collabora is enabled in production")
 	}
 	if secret == strings.TrimSpace(os.Getenv("JWT_SECRET")) {
 		return fmt.Errorf("OFFICE_FILE_TOKEN_SECRET must differ from JWT_SECRET in production")
@@ -106,17 +121,23 @@ func validatePresignedTTLProduction() error {
 }
 
 func validateSftpGoProduction() error {
-	if !IsProduction() {
-		return nil
-	}
-	enabled := strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_INTEGRATION_ENABLED")), "true") ||
-		os.Getenv("SFTPGO_INTEGRATION_ENABLED") == "1"
-	if !enabled {
+	if !IsProduction() || !sftpGoIntegrationEnabled() {
 		return nil
 	}
 	wh := strings.TrimSpace(os.Getenv("SFTPGO_WEBHOOK_SECRET"))
 	if wh == "" || weakSecret(wh) {
 		return fmt.Errorf("set a strong SFTPGO_WEBHOOK_SECRET when SFTPGO_INTEGRATION_ENABLED=true in production")
+	}
+	pwd := strings.TrimSpace(os.Getenv("SFTPGO_USER_PASSWORD_SECRET"))
+	if pwd == "" || weakSecret(pwd) {
+		return fmt.Errorf("set a strong SFTPGO_USER_PASSWORD_SECRET when SFTPGO_INTEGRATION_ENABLED=true in production")
+	}
+	if strings.TrimSpace(os.Getenv("MINIO_SFTP_ACCESS_KEY")) == "" || strings.TrimSpace(os.Getenv("MINIO_SFTP_SECRET_KEY")) == "" {
+		return fmt.Errorf("set MINIO_SFTP_ACCESS_KEY and MINIO_SFTP_SECRET_KEY (scoped inbox) when SFTPGo is enabled in production")
+	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_ALLOW_ROOT_MINIO_CREDS")), "true") ||
+		os.Getenv("SFTPGO_ALLOW_ROOT_MINIO_CREDS") == "1" {
+		return fmt.Errorf("SFTPGO_ALLOW_ROOT_MINIO_CREDS must not be set in production")
 	}
 	return nil
 }

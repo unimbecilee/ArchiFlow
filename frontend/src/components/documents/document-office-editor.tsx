@@ -36,6 +36,7 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
   const { user } = useAuthStore();
   const containerId = `office-editor-${doc.id}`;
   const editorRef = useRef<{ destroyEditor?: () => void } | null>(null);
+  const mountGen = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
     });
 
   const mount = useCallback(async () => {
+    const gen = ++mountGen.current;
     setLoading(true);
     setError(null);
     setHint(null);
@@ -74,6 +76,7 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
     setProvider(null);
     try {
       const cfg = await getOfficeEditorConfig(doc.id);
+      if (gen !== mountGen.current) return;
       if (!cfg.enabled || !cfg.config) {
         setHint(
           cfg.reason ||
@@ -106,6 +109,7 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
         return;
       }
       await loadScript(`${server}/web-apps/apps/api/documents/api.js`);
+      if (gen !== mountGen.current) return;
       if (!window.DocsAPI) {
         setError("API OnlyOffice indisponible");
         return;
@@ -113,16 +117,19 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
       editorRef.current?.destroyEditor?.();
       editorRef.current = new window.DocsAPI.DocEditor(containerId, cfg.config);
     } catch (e: unknown) {
+      if (gen !== mountGen.current) return;
       setError(e instanceof Error ? e.message : "Erreur chargement editeur");
     } finally {
-      setLoading(false);
+      if (gen === mountGen.current) setLoading(false);
     }
   }, [doc.id, containerId]);
 
   useEffect(() => {
-    mount();
+    void mount();
     return () => {
+      mountGen.current += 1;
       editorRef.current?.destroyEditor?.();
+      editorRef.current = null;
     };
   }, [mount]);
 
@@ -152,8 +159,7 @@ export function DocumentOfficeEditor({ doc, onSaved }: DocumentOfficeEditorProps
           {mode === "view" && " — lecture seule"}
         </span>
       </div>
-      {/* 5A : message seulement si pas de droit d'ecriture effectif */}
-      {!gate.ok && doc.can_write === false && (
+      {!gate.ok && (
         <p className="rounded-xl border border-slate-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
           {gate.reason} Mode lecture seule.
         </p>

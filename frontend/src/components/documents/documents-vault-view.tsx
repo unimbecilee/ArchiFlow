@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Check,
@@ -116,17 +116,21 @@ export function DocumentsVaultView() {
     queryKey: ["vault-folders", folderId],
     queryFn: () => getFolders(folderId),
   });
-  const docsQuery = useQuery({
+  const docsQuery = useInfiniteQuery({
     queryKey: ["vault-docs", folderId],
-    queryFn: () => getMyDocuments(folderId),
+    queryFn: ({ pageParam }) => getMyDocuments(folderId, false, pageParam ?? null),
+    initialPageParam: null as { cursor_id: number; cursor_created_at: string } | null,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const statsQuery = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: getDashboardStats,
+    staleTime: 60_000,
   });
   const favoritesQuery = useQuery({
     queryKey: ["favorites"],
     queryFn: getFavorites,
+    staleTime: 60_000,
   });
   const crumbQuery = useQuery({
     queryKey: ["vault-breadcrumb", folderId],
@@ -143,7 +147,10 @@ export function DocumentsVaultView() {
   const loading = foldersQuery.isPending || docsQuery.isPending;
   const error = foldersQuery.isError || docsQuery.isError;
   const folders = foldersQuery.data ?? [];
-  const documents = docsQuery.data?.documents ?? [];
+  const documents = React.useMemo(
+    () => docsQuery.data?.pages.flatMap((p) => p.documents) ?? [],
+    [docsQuery.data]
+  );
 
   const rows = React.useMemo<VaultRow[]>(() => {
     const folderRows: VaultRow[] = folders.map((folder) => ({
@@ -202,6 +209,8 @@ export function DocumentsVaultView() {
     void statsQuery.refetch();
     void favoritesQuery.refetch();
   }
+
+  const hasMoreDocs = Boolean(docsQuery.hasNextPage);
 
   async function toggleFav(docId: number) {
     const was = favoriteIds.has(docId);
@@ -462,6 +471,20 @@ export function DocumentsVaultView() {
                     ))}
                   </AnimatePresence>
                 </motion.ul>
+
+                {hasMoreDocs && !query.trim() && (
+                  <div className="border-t border-border px-4 py-3">
+                    <Button
+                      variant="soft"
+                      size="sm"
+                      className="w-full"
+                      disabled={docsQuery.isFetchingNextPage}
+                      onClick={() => void docsQuery.fetchNextPage()}
+                    >
+                      {docsQuery.isFetchingNextPage ? "Chargement…" : "Charger plus de fichiers"}
+                    </Button>
+                  </div>
+                )}
 
                 {dragging && (
                   <motion.div

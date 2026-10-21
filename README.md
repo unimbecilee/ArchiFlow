@@ -6,17 +6,17 @@ GED et workflows d'approbation pour l'entreprise — backend **Go**, frontend **
 
 ## Fonctionnalités
 
-| Domaine | Contenu |
-|--------|---------|
-| **Documents** | Dossiers, import, aperçu PDF/image, versioning, corbeille, recherche (FTS), favoris, verrouillage |
-| **Workflows** | Validation 2 étapes (Responsable → Administrateur), approbations avec **aperçu + attestation** avant décision |
-| **Collaboration** | Partages, commentaires, tags, notifications in-app + email (SMTP) |
-| **Temps réel** | WebSocket `GET /api/ws` (défaut) ou SSE legacy ; broker Redis multi-instances |
-| **Sessions** | Refresh opaque HttpOnly, rotation, révocation, idle timeout, plafond appareils |
-| **Admin** | Utilisateurs, workflows, rôles (`admin`, `manager`, `validator`, `archivist`, `user`) |
-| **ArchiFlow +** | Intégration Pydio Cells (profil Docker `cells`) — collaboration avancée, SSO |
-| **Bureautique** | OnlyOffice (profil Docker `office`) — édition Word/Excel/PPT |
-| **MFT** | SFTPGo (profil Docker `sftp`) — dépôt SFTP/FTPS → ingestion GED |
+| Domaine           | Contenu                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Documents**     | Dossiers, import, aperçu PDF/image, versioning, corbeille, recherche (FTS), favoris, verrouillage             |
+| **Workflows**     | Validation 2 étapes (Responsable → Administrateur), approbations avec **aperçu + attestation** avant décision |
+| **Collaboration** | Partages, commentaires, tags, notifications in-app + email (SMTP)                                             |
+| **Temps réel**    | WebSocket `GET /api/ws` (défaut) ou SSE legacy ; broker Redis multi-instances                                 |
+| **Sessions**      | Refresh opaque HttpOnly, rotation, révocation, idle timeout, plafond appareils                                |
+| **Admin**         | Utilisateurs, workflows, rôles (`admin`, `manager`, `validator`, `archivist`, `user`)                         |
+| **ArchiFlow +**   | Intégration Pydio Cells (profil Docker `cells`) — collaboration avancée, SSO                                  |
+| **Bureautique**   | Collabora (prioritaire) et/ou OnlyOffice (profil Docker `office`) — édition Word/Excel/PPT                    |
+| **MFT**           | SFTPGo (profil Docker `sftp`) — dépôt SFTP/FTPS → ingestion GED                                               |
 
 ---
 
@@ -64,20 +64,20 @@ Attendre que `postgres`, `minio`, `redis` et `backend` soient healthy, puis ouvr
 
 ### URLs
 
-| Service | URL | Identifiants |
-|---------|-----|--------------|
-| Frontend | http://localhost:3000 | — |
-| API Go | http://localhost:5010 | JWT / cookie refresh |
-| MinIO API | http://localhost:9000 | `minioadmin` / `minioadmin123` |
-| MinIO Console | http://localhost:9001 | idem |
-| Redis | localhost:6379 | — |
+| Service       | URL                   | Identifiants                   |
+| ------------- | --------------------- | ------------------------------ |
+| Frontend      | http://localhost:3000 | —                              |
+| API Go        | http://localhost:5010 | JWT / cookie refresh           |
+| MinIO API     | http://localhost:9000 | `minioadmin` / `minioadmin123` (image `pgsty/silo`, fork MinIO) |
+| MinIO Console | http://localhost:9001 | idem                           |
+| Redis         | localhost:6379        | —                              |
 
 ### Compte seed (premier démarrage)
 
 Un seul compte **superadmin** (`role=admin`) est créé au boot si aucun admin n’existe.
 
-| Rôle | Email (défaut) | Mot de passe |
-|------|----------------|--------------|
+| Rôle       | Email (défaut)                                    | Mot de passe                                        |
+| ---------- | ------------------------------------------------- | --------------------------------------------------- |
 | Superadmin | `SEED_ADMIN_EMAIL` (déf. `admin@archiflow.local`) | `SEED_ADMIN_PASSWORD` (**obligatoire** dans `.env`) |
 
 Les autres comptes (manager, validateur, archiviste, utilisateur) se créent depuis **Admin → Utilisateurs**.
@@ -90,7 +90,7 @@ Au premier login, le changement de mot de passe est forcé (`MustChangePassword`
 # Collaboration avancée (Pydio Cells + MySQL)
 docker compose --profile cells up -d
 
-# Édition bureautique OnlyOffice
+# Édition bureautique (OnlyOffice et/ou Collabora — voir COLLABORA_* / ONLYOFFICE_* dans .env)
 docker compose --profile office up -d
 
 # MFT SFTPGo (inbox SFTP → documents ArchiFlow)
@@ -149,17 +149,17 @@ UI : http://localhost:3000 — le proxy Next redirige `/api/*` vers le backend.
 
 Fichier unique **`.env`** à la racine (modèle : [`.env.example`](.env.example)).
 
-| Variable | Rôle |
-|----------|------|
-| `DATABASE_URL` | PostgreSQL |
-| `JWT_SECRET` / `JWT_REFRESH_SECRET` | Tokens (min. 32 car. en prod) |
-| `JWT_SESSION_IDLE_MINUTES` | Expiration refresh si inactif |
-| `JWT_MAX_SESSIONS_PER_USER` | Limite sessions par utilisateur |
-| `REDIS_URL` | Pub/sub temps réel (`redis://redis:6379/0` en Docker) |
-| `NEXT_PUBLIC_REALTIME_MODE` | `ws` (défaut) ou `sse` |
-| `NEXT_PUBLIC_API_URL` | WS direct navigateur + build frontend Docker |
-| `SMTP_*` | Emails (Brevo, etc.) — optionnel |
-| `PYDIO_*` | Intégration Cells — voir `.env.example` |
+| Variable                            | Rôle                                                  |
+| ----------------------------------- | ----------------------------------------------------- |
+| `DATABASE_URL`                      | PostgreSQL                                            |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | Tokens (min. 32 car. en prod)                         |
+| `JWT_SESSION_IDLE_MINUTES`          | Expiration refresh si inactif                         |
+| `JWT_MAX_SESSIONS_PER_USER`         | Limite sessions par utilisateur                       |
+| `REDIS_URL`                         | Pub/sub temps réel (`redis://redis:6379/0` en Docker) |
+| `NEXT_PUBLIC_REALTIME_MODE`         | `ws` (défaut) ou `sse`                                |
+| `NEXT_PUBLIC_API_URL`               | WS direct navigateur + build frontend Docker          |
+| `SMTP_*`                            | Emails (Brevo, etc.) — optionnel                      |
+| `PYDIO_*`                           | Intégration Cells — voir `.env.example`               |
 
 Après modification de `NEXT_PUBLIC_*`, **rebuild** le frontend Docker :
 
@@ -175,12 +175,12 @@ docker compose build frontend && docker compose up -d frontend
 - **Refresh token** opaque en cookie `HttpOnly`, rotation à chaque refresh
 - Invalidation : logout, changement mot de passe, désactivation admin, dépassement idle / max sessions
 
-| Endpoint | Description |
-|----------|-------------|
-| `POST /api/auth/login` | Connexion |
+| Endpoint                 | Description         |
+| ------------------------ | ------------------- |
+| `POST /api/auth/login`   | Connexion           |
 | `POST /api/auth/refresh` | Nouvel access token |
-| `POST /api/auth/logout` | Révocation session |
-| `GET /api/auth/me` | Profil (protégé) |
+| `POST /api/auth/logout`  | Révocation session  |
+| `GET /api/auth/me`       | Profil (protégé)    |
 
 ---
 
@@ -199,10 +199,10 @@ API : `POST /api/workflows/validation/start`, `POST /api/workflows/instances/:id
 
 ## Temps réel
 
-| Canal | Usage |
-|-------|--------|
-| `POST /api/ws/ticket` | Ticket WS court (60 s) |
-| `GET /api/ws?ticket=…` | Notifications + compteurs workflow (push) |
+| Canal                           | Usage                                                   |
+| ------------------------------- | ------------------------------------------------------- |
+| `POST /api/ws/ticket`           | Ticket WS court (60 s)                                  |
+| `GET /api/ws?ticket=…`          | Notifications + compteurs workflow (push)               |
 | `GET /api/notifications/stream` | Legacy SSE (poll DB) si `NEXT_PUBLIC_REALTIME_MODE=sse` |
 
 Redis synchronise les événements entre plusieurs replicas backend.
@@ -264,17 +264,22 @@ node scripts/test-realtime-ws.mjs
 
 Avant `ENVIRONMENT=production` :
 
-| Variable | Exigence |
-|----------|----------|
-| `JWT_SECRET` / `JWT_REFRESH_SECRET` | ≥ 32 car., pas valeur `.env.example` |
-| `PYDIO_API_TOKEN` | Token fort unique |
-| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | Pas `minioadmin` / `minioadmin123` |
-| `COOKIE_SECURE` | `true` ou non défini (auto prod) |
-| `AUTH_ALLOW_PUBLIC_REGISTER` | `false` (défaut prod) |
-| `DATABASE_URL` | `sslmode=require` ou `verify-full` |
-| `PYDIO_DEV_INSECURE` | **Non défini** (jamais en prod) |
-| `NEXT_PUBLIC_REALTIME_MODE` | `ws` (pas `sse` en prod) |
-| `PRESIGNED_URL_TTL_MINUTES` | `15` recommandé |
+| Variable                                                | Exigence                                                             |
+| ------------------------------------------------------- | -------------------------------------------------------------------- |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET`                     | ≥ 32 car., pas valeur `.env.example`                                 |
+| `PYDIO_API_TOKEN`                                       | Token fort unique                                                    |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`                 | Pas `minioadmin` / `minioadmin123`                                   |
+| `MINIO_SFTP_ACCESS_KEY` / `MINIO_SFTP_SECRET_KEY`       | Obligatoire si `SFTPGO_INTEGRATION_ENABLED=true` (clés scoped inbox) |
+| `SFTPGO_WEBHOOK_SECRET` / `SFTPGO_USER_PASSWORD_SECRET` | Forts, uniques ; jamais `change-me…`                                 |
+| `SFTPGO_ALLOW_ROOT_MINIO_CREDS`                         | **Non défini** en prod                                               |
+| `OFFICE_FILE_TOKEN_SECRET`                              | Fort et ≠ `JWT_SECRET` si OnlyOffice **ou** Collabora                |
+| `COOKIE_SECURE`                                         | `true` ou non défini (auto prod)                                     |
+| `AUTH_ALLOW_PUBLIC_REGISTER`                            | `false` (défaut prod)                                                |
+| `DATABASE_URL`                                          | `sslmode=require` ou `verify-full`                                   |
+| `PYDIO_DEV_INSECURE`                                    | **Non défini** (jamais en prod)                                      |
+| `NEXT_PUBLIC_REALTIME_MODE`                             | `ws` (pas `sse` en prod)                                             |
+| `PRESIGNED_URL_TTL_MINUTES`                             | `15` recommandé                                                      |
+| Ports data-plane                                        | Compose lie Postgres/MinIO/Redis/API/… sur `127.0.0.1`               |
 
 Script : `./scripts/check-prod-env.sh` (exécute les règles Go `ValidateSecurityForEnv`).
 
@@ -290,7 +295,7 @@ Script : `./scripts/check-prod-env.sh` (exécute les règles Go `ValidateSecurit
 
 **Backend** — Go 1.22, Echo, GORM, PostgreSQL, MinIO, Redis, gorilla/websocket, JWT, Zap
 
-**Frontend** — Next.js 14, TypeScript, Tailwind CSS, Radix UI, Zustand, Axios, Geist
+**Frontend** — Next.js 15, TypeScript, Tailwind CSS, Radix UI, Zustand, Axios, Geist
 
 ---
 
@@ -313,5 +318,3 @@ Erreurs : `success: false`, champ `error` ou `message`.
 ## Licence
 
 Propriétaire — Landry D. / ArchiFlow.
-
-

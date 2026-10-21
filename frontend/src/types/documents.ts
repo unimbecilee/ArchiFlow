@@ -53,8 +53,14 @@ export interface FolderFlatOption {
   path: string;
 }
 
+export type DocumentsCursor = {
+  cursor_id: number;
+  cursor_created_at: string;
+};
+
 export interface DocumentsResponse {
   success?: boolean;
   documents: Document[];
   total: number;
+  next_cursor?: DocumentsCursor | null;
 }

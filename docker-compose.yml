@@ -10,7 +10,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./deploy/postgres-init.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U archiflow -d archiflow"]
       interval: 5s
@@ -40,7 +40,7 @@ services:
       IGNORE_STARTUP_PARAMETERS: "extra_float_digits,application_name,prefer_simple_protocol"
     ports:
       # Image écoute sur 5432 ; on expose 6432 sur l'hôte (convention PgBouncer)
-      - "6432:5432"
+      - "127.0.0.1:6432:5432"
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,8 +53,9 @@ services:
       - archiflow
 
   minio:
-    # Épinglé (évite :latest) — remonter volontairement via Renovate/manuel
-    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    # Upstream minio/minio + quay.io/minio/* : plus de pull anonyme (401). Fork S3-compatible.
+    # https://github.com/pgsty/silo — API/env MinIO inchangés, données /data compatibles.
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: archiflow-minio
     command: server /data --console-address ":9001"
     environment:
@@ -65,8 +66,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
@@ -75,15 +76,18 @@ services:
     networks:
       - archiflow
 
+  # Client mc : image upstream minio/mc aussi retirée — AWS CLI vers l’API S3 MinIO.
   minio-init:
-    image: minio/mc:RELEASE.2024-09-16T17-43-14Z
+    image: amazon/aws-cli:2.17.50
     container_name: archiflow-minio-init
     depends_on:
       minio:
         condition: service_healthy
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://minio:9000
     entrypoint: ["/bin/sh", "-c", "sed 's/\\r$//' /minio-init.sh | sh"]
     volumes:
       - ./deploy/minio-init.sh:/minio-init.sh:ro,z
@@ -99,7 +103,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -116,8 +120,8 @@ services:
       CLAMD_STARTUP_TIMEOUT: 180
     volumes:
       - clamav_data:/var/lib/clamav
-    ports:
-      - "3310:3310"
+    # Pas de publish hôte : le worker joint clamav:3310 sur le réseau compose.
+    # (évite conflit si 3310 déjà pris / ancien bind 0.0.0.0)
     healthcheck:
       test: ["CMD", "clamdscan", "--ping"]
       interval: 30s
@@ -145,7 +149,7 @@ services:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-archiflow_meili_master_key_change_me}
       MEILI_NO_ANALYTICS: "true"
     ports:
-      - "7700:7700"
+      - "127.0.0.1:7700:7700"
     volumes:
       - meili_data:/meili_data
     healthcheck:
@@ -175,7 +179,7 @@ services:
       UPLOAD_SFTPGO_MAX_BYTES: "${UPLOAD_SFTPGO_MAX_BYTES:-0}"
     mem_limit: 512m
     ports:
-      - "5010:5000"  # 5001 often taken (e.g. documanager-logger-service)
+      - "127.0.0.1:5010:5000"  # localhost only — Next proxy reaches backend on Docker network
     depends_on:
       postgres:
         condition: service_healthy
@@ -277,7 +281,7 @@ services:
       JWT_ENABLED: "true"
       JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-archiflow_onlyoffice_jwt_change_me}
     ports:
-      - "9980:80"
+      - "127.0.0.1:9980:80"
     restart: unless-stopped
     networks:
       - archiflow
@@ -292,7 +296,7 @@ services:
       username: admin
       password: ${COLLABORA_ADMIN_PASSWORD:-collabora}
     ports:
-      - "9981:9980"
+      - "127.0.0.1:9981:9980"
     restart: unless-stopped
     networks:
       - archiflow
@@ -309,7 +313,7 @@ services:
     profiles: ["cells"]
     restart: unless-stopped
     ports:
-      - "4001:8080"
+      - "127.0.0.1:4001:8080"
     env_file:
       - ./pydio_cells/.env
     environment:
@@ -345,7 +349,7 @@ services:
     container_name: archiflow-sftpgo
     profiles: ["sftp"]
     ports:
-      - "2022:2022"
+      - "127.0.0.1:2022:2022"
       - "127.0.0.1:8082:8080"
     environment:
       SFTPGO_DATA_PROVIDER__DRIVER: sqlite
@@ -360,6 +364,9 @@ services:
       SFTPGO_COMMON__ACTIONS__EXECUTE_ON: "upload,pre-upload,login"
       SFTPGO_COMMON__ACTIONS__HOOK: ${SFTPGO_HOOK_URL:-http://backend:5000/api/integrations/sftpgo/hooks}
       SFTPGO_COMMON__ACTIONS__HTTP_HEADERS: "X-SFTPGO-Secret:${SFTPGO_WEBHOOK_SECRET:-change-me-sftpgo-webhook-secret-32chars}"
+      # Global HTTP client headers — also applied to external_auth_hook
+      SFTPGO_HTTP__HEADERS__0__KEY: X-SFTPGO-Secret
+      SFTPGO_HTTP__HEADERS__0__VALUE: ${SFTPGO_WEBHOOK_SECRET:-change-me-sftpgo-webhook-secret-32chars}
       SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_HOOK: ${SFTPGO_AUTH_HOOK_URL:-http://backend:5000/api/integrations/sftpgo/auth}
       SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_SCOPE: 0
       SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER:-admin}
@@ -383,7 +390,7 @@ services:
     container_name: archiflow-sftpgo-proxy
     profiles: ["sftp"]
     ports:
-      - "8088:8088"
+      - "127.0.0.1:8088:8088"
     volumes:
       - ./deploy/Caddyfile.sftpgo:/etc/caddy/Caddyfile:ro
     depends_on:

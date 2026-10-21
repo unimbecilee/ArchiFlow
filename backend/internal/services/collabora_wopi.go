@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -118,8 +119,7 @@ func (s *OfficeService) GetCollaboraEditorConfig(
 }
 
 func urlQueryEscape(s string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(s, ":", "%3A"), "/", "%2F")
-	// use net/url properly below — this helper is replaced
+	return url.QueryEscape(s)
 }
 
 // CheckFileInfo WOPI.

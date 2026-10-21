@@ -308,9 +308,10 @@ func main() {
 	api.GET("/wopi/files/:id/contents", officeHandler.WopiGetFile, middleware.CollaboraCircuitBreaker())
 	api.POST("/wopi/files/:id/contents", officeHandler.WopiPutFile, middleware.CollaboraCircuitBreaker())
 
-	// SFTPGo MFT — external auth + webhooks (pas de JWT utilisateur)
+	// SFTPGo MFT — external auth + webhooks (pas de JWT utilisateur).
+	// /auth exige le même secret que /hooks (header X-SFTPGO-Secret) — voir SFTPGO_HTTP__HEADERS.
 	sftpgoAPI := api.Group("/integrations/sftpgo")
-	sftpgoAPI.POST("/auth", sftpGoHandler.Auth, middleware.AuthRateLimit())
+	sftpgoAPI.POST("/auth", sftpGoHandler.Auth, middleware.SftpGoWebhookAuth(), middleware.AuthRateLimit())
 	sftpgoAPI.POST("/hooks", sftpGoHandler.Hooks, middleware.SftpGoWebhookAuth())
 
 	protected := api.Group("")

@@ -135,22 +135,23 @@ func (s *AdminService) UpdateUser(id uint, req dto.AdminUpdateUserRequest) (*dto
 	if req.LastName != nil {
 		u.LastName = strings.TrimSpace(*req.LastName)
 	}
+	roleChanged := false
 	if req.Role != nil {
 		switch *req.Role {
 		case models.RoleAdmin, models.RoleUser, models.RoleManager, models.RoleValidator, models.RoleArchivist:
+			if *req.Role != u.Role {
+				roleChanged = true
+			}
 			u.Role = *req.Role
 		default:
 			return nil, errors.New("invalid role")
 		}
 	}
+	deactivate := false
 	if req.IsActive != nil {
 		wasActive := u.IsActive
 		u.IsActive = *req.IsActive
-		if wasActive && !*req.IsActive {
-			if err := s.sessions.InvalidateUser(u.ID); err != nil {
-				return nil, errors.New("failed to invalidate sessions")
-			}
-		}
+		deactivate = wasActive && !*req.IsActive
 	}
 	// SFTP policy pilotée uniquement par le rôle.
 	en, mode := models.DefaultSftpForRole(u.Role)
@@ -158,6 +159,11 @@ func (s *AdminService) UpdateUser(id uint, req dto.AdminUpdateUserRequest) (*dto
 	u.SftpMode = mode
 	if err := s.users.Update(u); err != nil {
 		return nil, errors.New("failed to update user")
+	}
+	if roleChanged || deactivate {
+		if err := s.sessions.InvalidateUser(u.ID); err != nil {
+			return nil, errors.New("failed to invalidate sessions")
+		}
 	}
 	if s.policy != nil {
 		s.policy.InvalidateUser(u.ID)

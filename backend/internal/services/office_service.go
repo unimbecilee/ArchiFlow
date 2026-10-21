@@ -33,8 +33,9 @@ func NewOfficeService(collab *CollaborationService, userRepo repository.UserRepo
 	if secret == "" && config.IsDevelopment() {
 		secret = os.Getenv("JWT_SECRET")
 	}
-	if config.IsProduction() && OfficeEnabled() && (secret == "" || secret == os.Getenv("JWT_SECRET")) {
-		secret = "" // GetEditorConfig will fail closed via signOfficeToken
+	officeOn := OfficeEnabled() || CollaboraEnabled()
+	if config.IsProduction() && officeOn && (secret == "" || secret == os.Getenv("JWT_SECRET")) {
+		secret = "" // GetEditorConfig / WOPI will fail closed via signOfficeToken
 	}
 	return &OfficeService{collab: collab, userRepo: userRepo, policy: policy, secret: secret}
 }
@@ -206,6 +207,20 @@ func (s *OfficeService) StreamDocument(ctx context.Context, docID, userID uint, 
 	}
 	if tDoc != docID || tUser != userID {
 		return nil, "", "", errors.New("token mismatch")
+	}
+	u, err := s.userRepo.GetByID(userID)
+	if err != nil || u == nil || !u.IsActive {
+		return nil, "", "", errors.New("forbidden")
+	}
+	if s.policy != nil {
+		if err := s.policy.EnsureCan(userID, u.Role, docID, ActionRead); err != nil {
+			return nil, "", "", errors.New("forbidden")
+		}
+	} else {
+		ok, perms, aerr := s.collab.CanAccess(docID, userID, u.Role)
+		if aerr != nil || !ok || !s.collab.requirePerm(perms, models.PermRead) {
+			return nil, "", "", errors.New("forbidden")
+		}
 	}
 	doc, err := s.collab.docRepo.FindByID(docID)
 	if err != nil {

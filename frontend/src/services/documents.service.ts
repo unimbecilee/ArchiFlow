@@ -22,11 +22,16 @@ const MAX_CONTENT_LENGTH = 20 * 1024 * 1024;
 
 export async function getMyDocuments(
   folderId?: number | null,
-  adminMode = false
+  adminMode = false,
+  cursor?: { cursor_id: number; cursor_created_at: string } | null
 ): Promise<DocumentsResponse> {
   const params: Record<string, string> = {};
   if (folderId != null) params.folder_id = String(folderId);
   if (adminMode) params.admin_mode = "true";
+  if (cursor?.cursor_id) {
+    params.cursor_id = String(cursor.cursor_id);
+    params.cursor_created_at = cursor.cursor_created_at;
+  }
   const res = await api.get<DocumentsResponse>("/api/documents/my", { params });
   return res.data;
 }

@@ -16,6 +16,8 @@ docker compose --profile sftp up -d
 - SFTPGo :2022 / admin :8082
 - Proxy Caddy CORS no-buffer :8088 (`deploy/Caddyfile.sftpgo`)
 - Env : `SFTPGO_INTEGRATION_ENABLED=true`, `SFTPGO_PUBLIC_URL=http://localhost:8088`, `SFTPGO_USER_PASSWORD_SECRET`, `UPLOAD_SFTPGO_MAX_BYTES=0`
+- Auth hook `POST /api/integrations/sftpgo/auth` requires `X-SFTPGO-Secret` (= `SFTPGO_WEBHOOK_SECRET`); compose sets `SFTPGO_HTTP__HEADERS__0_*`
+- Filesystem credentials in auth response: prefer `MINIO_SFTP_*` (scoped). Root MinIO fallback only if `SFTPGO_ALLOW_ROOT_MINIO_CREDS=1` (non-prod)
 
 ## Smoke
 

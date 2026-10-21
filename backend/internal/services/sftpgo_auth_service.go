@@ -85,7 +85,8 @@ func (s *SftpGoAuthService) Authenticate(req SftpGoAuthRequest) (*SftpGoAuthResp
 		pwdOK := utils.VerifyPassword(req.Password, u.PasswordHash)
 		if !pwdOK {
 			uploadClient := NewSFTPGoUploadClient()
-			if uploadClient != nil && hmac.Equal([]byte(req.Password), []byte(uploadClient.UserPassword(username))) {
+			// HMAC web-upload password only when SFTPGo upload integration is enabled.
+			if uploadClient.Enabled() && hmac.Equal([]byte(req.Password), []byte(uploadClient.UserPassword(username))) {
 				pwdOK = true
 			}
 		}
@@ -97,7 +98,7 @@ func (s *SftpGoAuthService) Authenticate(req SftpGoAuthRequest) (*SftpGoAuthResp
 		// Web JWT path: HMAC password allows upload even if sftp_enabled false
 		if !ok {
 			uploadClient := NewSFTPGoUploadClient()
-			if uploadClient != nil && hmac.Equal([]byte(req.Password), []byte(uploadClient.UserPassword(username))) {
+			if uploadClient.Enabled() && hmac.Equal([]byte(req.Password), []byte(uploadClient.UserPassword(username))) {
 				ok = true
 				mode = models.SftpModeFull
 			}
@@ -163,15 +164,8 @@ func s3FilesystemConfig(userID uint) (map[string]any, bool) {
 	if endpoint == "" {
 		endpoint = "minio:9000"
 	}
-	access := os.Getenv("MINIO_SFTP_ACCESS_KEY")
-	secret := os.Getenv("MINIO_SFTP_SECRET_KEY")
-	if access == "" {
-		access = os.Getenv("MINIO_ACCESS_KEY")
-	}
-	if secret == "" {
-		secret = os.Getenv("MINIO_SECRET_KEY")
-	}
-	if access == "" || secret == "" {
+	access, secret, ok := sftpMinioCreds()
+	if !ok {
 		return nil, false
 	}
 	bucket := config.SFTPInboxBucket()
@@ -193,6 +187,30 @@ func s3FilesystemConfig(userID uint) (map[string]any, bool) {
 			"skip_tls_verify":    !useSSL,
 		},
 	}, true
+}
+
+// sftpMinioCreds prefers scoped inbox keys. Never falls back to root MinIO in production.
+// Non-prod may fall back to MINIO_ACCESS_KEY/SECRET only when SFTPGO_ALLOW_ROOT_MINIO_CREDS=1.
+func sftpMinioCreds() (access, secret string, ok bool) {
+	access = strings.TrimSpace(os.Getenv("MINIO_SFTP_ACCESS_KEY"))
+	secret = strings.TrimSpace(os.Getenv("MINIO_SFTP_SECRET_KEY"))
+	if access != "" && secret != "" {
+		return access, secret, true
+	}
+	if config.IsProduction() {
+		return "", "", false
+	}
+	allowRoot := strings.EqualFold(strings.TrimSpace(os.Getenv("SFTPGO_ALLOW_ROOT_MINIO_CREDS")), "true") ||
+		os.Getenv("SFTPGO_ALLOW_ROOT_MINIO_CREDS") == "1"
+	if !allowRoot {
+		return "", "", false
+	}
+	access = strings.TrimSpace(os.Getenv("MINIO_ACCESS_KEY"))
+	secret = strings.TrimSpace(os.Getenv("MINIO_SECRET_KEY"))
+	if access == "" || secret == "" {
+		return "", "", false
+	}
+	return access, secret, true
 }
 
 func sftpUploadPartSizeMB() int {

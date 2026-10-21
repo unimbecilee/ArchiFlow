@@ -1,13 +1,10 @@
 #!/bin/sh
 set -e
 
-MC_USER="${MINIO_ROOT_USER:-minioadmin}"
-MC_PASS="${MINIO_ROOT_PASSWORD:-minioadmin123}"
+# Crée les buckets via l’API S3 (aws-cli). Endpoint = AWS_ENDPOINT_URL (compose).
+aws --endpoint-url "${AWS_ENDPOINT_URL:-http://minio:9000}" s3 mb "s3://archiflow-documents" 2>/dev/null || true
+aws --endpoint-url "${AWS_ENDPOINT_URL:-http://minio:9000}" s3 mb "s3://archives-requests" 2>/dev/null || true
+aws --endpoint-url "${AWS_ENDPOINT_URL:-http://minio:9000}" s3 mb "s3://archiflow-sftp-inbox" 2>/dev/null || true
 
-mc alias set myminio http://minio:9000 "$MC_USER" "$MC_PASS"
-mc mb myminio/archiflow-documents --ignore-existing
-mc mb myminio/archives-requests --ignore-existing
-mc mb myminio/archiflow-sftp-inbox --ignore-existing
-
-# Bucket CORS via mc is optional; MinIO server uses MINIO_API_CORS_ALLOW_ORIGIN (see docker-compose).
+# Bucket CORS via API optionnel ; le serveur utilise MINIO_API_CORS_ALLOW_ORIGIN (docker-compose).
 echo "MinIO buckets ready (API CORS from MINIO_API_CORS_ALLOW_ORIGIN)"

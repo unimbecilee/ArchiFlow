@@ -29,7 +29,7 @@ func (h *FavoriteHandler) List(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]any{
 		"success":   true,
-		"documents": h.doc.documentsJSON(docs),
+		"documents": h.doc.documentsJSONForUser(c, docs),
 		"total":     len(docs),
 	})
 }
