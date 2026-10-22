@@ -62,7 +62,7 @@ export default function WorkflowInstanceDetailPage() {
       <PageFrame>
         <Link
           href="/workflows/termines"
-          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-emerald-700"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-accent-soft-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Termines
@@ -76,7 +76,7 @@ export default function WorkflowInstanceDetailPage() {
     <PageFrame>
       <Link
         href="/workflows/termines"
-        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700"
+        className="inline-flex items-center gap-1 text-sm font-medium text-accent-soft-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Termines
@@ -100,35 +100,47 @@ export default function WorkflowInstanceDetailPage() {
       <PagePanel title="Resume" subtitle={`Instance #${instance.id}`}>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Statut</dt>
-            <dd className="mt-1 font-medium text-zinc-900">{statusLabel(instance.statut)}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Statut
+            </dt>
+            <dd className="mt-1 font-medium text-foreground">
+              {statusLabel(instance.statut)}
+            </dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Etape</dt>
-            <dd className="mt-1 text-zinc-800">{instance.etape_courante_nom || "—"}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Etape
+            </dt>
+            <dd className="mt-1 text-foreground">
+              {instance.etape_courante_nom || "—"}
+            </dd>
           </div>
           {instance.date_debut && (
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Debut</dt>
-              <dd className="mt-1 text-zinc-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Debut
+              </dt>
+              <dd className="mt-1 text-foreground">
                 {new Date(instance.date_debut).toLocaleString("fr-FR")}
               </dd>
             </div>
           )}
           {instance.date_fin && (
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Fin</dt>
-              <dd className="mt-1 text-zinc-800">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Fin
+              </dt>
+              <dd className="mt-1 text-foreground">
                 {new Date(instance.date_fin).toLocaleString("fr-FR")}
               </dd>
             </div>
           )}
           {instance.commentaire && (
             <div className="sm:col-span-2">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Commentaire initial
               </dt>
-              <dd className="mt-1 text-zinc-800">{instance.commentaire}</dd>
+              <dd className="mt-1 text-foreground">{instance.commentaire}</dd>
             </div>
           )}
         </dl>

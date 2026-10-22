@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { FileText } from "@phosphor-icons/react";
-import { CrudDataView, type CrudBulkAction, type CrudRowAction } from "@/components/crud";
+import {
+  CrudDataView,
+  type CrudBulkAction,
+  type CrudRowAction,
+} from "@/components/crud";
 import { EmptyState } from "@/components/layout/empty-state";
 import type { Document } from "@/types/documents";
 
@@ -76,7 +80,9 @@ export function DocumentCrudView({
           header: "Statut",
           hideOnMobile: true,
           cell: (doc) => (
-            <span className="text-xs font-medium text-muted-foreground">{doc.status || "—"}</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              {doc.status || "—"}
+            </span>
           ),
         },
       ]}

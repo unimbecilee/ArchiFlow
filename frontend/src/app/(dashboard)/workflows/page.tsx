@@ -62,7 +62,12 @@ export default function WorkflowsPage() {
             key={item.href}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 100, damping: 20, delay: index * 0.06 }}
+            transition={{
+              type: "spring",
+              stiffness: 100,
+              damping: 20,
+              delay: index * 0.06,
+            }}
             className={item.span}
           >
             <Link
@@ -73,11 +78,16 @@ export default function WorkflowsPage() {
                 <item.icon className="h-5 w-5" weight="duotone" />
               </span>
               <div className="mt-8 space-y-2">
-                <p className="text-lg font-semibold tracking-tight">{item.title}</p>
+                <p className="text-lg font-semibold tracking-tight">
+                  {item.title}
+                </p>
                 <p className="text-sm text-muted-foreground">{item.copy}</p>
                 <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Ouvrir
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" weight="bold" />
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                    weight="bold"
+                  />
                 </span>
               </div>
             </Link>
@@ -85,15 +95,22 @@ export default function WorkflowsPage() {
         ))}
       </section>
 
-      <PagePanel title="Definitions" subtitle={`${workflows.length} workflow(s) disponible(s)`}>
+      <PagePanel
+        title="Definitions"
+        subtitle={`${workflows.length} workflow(s) disponible(s)`}
+      >
         {workflows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucun workflow configuré.</p>
+          <p className="text-sm text-muted-foreground">
+            Aucun workflow configuré.
+          </p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-border">
             {workflows.map((w) => (
               <li key={w.id} className="py-4 first:pt-0 last:pb-0">
                 <p className="font-medium">{w.name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{w.description}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {w.description}
+                </p>
                 <p className="mt-2 font-mono text-xs text-muted-foreground">
                   {w.steps?.length ?? 0} etape(s)
                 </p>

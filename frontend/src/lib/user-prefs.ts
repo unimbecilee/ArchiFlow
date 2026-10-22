@@ -17,7 +17,8 @@ export function readUserPrefs(): UserPrefs {
     const parsed = raw ? (JSON.parse(raw) as Partial<UserPrefs>) : {};
     return {
       showImportFab: parsed.showImportFab ?? DEFAULTS.showImportFab,
-      confirmBeforeDelete: parsed.confirmBeforeDelete ?? DEFAULTS.confirmBeforeDelete,
+      confirmBeforeDelete:
+        parsed.confirmBeforeDelete ?? DEFAULTS.confirmBeforeDelete,
     };
   } catch {
     return { ...DEFAULTS };

@@ -17,7 +17,12 @@ import { getRecentDocuments } from "@/services/documents.service";
 
 export default function DocumentsRecentsPage() {
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-  const { items: docs, loading, load, error } = useDocumentListPage({
+  const {
+    items: docs,
+    loading,
+    load,
+    error,
+  } = useDocumentListPage({
     loadFn: getRecentDocuments,
   });
   const openAction = useDocumentOpenAction();
@@ -29,7 +34,12 @@ export default function DocumentsRecentsPage() {
         description="Fichiers ouverts ou modifiés récemment."
         icon={<Clock className="h-5 w-5" weight="duotone" />}
         actions={
-          <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            className="gap-1.5"
+          >
             <ArrowsClockwise className="h-4 w-4" />
             Actualiser
           </Button>
@@ -56,7 +66,10 @@ export default function DocumentsRecentsPage() {
           />
         )}
       </PagePanel>
-      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+      <DocumentQuickPreview
+        doc={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
     </PageFrame>
   );
 }

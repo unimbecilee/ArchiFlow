@@ -2,10 +2,7 @@ import { createFolder, getFolders } from "@/services/documents.service";
 import { fileParentDir } from "@/lib/upload-accept";
 
 function sanitizeFolderSegment(name: string): string | null {
-  const cleaned = name
-    .trim()
-    .replace(/[/\\]/g, "")
-    .replace(/\0/g, "");
+  const cleaned = name.trim().replace(/[/\\]/g, "").replace(/\0/g, "");
   if (!cleaned) return null;
   return cleaned.length > 255 ? cleaned.slice(0, 255) : cleaned;
 }
@@ -14,7 +11,7 @@ function sanitizeFolderSegment(name: string): string | null {
 export async function resolveUploadFolder(
   baseFolderId: number | null,
   relativeDir: string,
-  cache: Map<string, number | null>
+  cache: Map<string, number | null>,
 ): Promise<number | null> {
   const dir = relativeDir.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
   if (!dir) return baseFolderId;
@@ -47,14 +44,15 @@ export async function resolveUploadFolder(
 /** Resout les dossiers cibles pour une liste de fichiers avec webkitRelativePath. */
 export async function resolveFolderTargets(
   files: File[],
-  baseFolderId: number | null
+  baseFolderId: number | null,
 ): Promise<Map<File, number | null>> {
   const cache = new Map<string, number | null>();
   const out = new Map<File, number | null>();
   const dirs = new Set<string>();
 
   for (const file of files) {
-    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+    const rel = (file as File & { webkitRelativePath?: string })
+      .webkitRelativePath;
     if (rel) dirs.add(fileParentDir(rel));
   }
 
@@ -63,7 +61,8 @@ export async function resolveFolderTargets(
   }
 
   for (const file of files) {
-    const rel = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+    const rel = (file as File & { webkitRelativePath?: string })
+      .webkitRelativePath;
     if (!rel) {
       out.set(file, baseFolderId);
       continue;
@@ -79,7 +78,9 @@ type DroppedEntry = {
   isDirectory: boolean;
   name: string;
   file: (cb: (f: File) => void) => void;
-  createReader: () => { readEntries: (cb: (e: DroppedEntry[]) => void) => void };
+  createReader: () => {
+    readEntries: (cb: (e: DroppedEntry[]) => void) => void;
+  };
 };
 
 function entryToFiles(entry: DroppedEntry, basePath = ""): Promise<File[]> {
@@ -88,7 +89,10 @@ function entryToFiles(entry: DroppedEntry, basePath = ""): Promise<File[]> {
       entry.file((file) => {
         const rel = basePath ? `${basePath}/${file.name}` : file.name;
         try {
-          Object.defineProperty(file, "webkitRelativePath", { value: rel, configurable: true });
+          Object.defineProperty(file, "webkitRelativePath", {
+            value: rel,
+            configurable: true,
+          });
         } catch {
           /* ignore */
         }
@@ -108,8 +112,11 @@ function entryToFiles(entry: DroppedEntry, basePath = ""): Promise<File[]> {
           try {
             const nested = await Promise.all(
               all.map((e) =>
-                entryToFiles(e, basePath ? `${basePath}/${entry.name}` : entry.name)
-              )
+                entryToFiles(
+                  e,
+                  basePath ? `${basePath}/${entry.name}` : entry.name,
+                ),
+              ),
             );
             resolve(nested.flat());
           } catch (err) {
@@ -128,7 +135,11 @@ function entryToFiles(entry: DroppedEntry, basePath = ""): Promise<File[]> {
 /** Extrait les fichiers d'un drop (fichiers ou dossiers). */
 export async function filesFromDataTransfer(dt: DataTransfer): Promise<File[]> {
   const items = dt.items;
-  if (items && items.length > 0 && typeof items[0].webkitGetAsEntry === "function") {
+  if (
+    items &&
+    items.length > 0 &&
+    typeof items[0].webkitGetAsEntry === "function"
+  ) {
     const entries = Array.from(items)
       .map((item) => item.webkitGetAsEntry?.() as DroppedEntry | null)
       .filter((e): e is DroppedEntry => !!e);

@@ -22,7 +22,11 @@ type DocumentTextEditorProps = {
   onSaved: () => void;
 };
 
-export function DocumentTextEditor({ doc, validationCtx, onSaved }: DocumentTextEditorProps) {
+export function DocumentTextEditor({
+  doc,
+  validationCtx,
+  onSaved,
+}: DocumentTextEditorProps) {
   const { user } = useAuthStore();
   const [content, setContent] = useState("");
   const [initial, setInitial] = useState("");
@@ -45,7 +49,9 @@ export function DocumentTextEditor({ doc, validationCtx, onSaved }: DocumentText
       setContent(res.content ?? "");
       setInitial(res.content ?? "");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Impossible de charger le contenu");
+      setError(
+        e instanceof Error ? e.message : "Impossible de charger le contenu",
+      );
     } finally {
       setLoading(false);
     }
@@ -77,7 +83,8 @@ export function DocumentTextEditor({ doc, validationCtx, onSaved }: DocumentText
           validationCtx.can_restart_validation)
       ) {
         toast.message("Correction enregistree", {
-          description: "Vous pouvez relancer la validation depuis le bandeau ci-dessus.",
+          description:
+            "Vous pouvez relancer la validation depuis le bandeau ci-dessus.",
         });
       }
     } catch (e: unknown) {
@@ -95,28 +102,40 @@ export function DocumentTextEditor({ doc, validationCtx, onSaved }: DocumentText
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-zinc-600">
-        <PencilSimple className="h-4 w-4 text-emerald-700" weight="duotone" />
-        <span>Edition en ligne — enregistrer cree une nouvelle version automatiquement.</span>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <PencilSimple
+          className="h-4 w-4 text-accent-soft-foreground"
+          weight="duotone"
+        />
+        <span>
+          Edition en ligne — enregistrer cree une nouvelle version
+          automatiquement.
+        </span>
       </div>
 
       {loading ? (
-        <p className="text-sm text-zinc-500">Chargement du contenu...</p>
+        <p className="text-sm text-muted-foreground">
+          Chargement du contenu...
+        </p>
       ) : !editable ? (
         error && <ErrorBanner message={error} />
       ) : (
         <>
-          {!editGate.ok && <ErrorBanner message={editGate.reason || "Edition bloquee"} />}
+          {!editGate.ok && (
+            <ErrorBanner message={editGate.reason || "Edition bloquee"} />
+          )}
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={!editGate.ok || saving}
-            className="min-h-[280px] w-full resize-y rounded-2xl border border-slate-200 bg-zinc-50/50 p-4 font-mono text-sm leading-relaxed text-zinc-800 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
+            className="min-h-[280px] w-full resize-y rounded-2xl border border-border bg-muted/40 p-4 font-mono text-sm leading-relaxed text-foreground focus:border-primary/40 focus:outline-none focus:ring-2 focus-visible:ring-primary/25 disabled:opacity-60"
             spellCheck={false}
           />
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="editComment">Commentaire de version (optionnel)</Label>
+              <Label htmlFor="editComment">
+                Commentaire de version (optionnel)
+              </Label>
               <Input
                 id="editComment"
                 placeholder="Ex: correction paragraphe 2"

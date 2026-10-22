@@ -9,35 +9,38 @@ import type {
 
 export async function adminListWorkflows(): Promise<AdminWorkflowListRow[]> {
   const res = await api.get<{ success: boolean; data: AdminWorkflowListRow[] }>(
-    "/api/admin/workflows"
+    "/api/admin/workflows",
   );
   return res.data.data ?? [];
 }
 
-export async function adminGetWorkflow(id: number): Promise<AdminWorkflowDetailPayload> {
-  const res = await api.get<{ success: boolean; data: AdminWorkflowDetailPayload }>(
-    `/api/admin/workflows/${id}`
-  );
+export async function adminGetWorkflow(
+  id: number,
+): Promise<AdminWorkflowDetailPayload> {
+  const res = await api.get<{
+    success: boolean;
+    data: AdminWorkflowDetailPayload;
+  }>(`/api/admin/workflows/${id}`);
   return res.data.data;
 }
 
 export async function adminCreateWorkflow(
-  payload: AdminCreateWorkflowPayload
+  payload: AdminCreateWorkflowPayload,
 ): Promise<WorkflowFullDefinition> {
-  const res = await api.post<{ success: boolean; data: WorkflowFullDefinition }>(
-    "/api/admin/workflows",
-    payload
-  );
+  const res = await api.post<{
+    success: boolean;
+    data: WorkflowFullDefinition;
+  }>("/api/admin/workflows", payload);
   return res.data.data;
 }
 
 export async function adminUpdateWorkflow(
   id: number,
-  payload: AdminUpdateWorkflowPayload
+  payload: AdminUpdateWorkflowPayload,
 ): Promise<WorkflowFullDefinition> {
   const res = await api.put<{ success: boolean; data: WorkflowFullDefinition }>(
     `/api/admin/workflows/${id}`,
-    payload
+    payload,
   );
   return res.data.data;
 }

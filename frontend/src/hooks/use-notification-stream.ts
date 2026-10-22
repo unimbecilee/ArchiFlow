@@ -13,7 +13,9 @@ export type NotificationStreamPayload = {
   items?: Notification[];
 };
 
-export function useNotificationStream(onUpdate: (payload: NotificationStreamPayload) => void) {
+export function useNotificationStream(
+  onUpdate: (payload: NotificationStreamPayload) => void,
+) {
   useEffect(() => {
     if (getRealtimeMode() !== "sse") {
       return;
@@ -38,7 +40,7 @@ export function useNotificationStream(onUpdate: (payload: NotificationStreamPayl
               headers: { Authorization: `Bearer ${token}` },
               credentials: "include",
               signal: controller.signal,
-            }
+            },
           );
           if (res.status === 401) {
             const renewed = await refreshAccessToken();
@@ -60,10 +62,23 @@ export function useNotificationStream(onUpdate: (payload: NotificationStreamPayl
             const parts = buffer.split("\n\n");
             buffer = parts.pop() ?? "";
             for (const block of parts) {
-              const dataLine = block.split("\n").find((l) => l.startsWith("data: "));
+              const lines = block.split("\n");
+              const eventLine = lines.find((l) => l.startsWith("event: "));
+              const eventName = eventLine
+                ? eventLine.slice(7).trim()
+                : "message";
+              // Ignore heartbeats (ping) and errors — they must not clear unread.
+              if (eventName === "ping" || eventName === "error") continue;
+              if (eventName !== "notifications" && eventName !== "message") {
+                continue;
+              }
+              const dataLine = lines.find((l) => l.startsWith("data: "));
               if (!dataLine) continue;
               try {
-                const payload = JSON.parse(dataLine.slice(6)) as NotificationStreamPayload;
+                const payload = JSON.parse(
+                  dataLine.slice(6),
+                ) as NotificationStreamPayload;
+                if (typeof payload.unread !== "number") continue;
                 onUpdate(payload);
                 const items = payload.items;
                 if (items?.length) {

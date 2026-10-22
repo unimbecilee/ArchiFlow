@@ -40,22 +40,24 @@ export function uploadRouteHeadline(stats: UploadQueueStats): string {
 
 export function uploadRouteDetail(stats: UploadQueueStats): string {
   const parts: string[] = [];
-    if (stats.sftpGoEnabled) {
+  if (stats.sftpGoEnabled) {
     parts.push(
-      "Les octets ne transitent pas par l'API ArchiFlow tant que SFTPGo repond. Les tres gros fichiers peuvent basculer en MPU."
+      "Les octets ne transitent pas par l'API ArchiFlow tant que SFTPGo repond. Les tres gros fichiers peuvent basculer en MPU.",
     );
   } else {
     parts.push(
-      "SFTPGo inactif (NEXT_PUBLIC_SFTPGO_UPLOAD) : envoi via API ArchiFlow (HTTP ou MPU)."
+      "SFTPGo inactif (NEXT_PUBLIC_SFTPGO_UPLOAD) : envoi via API ArchiFlow (HTTP ou MPU).",
     );
   }
   if (stats.httpCount > 0) {
     parts.push(
-      `${stats.httpCount} fichier(s) ≤ ${MAX_IMPORT_FILE_BYTES / (1024 * 1024)} Mo${stats.sftpGoEnabled ? " (SFTPGo ou HTTP selon repli)" : ""}.`
+      `${stats.httpCount} fichier(s) ≤ ${MAX_IMPORT_FILE_BYTES / (1024 * 1024)} Mo${stats.sftpGoEnabled ? " (SFTPGo ou HTTP selon repli)" : ""}.`,
     );
   }
   if (stats.mpuCount > 0) {
-    parts.push(`${stats.mpuCount} fichier(s) > 20 Mo : reprise avec parts paralleles.`);
+    parts.push(
+      `${stats.mpuCount} fichier(s) > 20 Mo : reprise avec parts paralleles.`,
+    );
   }
   return parts.join(" ");
 }

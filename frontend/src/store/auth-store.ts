@@ -1,15 +1,15 @@
-import { create } from 'zustand';
-import { User, LoginRequest, RegisterRequest } from '@/types/auth';
-import axios from '@/lib/api';
-import { api } from '@/lib/api';
-import { clearAuthSession, refreshAccessToken } from '@/lib/auth-session';
+import { create } from "zustand";
+import { User, LoginRequest, RegisterRequest } from "@/types/auth";
+import axios from "@/lib/api";
+import { api } from "@/lib/api";
+import { clearAuthSession, refreshAccessToken } from "@/lib/auth-session";
 import {
   clearAccessToken,
   getAccessToken,
   purgeLegacyTokenStorage,
   setAccessToken,
-} from '@/lib/session-tokens';
-import { getApiErrorMessage } from '@/lib/api-error';
+} from "@/lib/session-tokens";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 interface AuthState {
   user: User | null;
@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/api/auth/login', credentials);
+      const response = await axios.post("/api/auth/login", credentials);
       const data = response.data.data as {
         mfa_required?: boolean;
         user?: User;
@@ -63,16 +63,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
       if (user.must_change_password) {
         if (
-          typeof window !== 'undefined' &&
-          !window.location.pathname.startsWith('/changer-mot-de-passe')
+          typeof window !== "undefined" &&
+          !window.location.pathname.startsWith("/changer-mot-de-passe")
         ) {
-          window.location.href = '/changer-mot-de-passe';
+          window.location.href = "/changer-mot-de-passe";
         }
       }
       return { mfaRequired: false };
     } catch (error: unknown) {
       set({
-        error: getApiErrorMessage(error, 'Échec de connexion'),
+        error: getApiErrorMessage(error, "Échec de connexion"),
         isLoading: false,
       });
       throw error;
@@ -82,7 +82,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
   verifyMfa: async (email, code) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/api/auth/verify-mfa', { email, code });
+      const response = await axios.post("/api/auth/verify-mfa", {
+        email,
+        code,
+      });
       const { user, token } = response.data.data;
       setAccessToken(token.access_token);
       api.setToken(token.access_token);
@@ -92,12 +95,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
         isLoading: false,
         isInitializing: false,
       });
-      if (user.must_change_password && typeof window !== 'undefined') {
-        window.location.href = '/changer-mot-de-passe';
+      if (user.must_change_password && typeof window !== "undefined") {
+        window.location.href = "/changer-mot-de-passe";
       }
     } catch (error: unknown) {
       set({
-        error: getApiErrorMessage(error, 'Code MFA invalide'),
+        error: getApiErrorMessage(error, "Code MFA invalide"),
         isLoading: false,
       });
       throw error;
@@ -107,7 +110,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   register: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/api/auth/register', data);
+      const response = await axios.post("/api/auth/register", data);
       const { user, token } = response.data.data;
 
       setAccessToken(token.access_token);
@@ -121,7 +124,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       });
     } catch (error: unknown) {
       set({
-        error: getApiErrorMessage(error, 'Registration failed'),
+        error: getApiErrorMessage(error, "Registration failed"),
         isLoading: false,
       });
       throw error;
@@ -130,7 +133,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   logout: async () => {
     try {
-      await axios.post('/api/auth/logout');
+      await axios.post("/api/auth/logout");
     } catch {
       // ignore — cookie cleared below
     }
@@ -162,7 +165,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     api.setToken(token);
 
     try {
-      const response = await axios.get('/api/auth/me');
+      const response = await axios.get("/api/auth/me");
       set({
         user: response.data.data,
         isAuthenticated: true,
@@ -178,7 +181,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       }
       api.setToken(refreshed);
       try {
-        const response = await axios.get('/api/auth/me');
+        const response = await axios.get("/api/auth/me");
         set({
           user: response.data.data,
           isAuthenticated: true,

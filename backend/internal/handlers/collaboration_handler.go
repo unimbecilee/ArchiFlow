@@ -334,18 +334,23 @@ func (h *CollaborationHandler) PreviewVersion(c echo.Context) error {
 		c.Request().Context(), docID, versionID, userID, roleFromContext(c),
 	)
 	if err != nil {
-		return c.JSON(http.StatusForbidden, map[string]any{"success": false, "error": err.Error()})
+		status := http.StatusForbidden
+		if errors.Is(err, services.ErrStorageMissing) {
+			status = http.StatusNotFound
+		}
+		return c.JSON(status, map[string]any{"success": false, "error": err.Error()})
 	}
 	defer reader.Close()
 	c.Response().Header().Set("Content-Type", mime)
 	utils.ApplyPreviewSecurityHeaders(c.Response().Header(), mime)
-	if services.IsPreviewableMime(mime) {
+	if services.IsPreviewable(mime, filename) {
 		if cd := utils.ContentDispositionInline(filename); cd != "" {
 			c.Response().Header().Set("Content-Disposition", cd)
 		}
 	} else if cd := utils.ContentDispositionAttachment(filename); cd != "" {
 		c.Response().Header().Set("Content-Disposition", cd)
 	}
+	c.Response().WriteHeader(http.StatusOK)
 	_, copyErr := io.Copy(c.Response().Writer, reader)
 	return copyErr
 }

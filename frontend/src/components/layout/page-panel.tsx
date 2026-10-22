@@ -20,11 +20,19 @@ export function PagePanel({
     <section className={cn("space-y-2.5", className)}>
       {(title || subtitle) && (
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-          {title && <h2 className="text-[13px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h2>}
-          {subtitle && <p className="text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
+          {title && (
+            <h2 className="text-[13px] font-semibold tracking-tight text-foreground">
+              {title}
+            </h2>
+          )}
+          {subtitle && (
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          )}
         </div>
       )}
-      <div className={cn("surface-card", compact ? "p-4" : "p-5 sm:p-6")}>{children}</div>
+      <div className={cn("surface-card", compact ? "p-4" : "p-5 sm:p-6")}>
+        {children}
+      </div>
     </section>
   );
 }

@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AppDecor, PanelDecor } from "@/components/backgrounds";
 import { ErrorBanner } from "@/components/layout/error-banner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -40,8 +46,8 @@ export default function ChangerMotDePassePage() {
       router.replace("/");
     } catch (err: unknown) {
       const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Echec mise a jour";
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Echec mise a jour";
       setError(msg);
     } finally {
       setLoading(false);
@@ -64,8 +70,9 @@ export default function ChangerMotDePassePage() {
               Definissez votre mot de passe
             </CardTitle>
             <CardDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Premiere connexion pour <span className="font-medium text-foreground">{user?.email}</span>.
-              Ce mot de passe sera utilise sur ArchiFlow et ArchiFlow +.
+              Premiere connexion pour{" "}
+              <span className="font-medium text-foreground">{user?.email}</span>
+              . Ce mot de passe sera utilise sur ArchiFlow et ArchiFlow +.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -81,7 +88,9 @@ export default function ChangerMotDePassePage() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                 />
-                <p className="text-xs text-muted-foreground">8 caracteres minimum.</p>
+                <p className="text-xs text-muted-foreground">
+                  8 caracteres minimum.
+                </p>
               </div>
 
               <div className="space-y-2">

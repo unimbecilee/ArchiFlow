@@ -21,9 +21,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     api
-      .get<{ success: boolean; data: { allow_public_register?: boolean } }>("/api/auth/config")
-      .then((res) => setAllowRegister(res.data.data?.allow_public_register !== false))
-      .catch(() => setAllowRegister(process.env.NEXT_PUBLIC_AUTH_ALLOW_PUBLIC_REGISTER !== "false"));
+      .get<{ success: boolean; data: { allow_public_register?: boolean } }>(
+        "/api/auth/config",
+      )
+      .then((res) =>
+        setAllowRegister(res.data.data?.allow_public_register !== false),
+      )
+      .catch(() =>
+        setAllowRegister(
+          process.env.NEXT_PUBLIC_AUTH_ALLOW_PUBLIC_REGISTER !== "false",
+        ),
+      );
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +83,10 @@ export default function LoginPage() {
         allowRegister ? (
           <>
             Pas encore de compte ?{" "}
-            <Link href="/register" className="font-medium text-primary hover:underline">
+            <Link
+              href="/register"
+              className="font-medium text-primary hover:underline"
+            >
               Créer un compte
             </Link>
           </>
@@ -101,7 +112,9 @@ export default function LoginPage() {
                 autoComplete="username"
                 placeholder="prenom.nom@votre-organisation.fr"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 required
               />
             </div>
@@ -112,7 +125,9 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 required
               />
             </div>
@@ -145,7 +160,11 @@ export default function LoginPage() {
         )}
 
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Vérification…" : mfaStep ? "Valider le code" : "Se connecter"}
+          {isLoading
+            ? "Vérification…"
+            : mfaStep
+              ? "Valider le code"
+              : "Se connecter"}
         </Button>
       </form>
     </AuthSplitLayout>

@@ -12,7 +12,9 @@ export function ArchiFlowSidebar() {
           <Archive className="h-5 w-5" weight="bold" />
         </div>
         <div className="leading-tight">
-          <p className="text-sm font-semibold tracking-tight text-sidebar-foreground">ArchiFlow</p>
+          <p className="text-sm font-semibold tracking-tight text-sidebar-foreground">
+            ArchiFlow
+          </p>
           <p className="text-[11px] text-sidebar-muted">Espace documentaire</p>
         </div>
       </div>

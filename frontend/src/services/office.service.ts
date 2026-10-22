@@ -9,10 +9,11 @@ export type OfficeEditorConfigResponse = {
 };
 
 export async function getOfficeEditorConfig(
-  documentId: number
+  documentId: number,
 ): Promise<OfficeEditorConfigResponse> {
-  const res = await api.get<{ success: boolean; data: OfficeEditorConfigResponse }>(
-    `/api/documents/${documentId}/office/config`
-  );
+  const res = await api.get<{
+    success: boolean;
+    data: OfficeEditorConfigResponse;
+  }>(`/api/documents/${documentId}/office/config`);
   return res.data.data;
 }

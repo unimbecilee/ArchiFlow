@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Trash, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { DocumentList } from "@/components/documents/document-list";
-import { DocumentQuickPreview } from "@/components/documents/document-quick-preview";
 import type { Document } from "@/types/documents";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
@@ -12,46 +11,103 @@ import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { useDocumentListPage } from "@/hooks/use-document-list-page";
-import { getTrashDocuments, purgeDocument, restoreDocument } from "@/services/documents.service";
+import {
+  getTrashDocuments,
+  purgeDocument,
+  restoreDocument,
+} from "@/services/documents.service";
 import { buildTrashDocumentActions } from "@/lib/document-crud-actions";
 import { useConfirm } from "@/components/feedback/confirm-provider";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { toast } from "sonner";
 
 export default function CorbeillePage() {
   const confirm = useConfirm();
-  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-  const { items: docs, loading, load, error } = useDocumentListPage({
+  const {
+    items: docs,
+    loading,
+    load,
+    error,
+  } = useDocumentListPage({
     loadFn: getTrashDocuments,
   });
 
-  const handleRestore = useCallback(async (id: number) => {
-    await restoreDocument(id);
-    await load();
-  }, [load]);
+  const handleRestore = useCallback(
+    async (id: number) => {
+      try {
+        await restoreDocument(id);
+        toast.success("Document restauré");
+        await load();
+      } catch (e: unknown) {
+        toast.error(getApiErrorMessage(e, "Restauration impossible"));
+      }
+    },
+    [load],
+  );
 
-  const handlePurge = useCallback(async (id: number) => {
-    if (
-      !(await confirm({
-        title: "Purge définitive",
-        description: "Ce document sera détruit définitivement. Impossible si un legal hold est actif.",
-        confirmLabel: "Purger",
-        destructive: true,
-      }))
-    ) {
-      return;
-    }
-    try {
-      await purgeDocument(id);
-      toast.success("Document purgé");
+  const handlePurge = useCallback(
+    async (id: number) => {
+      if (
+        !(await confirm({
+          title: "Purge définitive",
+          description:
+            "Ce document sera détruit définitivement. Impossible si un legal hold est actif.",
+          confirmLabel: "Purger",
+          destructive: true,
+        }))
+      ) {
+        return;
+      }
+      try {
+        await purgeDocument(id);
+        toast.success("Document purgé");
+        await load();
+      } catch (e: unknown) {
+        toast.error(
+          getApiErrorMessage(e, "Purge impossible (conservation active ?)"),
+        );
+      }
+    },
+    [confirm, load],
+  );
+
+  const handleBulkPurge = useCallback(
+    async (items: Document[]) => {
+      if (
+        !(await confirm({
+          title: "Purge définitive",
+          description: `${items.length} document${items.length > 1 ? "s" : ""} seront détruits définitivement.`,
+          confirmLabel: "Purger",
+          destructive: true,
+        }))
+      ) {
+        return;
+      }
+      const results = await Promise.allSettled(
+        items.map((d) => purgeDocument(d.id)),
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const ok = results.length - failed;
+      if (ok > 0) toast.success(`${ok} document${ok > 1 ? "s" : ""} purgé${ok > 1 ? "s" : ""}`);
+      if (failed > 0) {
+        const first = results.find((r) => r.status === "rejected") as
+          | PromiseRejectedResult
+          | undefined;
+        toast.error(
+          getApiErrorMessage(
+            first?.reason,
+            `${failed} purge${failed > 1 ? "s" : ""} en échec`,
+          ),
+        );
+      }
       await load();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Purge impossible (conservation active ?)");
-    }
-  }, [confirm, load]);
+    },
+    [confirm, load],
+  );
 
   const { rowActions, bulkActions } = useMemo(
-    () => buildTrashDocumentActions(handleRestore, handlePurge),
-    [handleRestore, handlePurge]
+    () => buildTrashDocumentActions(handleRestore, handlePurge, handleBulkPurge),
+    [handleRestore, handlePurge, handleBulkPurge],
   );
 
   return (
@@ -61,7 +117,12 @@ export default function CorbeillePage() {
         description="Documents supprimés, récupérables avant purge définitive."
         icon={<Trash className="h-5 w-5" weight="duotone" />}
         actions={
-          <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            className="gap-1.5"
+          >
             <ArrowsClockwise className="h-4 w-4" />
             Actualiser
           </Button>
@@ -88,11 +149,9 @@ export default function CorbeillePage() {
             rowActions={rowActions}
             bulkActions={bulkActions}
             storageKey="archiflow-trash-view"
-            onQuickPreview={setPreviewDoc}
           />
         )}
       </PagePanel>
-      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </PageFrame>
   );
 }

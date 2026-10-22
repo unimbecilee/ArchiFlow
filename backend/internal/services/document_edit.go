@@ -63,6 +63,12 @@ func (s *CollaborationService) GetEditableContent(
 	if doc.MinioObjectName == "" {
 		return &DocumentEditableContent{Editable: false, Reason: "fichier absent"}, nil
 	}
+	if _, _, err := config.StatObject(ctx, doc.MinioBucket, doc.MinioObjectName); err != nil {
+		if isMinioNotFound(err) {
+			return &DocumentEditableContent{Editable: false, Reason: ErrStorageMissing.Error()}, nil
+		}
+		return nil, err
+	}
 	reader, err := config.GetObjectStream(ctx, doc.MinioBucket, doc.MinioObjectName)
 	if err != nil {
 		return nil, err

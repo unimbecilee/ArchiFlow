@@ -22,16 +22,18 @@ export type AccessPolicyInput = {
 
 export async function listAccessPolicies(): Promise<AccessPolicy[]> {
   const res = await api.get<{ success: boolean; data: AccessPolicy[] }>(
-    "/api/admin/access-policies"
+    "/api/admin/access-policies",
   );
   return res.data.data ?? [];
 }
 
-export async function createAccessPolicy(input: AccessPolicyInput): Promise<AccessPolicy> {
+export async function createAccessPolicy(
+  input: AccessPolicyInput,
+): Promise<AccessPolicy> {
   try {
     const res = await api.post<{ success: boolean; data: AccessPolicy }>(
       "/api/admin/access-policies",
-      input
+      input,
     );
     return res.data.data;
   } catch (e) {
@@ -41,12 +43,12 @@ export async function createAccessPolicy(input: AccessPolicyInput): Promise<Acce
 
 export async function updateAccessPolicy(
   id: number,
-  input: AccessPolicyInput
+  input: AccessPolicyInput,
 ): Promise<AccessPolicy> {
   try {
     const res = await api.put<{ success: boolean; data: AccessPolicy }>(
       `/api/admin/access-policies/${id}`,
-      input
+      input,
     );
     return res.data.data;
   } catch (e) {

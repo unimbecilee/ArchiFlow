@@ -30,11 +30,7 @@ import {
 } from "@/services/admin.service";
 
 import { ARCHIFLOW_PLUS } from "@/lib/branding";
-import {
-  ASSIGNABLE_ROLES,
-  ROLE_LABELS,
-  type PlatformRole,
-} from "@/lib/roles";
+import { ASSIGNABLE_ROLES, ROLE_LABELS, type PlatformRole } from "@/lib/roles";
 import { useConfirm } from "@/components/feedback/confirm-provider";
 
 export default function AdminUserDetailPage() {
@@ -108,7 +104,7 @@ export default function AdminUserDetailPage() {
 
   const runAction = async (
     key: string,
-    fn: () => Promise<{ email_sent?: boolean }>
+    fn: () => Promise<{ email_sent?: boolean }>,
   ) => {
     setActionLoading(key);
     setError(null);
@@ -120,7 +116,7 @@ export default function AdminUserDetailPage() {
         setSuccess(
           res.email_sent
             ? "Nouveau mot de passe temporaire envoye par e-mail"
-            : "Mot de passe regenere (SMTP inactif — voir logs)"
+            : "Mot de passe regenere (SMTP inactif — voir logs)",
         );
       } else {
         setSuccess(`Compte ${ARCHIFLOW_PLUS} synchronise`);
@@ -177,7 +173,7 @@ export default function AdminUserDetailPage() {
 
       {error && <ErrorBanner message={error} />}
       {success && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <p className="rounded-xl border border-emerald-200 bg-accent-soft px-4 py-3 text-sm text-accent-soft-foreground">
           {success}
         </p>
       )}
@@ -216,14 +212,14 @@ export default function AdminUserDetailPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>E-mail</Label>
-                <Input value={detail.email} disabled className="bg-zinc-50" />
+                <Input value={detail.email} disabled className="bg-muted" />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="role">Role</Label>
                   <select
                     id="role"
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                   >
@@ -235,10 +231,10 @@ export default function AdminUserDetailPage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-2 justify-end">
-                  <label className="flex items-center gap-2 text-sm text-zinc-700">
+                  <label className="flex items-center gap-2 text-sm text-foreground">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                      className="h-4 w-4 rounded border-border text-primary"
                       checked={isActive}
                       onChange={(e) => setIsActive(e.target.checked)}
                     />
@@ -247,21 +243,33 @@ export default function AdminUserDetailPage() {
                 </div>
               </div>
 
-              <dl className="grid gap-2 rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">
+              <dl className="grid gap-2 rounded-xl bg-muted p-4 text-sm text-muted-foreground">
                 <div className="flex justify-between gap-4">
                   <dt>Role affiche</dt>
-                  <dd className="font-medium text-zinc-900">{ROLE_LABELS[role as PlatformRole] ?? role}</dd>
+                  <dd className="font-medium text-foreground">
+                    {ROLE_LABELS[role as PlatformRole] ?? role}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>Mot de passe</dt>
-                  <dd className={detail.must_change_password ? "text-amber-700" : "text-emerald-700"}>
-                    {detail.must_change_password ? "A changer a la prochaine connexion" : "OK"}
+                  <dd
+                    className={
+                      detail.must_change_password
+                        ? "text-warning-soft-foreground"
+                        : "text-accent-soft-foreground"
+                    }
+                  >
+                    {detail.must_change_password
+                      ? "A changer a la prochaine connexion"
+                      : "OK"}
                   </dd>
                 </div>
                 {detail.last_login_at && (
                   <div className="flex justify-between gap-4">
                     <dt>Derniere connexion</dt>
-                    <dd>{new Date(detail.last_login_at).toLocaleString("fr-FR")}</dd>
+                    <dd>
+                      {new Date(detail.last_login_at).toLocaleString("fr-FR")}
+                    </dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-4">
@@ -280,27 +288,29 @@ export default function AdminUserDetailPage() {
             <PagePanel title="Comptes externes" subtitle={ARCHIFLOW_PLUS}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="py-2 font-medium">Application</th>
                     <th className="py-2 font-medium">Statut</th>
                     <th className="py-2 font-medium">ID</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-3 font-medium text-zinc-900">{ARCHIFLOW_PLUS}</td>
+                  <tr className="border-b border-border">
+                    <td className="py-3 font-medium text-foreground">
+                      {ARCHIFLOW_PLUS}
+                    </td>
                     <td className="py-3">
                       <span
                         className={
                           detail.pydio_linked
-                            ? "text-emerald-700 font-medium"
-                            : "text-amber-700 font-medium"
+                            ? "text-accent-soft-foreground font-medium"
+                            : "text-warning-soft-foreground font-medium"
                         }
                       >
                         {detail.pydio_linked ? "Lie" : "Non lie"}
                       </span>
                     </td>
-                    <td className="py-3 font-mono text-xs text-zinc-500">
+                    <td className="py-3 font-mono text-xs text-muted-foreground">
                       {detail.pydio_user_id || "—"}
                     </td>
                   </tr>
@@ -316,7 +326,9 @@ export default function AdminUserDetailPage() {
                   onClick={() => runAction("sync", () => syncPydio(detail.id))}
                 >
                   <ArrowsClockwise className="h-4 w-4" />
-                  {actionLoading === "sync" ? "Sync..." : `Synchroniser ${ARCHIFLOW_PLUS}`}
+                  {actionLoading === "sync"
+                    ? "Sync..."
+                    : `Synchroniser ${ARCHIFLOW_PLUS}`}
                 </Button>
                 <Button
                   type="button"
@@ -324,15 +336,19 @@ export default function AdminUserDetailPage() {
                   size="sm"
                   className="gap-1.5"
                   disabled={actionLoading !== null}
-                  onClick={() => runAction("resend", () => resendCredentials(detail.id))}
+                  onClick={() =>
+                    runAction("resend", () => resendCredentials(detail.id))
+                  }
                 >
                   <EnvelopeSimple className="h-4 w-4" />
-                  {actionLoading === "resend" ? "Envoi..." : "Renvoyer identifiants"}
+                  {actionLoading === "resend"
+                    ? "Envoi..."
+                    : "Renvoyer identifiants"}
                 </Button>
               </div>
-              <p className="mt-3 text-xs text-zinc-500">
-                Sync regenere un mot de passe temporaire pour ArchiFlow et {ARCHIFLOW_PLUS}. Renvoyer envoie aussi
-                un e-mail si SMTP actif.
+              <p className="mt-3 text-xs text-muted-foreground">
+                Sync regenere un mot de passe temporaire pour ArchiFlow et{" "}
+                {ARCHIFLOW_PLUS}. Renvoyer envoie aussi un e-mail si SMTP actif.
               </p>
             </PagePanel>
 
@@ -341,7 +357,7 @@ export default function AdminUserDetailPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-red-600 hover:text-red-700"
+                className="gap-1.5 text-destructive hover:text-destructive"
                 disabled={detail.id === currentUser?.id}
                 onClick={handleDelete}
               >

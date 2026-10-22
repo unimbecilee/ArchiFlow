@@ -19,7 +19,7 @@ export function documentForQuickPreview(
     | "status"
     | "is_locked"
     | "can_write"
-  >
+  >,
 ): Document {
   return {
     id: doc.id,

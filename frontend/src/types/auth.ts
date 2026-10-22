@@ -3,12 +3,12 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'user' | 'manager' | 'validator' | 'archivist';
+  role: "admin" | "user" | "manager" | "validator" | "archivist";
   avatar_url?: string;
   department?: string;
   clearance_level?: string;
   sftp_enabled?: boolean;
-  sftp_mode?: 'none' | 'drop' | 'inbox' | 'full';
+  sftp_mode?: "none" | "drop" | "inbox" | "full";
   is_active: boolean;
   must_change_password?: boolean;
   pydio_linked?: boolean;

@@ -5,7 +5,7 @@ import type { CrudViewMode } from "./crud-types";
 
 export function useCrudViewMode(
   storageKey?: string,
-  defaultMode: CrudViewMode = "list"
+  defaultMode: CrudViewMode = "list",
 ) {
   const [mode, setModeState] = useState<CrudViewMode>(() => {
     if (typeof window === "undefined" || !storageKey) return defaultMode;
@@ -20,7 +20,7 @@ export function useCrudViewMode(
         localStorage.setItem(storageKey, next);
       }
     },
-    [storageKey]
+    [storageKey],
   );
 
   return [mode, setMode] as const;

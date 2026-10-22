@@ -12,16 +12,21 @@ export type MenuAccessContext = {
   canWrite: boolean;
 };
 
-export function canSeeMenuItem(item: MenuItem, ctx: MenuAccessContext): boolean {
+export function canSeeMenuItem(
+  item: MenuItem,
+  ctx: MenuAccessContext,
+): boolean {
   if (item.adminOnly && !ctx.isAdmin) return false;
   if (item.requiresWrite && !ctx.canWrite) return false;
   return true;
 }
 
-export function buildMenuAccessContext(user: {
-  role?: string;
-  capabilities?: RoleCapabilities;
-} | null): MenuAccessContext {
+export function buildMenuAccessContext(
+  user: {
+    role?: string;
+    capabilities?: RoleCapabilities;
+  } | null,
+): MenuAccessContext {
   return {
     isAdmin: user?.role === "admin",
     canWrite: user?.capabilities?.write_documents !== false,
@@ -40,7 +45,10 @@ export function listNavMenuEntries(ctx: MenuAccessContext): NavMenuEntry[] {
   return out;
 }
 
-export function filterNavMenuEntries(entries: NavMenuEntry[], query: string): NavMenuEntry[] {
+export function filterNavMenuEntries(
+  entries: NavMenuEntry[],
+  query: string,
+): NavMenuEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return entries;
   return entries.filter((e) => {

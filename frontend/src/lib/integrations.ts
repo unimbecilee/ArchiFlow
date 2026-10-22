@@ -11,9 +11,10 @@ export type PydioIntegrationConfig = {
 
 export async function fetchPydioConfig(): Promise<PydioIntegrationConfig | null> {
   try {
-    const res = await api.get<{ success: boolean; data: PydioIntegrationConfig }>(
-      "/api/integrations/pydio"
-    );
+    const res = await api.get<{
+      success: boolean;
+      data: PydioIntegrationConfig;
+    }>("/api/integrations/pydio");
     return res.data.data;
   } catch {
     return null;
@@ -27,7 +28,7 @@ export function cellsPublicUrl(): string {
 export async function fetchPydioSSOLaunchUrl(): Promise<string | null> {
   try {
     const res = await api.get<{ success: boolean; launch_url: string }>(
-      "/api/integrations/pydio/sso-launch"
+      "/api/integrations/pydio/sso-launch",
     );
     return res.data.launch_url || null;
   } catch {

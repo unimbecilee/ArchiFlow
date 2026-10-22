@@ -181,7 +181,7 @@ func (s *CollaborationService) ListSharedWithMe(userID uint) ([]map[string]any, 
 			"taille_formatee":    FormatFileSize(doc.Size),
 			"mime_type":          doc.MimeType,
 			"file_name":          doc.FileName,
-			"previewable":        IsPreviewableMime(doc.MimeType),
+			"previewable":        IsPreviewable(doc.MimeType, doc.FileName),
 			"editable":           IsEditableDocument(doc.MimeType, doc.FileName),
 			"office_editable":    IsOfficeDocument(doc.MimeType, doc.FileName),
 			"status":             doc.Status,
@@ -289,8 +289,22 @@ func (s *CollaborationService) OpenVersionContent(
 	if err != nil || ver.DocumentID != docID {
 		return nil, "", "", errors.New("version not found")
 	}
-	reader, err := config.GetObjectStream(ctx, ver.MinioBucket, ver.MinioObjectName)
+	bucket := strings.TrimSpace(ver.MinioBucket)
+	key := strings.TrimSpace(ver.MinioObjectName)
+	if bucket == "" || key == "" {
+		return nil, "", "", ErrStorageMissing
+	}
+	if _, _, err := config.StatObject(ctx, bucket, key); err != nil {
+		if isMinioNotFound(err) {
+			return nil, "", "", ErrStorageMissing
+		}
+		return nil, "", "", fmt.Errorf("stockage: %w", err)
+	}
+	reader, err := config.GetObjectStream(ctx, bucket, key)
 	if err != nil {
+		if isMinioNotFound(err) {
+			return nil, "", "", ErrStorageMissing
+		}
 		return nil, "", "", err
 	}
 	mime := ver.MimeType

@@ -46,7 +46,12 @@ export const MENU_ARCHIFLOW: MenuSection[] = [
       { title: "Favoris", path: "/favoris", icon: Star },
       { title: "Recherche", path: "/recherche", icon: MagnifyingGlass },
       { title: "Corbeille", path: "/corbeille", icon: Trash },
-      { title: "Importer", path: "/importer", icon: UploadSimple, requiresWrite: true },
+      {
+        title: "Importer",
+        path: "/importer",
+        icon: UploadSimple,
+        requiresWrite: true,
+      },
       { title: "Notifications", path: "/notifications", icon: Bell },
       { title: COLLABORATION_MENU_LABEL, path: "/ged/cells", icon: UsersThree },
     ],
@@ -55,7 +60,11 @@ export const MENU_ARCHIFLOW: MenuSection[] = [
     heading: "Workflows",
     items: [
       { title: "Circuits", path: "/workflows", icon: GitBranch },
-      { title: "Approbations", path: "/workflows/approbations", icon: CheckCircle },
+      {
+        title: "Approbations",
+        path: "/workflows/approbations",
+        icon: CheckCircle,
+      },
       { title: "En cours", path: "/workflows/en-cours", icon: ListBullets },
       { title: "Terminés", path: "/workflows/termines", icon: Archive },
     ],
@@ -63,9 +72,24 @@ export const MENU_ARCHIFLOW: MenuSection[] = [
   {
     heading: "Administration",
     items: [
-      { title: "Utilisateurs", path: "/admin/users", icon: ShieldCheck, adminOnly: true },
-      { title: "Flux de validation", path: "/admin/workflows", icon: TreeStructure, adminOnly: true },
-      { title: "Conservation", path: "/admin/conservation", icon: LockKey, adminOnly: true },
+      {
+        title: "Utilisateurs",
+        path: "/admin/users",
+        icon: ShieldCheck,
+        adminOnly: true,
+      },
+      {
+        title: "Flux de validation",
+        path: "/admin/workflows",
+        icon: TreeStructure,
+        adminOnly: true,
+      },
+      {
+        title: "Conservation",
+        path: "/admin/conservation",
+        icon: LockKey,
+        adminOnly: true,
+      },
     ],
   },
   {

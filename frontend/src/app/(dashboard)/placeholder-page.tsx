@@ -21,8 +21,9 @@ export function PlaceholderPage({
         icon={<Wrench className="h-6 w-6" weight="duotone" />}
       />
       <PagePanel title={phase} subtitle="Implementation a venir">
-        <p className="text-sm leading-relaxed text-zinc-600">
-          Cette section sera connectee aux services backend dans une prochaine iteration.
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Cette section sera connectee aux services backend dans une prochaine
+          iteration.
         </p>
       </PagePanel>
     </PageFrame>

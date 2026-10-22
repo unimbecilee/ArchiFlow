@@ -12,8 +12,18 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { ErrorBanner } from "@/components/layout/error-banner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { createRetentionPolicy, listRetentionPolicies } from "@/services/retention.service";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  createRetentionPolicy,
+  listRetentionPolicies,
+} from "@/services/retention.service";
 import { toast } from "sonner";
 
 export default function AdminConservationPage() {
@@ -35,9 +45,18 @@ export default function AdminConservationPage() {
         icon={<LockKey className="h-6 w-6" />}
       />
       {isError && (
-        <ErrorBanner message={error instanceof Error ? error.message : "Chargement impossible"} />
+        <ErrorBanner
+          message={
+            error instanceof Error ? error.message : "Chargement impossible"
+          }
+        />
       )}
-      <PagePanel title="Politiques" subtitle={isLoading ? "Chargement…" : `${data?.length ?? 0} politique(s)`}>
+      <PagePanel
+        title="Politiques"
+        subtitle={
+          isLoading ? "Chargement…" : `${data?.length ?? 0} politique(s)`
+        }
+      >
         {isLoading ? (
           <ListSkeleton rows={3} />
         ) : (
@@ -75,7 +94,9 @@ export default function AdminConservationPage() {
               });
               setName("");
               toast.success("Politique créée");
-              await queryClient.invalidateQueries({ queryKey: ["retention-policies"] });
+              await queryClient.invalidateQueries({
+                queryKey: ["retention-policies"],
+              });
             } catch {
               toast.error("Création impossible");
             } finally {
@@ -85,7 +106,12 @@ export default function AdminConservationPage() {
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="polName">Nom</Label>
-            <Input id="polName" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input
+              id="polName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="polYears">Durée (années)</Label>
@@ -101,7 +127,11 @@ export default function AdminConservationPage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="polClass">Classification</Label>
-            <Select id="polClass" value={classification} onChange={(e) => setClassification(e.target.value)}>
+            <Select
+              id="polClass"
+              value={classification}
+              onChange={(e) => setClassification(e.target.value)}
+            >
               <option value="">Toutes</option>
               <option value="PUBLIC">PUBLIC</option>
               <option value="INTERNE">INTERNE</option>

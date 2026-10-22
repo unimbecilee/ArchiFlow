@@ -9,7 +9,7 @@ export type RetentionPolicy = {
 
 export async function listRetentionPolicies(): Promise<RetentionPolicy[]> {
   const res = await api.get<{ success: boolean; data: RetentionPolicy[] }>(
-    "/api/admin/retention-policies"
+    "/api/admin/retention-policies",
   );
   return res.data.data ?? [];
 }
@@ -21,7 +21,7 @@ export async function createRetentionPolicy(data: {
 }): Promise<RetentionPolicy> {
   const res = await api.post<{ success: boolean; data: RetentionPolicy }>(
     "/api/admin/retention-policies",
-    data
+    data,
   );
   return res.data.data;
 }

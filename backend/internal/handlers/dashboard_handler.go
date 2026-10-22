@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
 	"archiflow/backend/internal/services"
 
@@ -79,7 +80,7 @@ func (h *DashboardHandler) Stats(c echo.Context) error {
 	if cached, ok := h.cache.get(cacheKey); ok {
 		return c.JSON(http.StatusOK, map[string]any{"success": true, "data": cached})
 	}
-	isAdmin := role == "admin"
+	isAdmin := models.RoleIsAdmin(role)
 
 	docCount, _ := h.docRepo.CountActive(userID, isAdmin)
 	trashCount, _ := h.docRepo.CountTrash(userID, isAdmin)

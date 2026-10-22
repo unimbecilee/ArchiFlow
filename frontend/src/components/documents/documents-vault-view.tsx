@@ -4,7 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Check,
@@ -49,7 +53,11 @@ import {
   restoreDocument,
 } from "@/services/documents.service";
 import { pluralFr } from "@/lib/fr";
-import { addFavorite, getFavorites, removeFavorite } from "@/services/favorites.service";
+import {
+  addFavorite,
+  getFavorites,
+  removeFavorite,
+} from "@/services/favorites.service";
 import { getLastCorrelationId } from "@/lib/api";
 import { documentBadge } from "@/lib/document-badge";
 import { FILE_KIND_STYLE, kindFromName, type FileKind } from "@/lib/file-kind";
@@ -118,8 +126,12 @@ export function DocumentsVaultView() {
   });
   const docsQuery = useInfiniteQuery({
     queryKey: ["vault-docs", folderId],
-    queryFn: ({ pageParam }) => getMyDocuments(folderId, false, pageParam ?? null),
-    initialPageParam: null as { cursor_id: number; cursor_created_at: string } | null,
+    queryFn: ({ pageParam }) =>
+      getMyDocuments(folderId, false, pageParam ?? null),
+    initialPageParam: null as {
+      cursor_id: number;
+      cursor_created_at: string;
+    } | null,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const statsQuery = useQuery({
@@ -149,7 +161,7 @@ export function DocumentsVaultView() {
   const folders = foldersQuery.data ?? [];
   const documents = React.useMemo(
     () => docsQuery.data?.pages.flatMap((p) => p.documents) ?? [],
-    [docsQuery.data]
+    [docsQuery.data],
   );
 
   const rows = React.useMemo<VaultRow[]>(() => {
@@ -171,7 +183,9 @@ export function DocumentsVaultView() {
       fileKind: kindFromName(doc.file_name || doc.titre, doc.mime_type),
       name: doc.titre,
       owner: "Vous",
-      updatedAt: formatRelativeFr(doc.derniere_modification || doc.date_creation),
+      updatedAt: formatRelativeFr(
+        doc.derniere_modification || doc.date_creation,
+      ),
       size: doc.taille ?? 0,
       favorite: favoriteIds.has(doc.id),
       shared: false,
@@ -187,7 +201,7 @@ export function DocumentsVaultView() {
       (row) =>
         row.name.toLowerCase().includes(q) ||
         row.owner.toLowerCase().includes(q) ||
-        (row.kind === "file" && row.badge?.label.toLowerCase().includes(q))
+        (row.kind === "file" && row.badge?.label.toLowerCase().includes(q)),
     );
   }, [rows, query]);
 
@@ -254,8 +268,15 @@ export function DocumentsVaultView() {
       .map((key) => Number(key.replace("doc-", "")));
     if (!ids.length) return;
     const snapshot = documents;
-    queryClient.setQueryData(["vault-docs", folderId], (prev: { documents: Document[] } | undefined) =>
-      prev ? { ...prev, documents: prev.documents.filter((d) => !ids.includes(d.id)) } : prev
+    queryClient.setQueryData(
+      ["vault-docs", folderId],
+      (prev: { documents: Document[] } | undefined) =>
+        prev
+          ? {
+              ...prev,
+              documents: prev.documents.filter((d) => !ids.includes(d.id)),
+            }
+          : prev,
     );
     setSelected(new Set());
     try {
@@ -267,13 +288,17 @@ export function DocumentsVaultView() {
           action: {
             label: "Annuler",
             onClick: () => {
-              void Promise.all(ids.map((id) => restoreDocument(id))).then(() => refetchAll());
+              void Promise.all(ids.map((id) => restoreDocument(id))).then(() =>
+                refetchAll(),
+              );
             },
           },
-        }
+        },
       );
     } catch {
-      queryClient.setQueryData(["vault-docs", folderId], { documents: snapshot });
+      queryClient.setQueryData(["vault-docs", folderId], {
+        documents: snapshot,
+      });
       toast.error("Suppression impossible");
     }
   }
@@ -288,11 +313,14 @@ export function DocumentsVaultView() {
   }
 
   const fileRows = filtered.filter((row) => row.kind === "file");
-  const allChecked = fileRows.length > 0 && fileRows.every((row) => selected.has(row.key));
+  const allChecked =
+    fileRows.length > 0 && fileRows.every((row) => selected.has(row.key));
 
   function toggleSelectAll() {
     setSelected((prev) =>
-      prev.size === fileRows.length ? new Set() : new Set(fileRows.map((row) => row.key))
+      prev.size === fileRows.length
+        ? new Set()
+        : new Set(fileRows.map((row) => row.key)),
     );
   }
 
@@ -324,53 +352,66 @@ export function DocumentsVaultView() {
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-e1">
                 <Folder className="h-5 w-5" weight="fill" />
               </span>
-              <h1 className="text-[24px] font-bold tracking-tight text-foreground sm:text-[26px]">Mes documents</h1>
+              <h1 className="text-[24px] font-bold tracking-tight text-foreground sm:text-[26px]">
+                Mes documents
+              </h1>
             </div>
-          {folderId != null && folderCrumbs.length > 0 ? (
-            <nav
-              className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-              aria-label="Dossier"
-            >
-              <button
-                type="button"
-                onClick={() => navigateFolder(null)}
-                className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground"
+            {folderId != null && folderCrumbs.length > 0 ? (
+              <nav
+                className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
+                aria-label="Dossier"
               >
-                Racine
-              </button>
-              {folderCrumbs.map((crumb) => (
-                <span key={crumb.id} className="flex items-center gap-1.5">
-                  <span className="text-subtle-foreground">/</span>
-                  <button
-                    type="button"
-                    onClick={() => navigateFolder(crumb.id)}
-                    className={cn(
-                      "rounded-md px-1.5 py-0.5 transition-colors",
-                      crumb.id === folderId
-                        ? "bg-card font-medium text-foreground shadow-e1 ring-1 ring-border"
-                        : "hover:bg-accent hover:text-foreground"
-                    )}
-                  >
-                    {crumb.name}
-                  </button>
-                </span>
-              ))}
-            </nav>
-          ) : (
-            <p className="mt-1.5 max-w-[60ch] text-sm font-medium leading-relaxed text-muted-foreground">
-              Dossiers et fichiers de votre espace. Le fond habille les goulottes, vos cartes restent nettes.
-            </p>
-          )}
+                <button
+                  type="button"
+                  onClick={() => navigateFolder(null)}
+                  className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  Racine
+                </button>
+                {folderCrumbs.map((crumb) => (
+                  <span key={crumb.id} className="flex items-center gap-1.5">
+                    <span className="text-subtle-foreground">/</span>
+                    <button
+                      type="button"
+                      onClick={() => navigateFolder(crumb.id)}
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 transition-colors",
+                        crumb.id === folderId
+                          ? "bg-card font-medium text-foreground shadow-e1 ring-1 ring-border"
+                          : "hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      {crumb.name}
+                    </button>
+                  </span>
+                ))}
+              </nav>
+            ) : (
+              <p className="mt-1.5 max-w-[60ch] text-sm font-medium leading-relaxed text-muted-foreground">
+                Dossiers et fichiers de votre espace. Le fond habille les
+                goulottes, vos cartes restent nettes.
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="soft"
+              size="sm"
+              onClick={() => setCreateOpen(true)}
+              className="h-9"
+            >
+              <FolderPlus /> Nouveau dossier
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={openUploader}
+              className="h-9 shadow-e1"
+            >
+              <UploadSimple /> Importer
+            </Button>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button variant="soft" size="sm" onClick={() => setCreateOpen(true)} className="h-9">
-            <FolderPlus /> Nouveau dossier
-          </Button>
-          <Button variant="default" size="sm" onClick={openUploader} className="h-9 shadow-e1">
-            <UploadSimple /> Importer
-          </Button>
-        </div>
-      </div>
       </div>
 
       <div className="mt-4 space-y-3 pb-16">
@@ -381,9 +422,15 @@ export function DocumentsVaultView() {
           >
             <Warning className="h-4 w-4 shrink-0" weight="duotone" />
             <span className="font-medium">
-              {pluralFr(pending, "approbation en attente", "approbations en attente")}
+              {pluralFr(
+                pending,
+                "approbation en attente",
+                "approbations en attente",
+              )}
             </span>
-            <span className="ml-auto text-xs font-medium text-warning-soft-foreground">Traiter →</span>
+            <span className="ml-auto text-xs font-medium text-warning-soft-foreground">
+              Traiter →
+            </span>
           </Link>
         )}
 
@@ -428,7 +475,7 @@ export function DocumentsVaultView() {
                       "flex h-4 w-4 items-center justify-center rounded border transition-colors",
                       allChecked
                         ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card hover:border-primary"
+                        : "border-border bg-card hover:border-primary",
                     )}
                   >
                     {allChecked && <Check className="h-3 w-3" weight="bold" />}
@@ -461,12 +508,17 @@ export function DocumentsVaultView() {
                         row={row}
                         index={i}
                         checked={selected.has(row.key)}
-                        onToggle={() => row.kind === "file" && toggleSelect(row.key)}
+                        onToggle={() =>
+                          row.kind === "file" && toggleSelect(row.key)
+                        }
                         onOpen={() => {
-                          if (row.kind === "folder") navigateFolder(row.folder.id);
+                          if (row.kind === "folder")
+                            navigateFolder(row.folder.id);
                           else router.push(`/documents/${row.doc.id}`);
                         }}
-                        onToggleFav={() => row.kind === "file" && void toggleFav(row.doc.id)}
+                        onToggleFav={() =>
+                          row.kind === "file" && void toggleFav(row.doc.id)
+                        }
                       />
                     ))}
                   </AnimatePresence>
@@ -481,7 +533,9 @@ export function DocumentsVaultView() {
                       disabled={docsQuery.isFetchingNextPage}
                       onClick={() => void docsQuery.fetchNextPage()}
                     >
-                      {docsQuery.isFetchingNextPage ? "Chargement…" : "Charger plus de fichiers"}
+                      {docsQuery.isFetchingNextPage
+                        ? "Chargement…"
+                        : "Charger plus de fichiers"}
                     </Button>
                   </div>
                 )}
@@ -514,10 +568,31 @@ export function DocumentsVaultView() {
             <span className="px-2.5 text-sm font-medium text-foreground">
               {pluralFr(selected.size, "sélectionné")}
             </span>
-            <Button variant="soft" size="sm" onClick={() => router.push("/documents-partages")}>
+            <Button
+              variant="soft"
+              size="sm"
+              onClick={() => {
+                const docIds = [...selected]
+                  .filter((key) => key.startsWith("doc-"))
+                  .map((key) => Number(key.replace("doc-", "")));
+                if (docIds.length === 1) {
+                  router.push(`/documents/${docIds[0]}?tab=partage`);
+                  return;
+                }
+                toast.message(
+                  docIds.length === 0
+                    ? "Sélectionnez un fichier à partager"
+                    : "Partagez un document à la fois depuis sa fiche",
+                );
+              }}
+            >
               <ShareNetwork /> Partager
             </Button>
-            <Button variant="danger" size="sm" onClick={() => void removeSelected()}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => void removeSelected()}
+            >
               <Trash /> Supprimer
             </Button>
             <Button
@@ -551,10 +626,17 @@ export function DocumentsVaultView() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+            <Button
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+            >
               Annuler
             </Button>
-            <Button onClick={() => void handleCreateFolder()} disabled={creating || !folderName.trim()}>
+            <Button
+              onClick={() => void handleCreateFolder()}
+              disabled={creating || !folderName.trim()}
+            >
               <FolderPlus /> Créer
             </Button>
           </DialogFooter>
@@ -588,10 +670,14 @@ function VaultRowItem({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -24, transition: { duration: 0.18 } }}
-      transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.3), ease: "easeOut" }}
+      transition={{
+        duration: 0.25,
+        delay: Math.min(index * 0.03, 0.3),
+        ease: "easeOut",
+      }}
       className={cn(
         "group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50",
-        checked && "bg-accent-soft/50"
+        checked && "bg-accent-soft/50",
       )}
     >
       <button
@@ -603,24 +689,30 @@ function VaultRowItem({
           row.kind === "folder" && "invisible",
           checked
             ? "border-primary bg-primary text-primary-foreground"
-            : "border-border bg-card opacity-0 group-hover:opacity-100 hover:border-primary"
+            : "border-border bg-card opacity-0 group-hover:opacity-100 hover:border-primary",
         )}
       >
         {checked && <Check className="h-3 w-3" weight="bold" />}
       </button>
 
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+      >
         <span
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1",
-            FILE_KIND_STYLE[fileKind]
+            FILE_KIND_STYLE[fileKind],
           )}
         >
           <Icon className="h-4 w-4" weight="duotone" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-foreground">{row.name}</p>
+            <p className="truncate text-sm font-medium text-foreground">
+              {row.name}
+            </p>
             {row.kind === "file" && row.badge && (
               <Badge tone={row.badge.tone} className="shrink-0">
                 {row.badge.tone === "amber" && <Warning />}
@@ -635,7 +727,10 @@ function VaultRowItem({
       </button>
 
       {row.shared && (
-        <span className="hidden shrink-0 text-subtle-foreground sm:block" title="Partagé">
+        <span
+          className="hidden shrink-0 text-subtle-foreground sm:block"
+          title="Partagé"
+        >
           <ShareNetwork className="h-4 w-4" />
         </span>
       )}
@@ -648,15 +743,23 @@ function VaultRowItem({
         <button
           type="button"
           onClick={onToggleFav}
-          aria-label={row.favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+          aria-label={
+            row.favorite ? "Retirer des favoris" : "Ajouter aux favoris"
+          }
           className={cn(
             "shrink-0 rounded-md p-1.5 transition-colors",
             row.favorite
               ? "text-warning hover:bg-warning-soft/30"
-              : "text-subtle-foreground opacity-0 hover:bg-accent/30 hover:text-warning group-hover:opacity-100"
+              : "text-subtle-foreground opacity-0 hover:bg-accent/30 hover:text-warning group-hover:opacity-100",
           )}
         >
-          <Star className={cn("h-4 w-4", row.favorite && "fill-warning text-warning")} weight={row.favorite ? "fill" : "regular"} />
+          <Star
+            className={cn(
+              "h-4 w-4",
+              row.favorite && "fill-warning text-warning",
+            )}
+            weight={row.favorite ? "fill" : "regular"}
+          />
         </button>
       )}
     </motion.li>

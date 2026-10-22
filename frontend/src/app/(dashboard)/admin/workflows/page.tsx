@@ -3,15 +3,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Trash, TreeStructure, PencilSimple } from "@phosphor-icons/react";
+import {
+  Plus,
+  Trash,
+  TreeStructure,
+  PencilSimple,
+} from "@phosphor-icons/react";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { Button } from "@/components/ui/button";
-import { CrudDataView, type CrudBulkAction, type CrudRowAction } from "@/components/crud";
+import {
+  CrudDataView,
+  type CrudBulkAction,
+  type CrudRowAction,
+} from "@/components/crud";
 import { useAuthStore } from "@/store/auth-store";
-import { adminDeleteWorkflow, adminListWorkflows } from "@/services/admin-workflows.service";
+import {
+  adminDeleteWorkflow,
+  adminListWorkflows,
+} from "@/services/admin-workflows.service";
 import type { AdminWorkflowListRow } from "@/types/workflows";
 import { useConfirm } from "@/components/feedback/confirm-provider";
 import { toast } from "sonner";
@@ -85,7 +97,7 @@ export default function AdminWorkflowsPage() {
         onClick: (row) => deleteOne(row),
       },
     ],
-    [load, router, confirm]
+    [load, router, confirm],
   );
 
   const bulkActions: CrudBulkAction<AdminWorkflowListRow>[] = useMemo(
@@ -110,7 +122,9 @@ export default function AdminWorkflowsPage() {
             return;
           }
           try {
-            await Promise.all(targets.map((r) => adminDeleteWorkflow(r.workflow.id)));
+            await Promise.all(
+              targets.map((r) => adminDeleteWorkflow(r.workflow.id)),
+            );
             toast.success(`${targets.length} workflow(s) supprime(s)`);
             await load();
           } catch {
@@ -120,7 +134,7 @@ export default function AdminWorkflowsPage() {
         },
       },
     ],
-    [load, confirm]
+    [load, confirm],
   );
 
   if (user?.role !== "admin") {
@@ -149,11 +163,16 @@ export default function AdminWorkflowsPage() {
         }
       />
 
-      <PagePanel title="Definitions" subtitle={loading ? "Chargement..." : `${rows.length} workflow(s)`}>
+      <PagePanel
+        title="Definitions"
+        subtitle={loading ? "Chargement..." : `${rows.length} workflow(s)`}
+      >
         {loading ? (
           <ListSkeleton rows={4} />
         ) : rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">Aucun workflow</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Aucun workflow
+          </p>
         ) : (
           <CrudDataView
             items={rows}
@@ -167,8 +186,12 @@ export default function AdminWorkflowsPage() {
                 header: "Nom",
                 cell: (row) => (
                   <div>
-                    <p className="font-medium text-zinc-900">{row.workflow.name}</p>
-                    <p className="text-xs text-zinc-500">{row.workflow.description || "—"}</p>
+                    <p className="font-medium text-foreground">
+                      {row.workflow.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {row.workflow.description || "—"}
+                    </p>
                   </div>
                 ),
               },
@@ -188,7 +211,13 @@ export default function AdminWorkflowsPage() {
                 id: "active",
                 header: "Actif",
                 cell: (row) => (
-                  <span className={row.workflow.is_active ? "text-emerald-700" : "text-zinc-400"}>
+                  <span
+                    className={
+                      row.workflow.is_active
+                        ? "text-accent-soft-foreground"
+                        : "text-muted-foreground"
+                    }
+                  >
                     {row.workflow.is_active ? "Oui" : "Non"}
                   </span>
                 ),
@@ -199,27 +228,31 @@ export default function AdminWorkflowsPage() {
                 hideOnMobile: true,
                 cell: (row) =>
                   row.protected ? (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-soft-foreground">
                       Systeme
                     </span>
                   ) : (
-                    <span className="text-xs text-zinc-500">Personnalise</span>
+                    <span className="text-xs text-muted-foreground">
+                      Personnalise
+                    </span>
                   ),
               },
             ]}
             renderGridCard={(row) => (
               <div className="space-y-2">
-                <p className="font-medium text-zinc-900">{row.workflow.name}</p>
-                <p className="line-clamp-2 text-xs text-zinc-500">
+                <p className="font-medium text-foreground">
+                  {row.workflow.name}
+                </p>
+                <p className="line-clamp-2 text-xs text-muted-foreground">
                   {row.workflow.description || "Sans description"}
                 </p>
-                <div className="flex flex-wrap gap-2 text-xs text-zinc-600">
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <span>{row.workflow.steps?.length ?? 0} etapes</span>
                   <span>·</span>
                   <span>{row.instance_count} instances</span>
                 </div>
                 {row.protected && (
-                  <span className="inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                  <span className="inline-block rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning-soft-foreground">
                     Systeme
                   </span>
                 )}

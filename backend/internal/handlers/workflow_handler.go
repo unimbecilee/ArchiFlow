@@ -49,11 +49,11 @@ func instanceView(inst *models.WorkflowInstance) map[string]any {
 
 func approvalView(a *models.WorkflowApproval) map[string]any {
 	v := map[string]any{
-		"id":        a.ID,
-		"decision":  a.Decision,
+		"id":          a.ID,
+		"decision":    a.Decision,
 		"commentaire": a.Comment,
-		"date":      a.DecidedAt,
-		"step_id":   a.StepID,
+		"date":        a.DecidedAt,
+		"step_id":     a.StepID,
 	}
 	if a.Step != nil {
 		v["etape_nom"] = a.Step.Name

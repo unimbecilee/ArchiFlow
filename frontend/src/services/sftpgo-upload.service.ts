@@ -47,20 +47,26 @@ const MAX_CONCURRENT = 4;
 
 async function mintToken(
   folderId: number | null | undefined,
-  specs: SftpGoFileSpec[]
+  specs: SftpGoFileSpec[],
 ): Promise<TokenData> {
-  const res = await api.post<{ success: boolean; data: TokenData }>("/api/upload/token", {
-    folder_id: folderId ?? undefined,
-    files: specs.map((s) => ({
-      name: s.file.name,
-      size: s.file.size,
-      relative_path: s.relative_path || undefined,
-    })),
-  });
+  const res = await api.post<{ success: boolean; data: TokenData }>(
+    "/api/upload/token",
+    {
+      folder_id: folderId ?? undefined,
+      files: specs.map((s) => ({
+        name: s.file.name,
+        size: s.file.size,
+        relative_path: s.relative_path || undefined,
+      })),
+    },
+  );
   return res.data.data;
 }
 
-async function refreshToken(): Promise<{ token: string; uploadUrlBase: string }> {
+async function refreshToken(): Promise<{
+  token: string;
+  uploadUrlBase: string;
+}> {
   const res = await api.post<{
     success: boolean;
     data: { token: string; expires_in: number; uploadUrlBase: string };
@@ -78,7 +84,7 @@ async function putFileSftpGo(
   virtualPath: string,
   file: File,
   onBytes?: (n: number) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<void> {
   let attempt = 0;
   let auth = token;
@@ -97,13 +103,17 @@ async function putFileSftpGo(
       const xhr = new XMLHttpRequest();
       xhr.open("POST", url);
       xhr.setRequestHeader("Authorization", `Bearer ${auth}`);
-      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      xhr.setRequestHeader(
+        "Content-Type",
+        file.type || "application/octet-stream",
+      );
       xhr.withCredentials = false;
       xhr.upload.onprogress = (ev) => {
         if (ev.lengthComputable) onBytes?.(ev.loaded);
       };
       xhr.onload = () => resolve(xhr.status);
-      xhr.onerror = () => reject(new Error("NetworkError when uploading to SFTPGo"));
+      xhr.onerror = () =>
+        reject(new Error("NetworkError when uploading to SFTPGo"));
       xhr.onabort = () => reject(new DOMException("Aborted", "AbortError"));
       if (signal) {
         signal.addEventListener("abort", () => xhr.abort(), { once: true });
@@ -137,13 +147,13 @@ export async function putFilesViaSftpGo(
   specs: SftpGoFileSpec[],
   meta: SftpGoUploadMeta,
   onProgress?: (p: SftpGoProgress) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<Array<{ file: File; document?: Document; error?: string }>> {
   if (specs.length === 0) return [];
   for (const s of specs) {
     if (s.file.size > MAX_RESUMABLE_FILE_BYTES) {
       throw new Error(
-        `Fichier trop volumineux (MAX_CONTENT_LENGTH resumable=${MAX_RESUMABLE_FILE_BYTES}, classic=${MAX_CONTENT_LENGTH}): ${s.file.name}`
+        `Fichier trop volumineux (MAX_CONTENT_LENGTH resumable=${MAX_RESUMABLE_FILE_BYTES}, classic=${MAX_CONTENT_LENGTH}): ${s.file.name}`,
       );
     }
   }
@@ -151,9 +161,8 @@ export async function putFilesViaSftpGo(
   const tokenData = await mintToken(meta.folder_id, specs);
   const pathByName = new Map(tokenData.files.map((f) => [f.name, f]));
 
-  const results: Array<{ file: File; document?: Document; error?: string }> = new Array(
-    specs.length
-  );
+  const results: Array<{ file: File; document?: Document; error?: string }> =
+    new Array(specs.length);
   let filesDone = 0;
   const bytesTotal = specs.reduce((s, x) => s + x.file.size, 0);
   const bytesPerFile = new Map<number, number>();
@@ -173,54 +182,66 @@ export async function putFilesViaSftpGo(
   };
 
   let cursor = 0;
-  const workers = Array.from({ length: Math.min(MAX_CONCURRENT, specs.length) }, async () => {
-    while (cursor < specs.length) {
-      if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-      const idx = cursor++;
-      const spec = specs[idx];
-      const mapped = pathByName.get(spec.file.name);
-      const vpath = mapped?.path;
-      if (!vpath || mapped.mode !== "sftpgo") {
-        results[idx] = {
-          file: spec.file,
-          error: mapped?.mode === "s3" ? "Fichier trop gros pour SFTPGo (utilise MPU)" : "Path manquant",
-        };
+  const workers = Array.from(
+    { length: Math.min(MAX_CONCURRENT, specs.length) },
+    async () => {
+      while (cursor < specs.length) {
+        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+        const idx = cursor++;
+        const spec = specs[idx];
+        const mapped = pathByName.get(spec.file.name);
+        const vpath = mapped?.path;
+        if (!vpath || mapped.mode !== "sftpgo") {
+          results[idx] = {
+            file: spec.file,
+            error:
+              mapped?.mode === "s3"
+                ? "Fichier trop gros pour SFTPGo (utilise MPU)"
+                : "Path manquant",
+          };
+          filesDone++;
+          report(spec.file.name);
+          continue;
+        }
+        try {
+          await putFileSftpGo(
+            tokenData.uploadUrlBase,
+            tokenData.token,
+            vpath,
+            spec.file,
+            (n) => {
+              bytesPerFile.set(idx, n);
+              report(spec.file.name);
+            },
+            signal,
+          );
+          results[idx] = {
+            file: spec.file,
+            document: {
+              id: 0,
+              titre:
+                spec.titre ||
+                spec.file.name.replace(/\.[^.]+$/, "") ||
+                spec.file.name,
+              file_name: spec.file.name,
+              taille: spec.file.size,
+              mime_type: spec.file.type || "application/octet-stream",
+              date_creation: new Date().toISOString(),
+              folder_id: meta.folder_id ?? undefined,
+            },
+          };
+        } catch (err) {
+          results[idx] = {
+            file: spec.file,
+            error: getApiErrorMessage(err, "Echec SFTPGo"),
+          };
+        }
         filesDone++;
+        bytesPerFile.set(idx, spec.file.size);
         report(spec.file.name);
-        continue;
       }
-      try {
-        await putFileSftpGo(
-          tokenData.uploadUrlBase,
-          tokenData.token,
-          vpath,
-          spec.file,
-          (n) => {
-            bytesPerFile.set(idx, n);
-            report(spec.file.name);
-          },
-          signal
-        );
-        results[idx] = {
-          file: spec.file,
-          document: {
-            id: 0,
-            titre: spec.titre || spec.file.name.replace(/\.[^.]+$/, "") || spec.file.name,
-            file_name: spec.file.name,
-            taille: spec.file.size,
-            mime_type: spec.file.type || "application/octet-stream",
-            date_creation: new Date().toISOString(),
-            folder_id: meta.folder_id ?? undefined,
-          },
-        };
-      } catch (err) {
-        results[idx] = { file: spec.file, error: getApiErrorMessage(err, "Echec SFTPGo") };
-      }
-      filesDone++;
-      bytesPerFile.set(idx, spec.file.size);
-      report(spec.file.name);
-    }
-  });
+    },
+  );
 
   await Promise.all(workers);
   return results;
@@ -229,5 +250,8 @@ export async function putFilesViaSftpGo(
 export function isSftpGoHotPathEnabled(): boolean {
   // Backend decides; frontend always tries token mint when this flag is true via env proxy.
   // Build-time: NEXT_PUBLIC optional; runtime we detect by attempting token when selected.
-  return process.env.NEXT_PUBLIC_SFTPGO_UPLOAD === "1" || process.env.NEXT_PUBLIC_SFTPGO_UPLOAD === "true";
+  return (
+    process.env.NEXT_PUBLIC_SFTPGO_UPLOAD === "1" ||
+    process.env.NEXT_PUBLIC_SFTPGO_UPLOAD === "true"
+  );
 }

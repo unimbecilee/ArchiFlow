@@ -41,10 +41,14 @@ export default function CollaborationPage() {
       if (url) {
         window.open(url, "_blank", "noopener,noreferrer");
       } else {
-        setSsoError("Connexion impossible. Reessayez ou contactez un administrateur.");
+        setSsoError(
+          "Connexion impossible. Reessayez ou contactez un administrateur.",
+        );
       }
     } catch {
-      setSsoError("Connexion impossible. Reessayez ou contactez un administrateur.");
+      setSsoError(
+        "Connexion impossible. Reessayez ou contactez un administrateur.",
+      );
     } finally {
       setSsoLoading(false);
     }
@@ -75,28 +79,30 @@ export default function CollaborationPage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">
                   Acces workspace
                 </p>
-                <p className="text-base leading-relaxed text-zinc-600">
-                  Ouvrez {ARCHIFLOW_PLUS} avec votre compte ArchiFlow — une seule connexion, sans
-                  ressaisir vos identifiants.
+                <p className="text-base leading-relaxed text-muted-foreground">
+                  Ouvrez {ARCHIFLOW_PLUS} avec votre compte ArchiFlow — une
+                  seule connexion, sans ressaisir vos identifiants.
                 </p>
               </div>
             </div>
 
             <div className="flex shrink-0 flex-col items-stretch gap-3 sm:min-w-[14rem]">
               {ssoEnabled === false && (
-                <p className="rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+                <p className="rounded-xl border border-warning/30 bg-warning-soft/80 px-4 py-3 text-sm text-warning-soft-foreground">
                   {ssoNote ||
                     `${ARCHIFLOW_PLUS} n'est pas encore disponible pour votre compte.`}
                 </p>
               )}
               {ssoError && (
-                <p className="rounded-xl border border-red-200/80 bg-red-50/80 px-4 py-3 text-sm text-red-800">
+                <p className="rounded-xl border border-destructive/30 bg-destructive-soft/80 px-4 py-3 text-sm text-destructive-soft-foreground">
                   {ssoError}
                 </p>
               )}
               <Button
                 size="lg"
-                disabled={ssoLoading || ssoEnabled === false || ssoEnabled === null}
+                disabled={
+                  ssoLoading || ssoEnabled === false || ssoEnabled === null
+                }
                 className="gap-2 shadow-[0_12px_32px_-12px_hsla(160,61%,35%,0.55)]"
                 onClick={() => void openArchiFlowPlus()}
               >
@@ -104,7 +110,9 @@ export default function CollaborationPage() {
                 {ssoLoading ? "Connexion..." : ARCHIFLOW_PLUS}
               </Button>
               {ssoEnabled === null && (
-                <p className="text-center text-xs text-zinc-500">Verification du service...</p>
+                <p className="text-center text-xs text-muted-foreground">
+                  Verification du service...
+                </p>
               )}
             </div>
           </div>
@@ -114,29 +122,41 @@ export default function CollaborationPage() {
           className="surface-card flex flex-col gap-4 p-8"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.06 }}
+          transition={{
+            type: "spring",
+            stiffness: 100,
+            damping: 20,
+            delay: 0.06,
+          }}
         >
           <span className="icon-well">
             <Archive className="h-5 w-5" weight="duotone" />
           </span>
-          <p className="text-sm font-semibold text-zinc-900">Verser vers ArchiFlow</p>
-          <p className="text-sm leading-relaxed text-zinc-600">
+          <p className="text-sm font-semibold text-foreground">
+            Verser vers ArchiFlow
+          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Dans {ARCHIFLOW_PLUS}, clic droit sur un fichier puis{" "}
-            <strong className="font-medium text-zinc-800">Archiver vers MinIO (ArchiFlow)</strong>{" "}
+            <strong className="font-medium text-foreground">
+              Archiver vers MinIO (ArchiFlow)
+            </strong>{" "}
             pour declencher la conservation dans le coffre central.
           </p>
         </motion.div>
       </section>
 
       <PagePanel title="Rappel" subtitle="Collaboration et archivage">
-        <div className="flex items-start gap-4 text-sm leading-relaxed text-zinc-600">
+        <div className="flex items-start gap-4 text-sm leading-relaxed text-muted-foreground">
           <span className="icon-well">
             <CloudArrowUp className="h-5 w-5" weight="duotone" />
           </span>
           <p>
-            <strong className="font-medium text-zinc-900">{ARCHIFLOW_PLUS}</strong> couvre le
-            travail d&apos;equipe en temps reel. La recherche GED, les workflows et l&apos;archivage
-            long terme vivent dans ArchiFlow, avec stockage objet securise.
+            <strong className="font-medium text-foreground">
+              {ARCHIFLOW_PLUS}
+            </strong>{" "}
+            couvre le travail d&apos;equipe en temps reel. La recherche GED, les
+            workflows et l&apos;archivage long terme vivent dans ArchiFlow, avec
+            stockage objet securise.
           </p>
         </div>
       </PagePanel>

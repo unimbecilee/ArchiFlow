@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -441,7 +442,11 @@ func (h *DocumentHandler) Download(c echo.Context) error {
 	}
 	reader, mime, filename, err := h.documentService.OpenContentByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
+		status := http.StatusNotFound
+		if !errors.Is(err, services.ErrStorageMissing) {
+			status = http.StatusInternalServerError
+		}
+		return c.JSON(status, map[string]any{"success": false, "error": err.Error()})
 	}
 	defer reader.Close()
 	h.auditDoc(c, "document.download", id)
@@ -486,19 +491,24 @@ func (h *DocumentHandler) Preview(c echo.Context) error {
 
 	reader, mime, filename, err := h.documentService.OpenContentByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]any{"success": false, "error": err.Error()})
+		status := http.StatusNotFound
+		if !errors.Is(err, services.ErrStorageMissing) {
+			status = http.StatusInternalServerError
+		}
+		return c.JSON(status, map[string]any{"success": false, "error": err.Error()})
 	}
 	defer reader.Close()
 
 	c.Response().Header().Set("Content-Type", mime)
 	utils.ApplyPreviewSecurityHeaders(c.Response().Header(), mime)
-	if services.IsPreviewableMime(mime) {
+	if services.IsPreviewable(mime, filename) {
 		if cd := utils.ContentDispositionInline(filename); cd != "" {
 			c.Response().Header().Set("Content-Disposition", cd)
 		}
 	} else if cd := utils.ContentDispositionAttachment(filename); cd != "" {
 		c.Response().Header().Set("Content-Disposition", cd)
 	}
+	c.Response().WriteHeader(http.StatusOK)
 	_, copyErr := io.Copy(c.Response().Writer, reader)
 	if copyErr != nil {
 		return copyErr

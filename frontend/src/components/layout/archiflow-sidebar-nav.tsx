@@ -26,9 +26,14 @@ export function ArchiFlowSidebarNav({
   const menuCtx = buildMenuAccessContext(user);
 
   return (
-    <nav className={cn("space-y-6", className)} aria-label="Navigation principale">
+    <nav
+      className={cn("space-y-6", className)}
+      aria-label="Navigation principale"
+    >
       {MENU_ARCHIFLOW.map((section, idx) => {
-        const items = section.items.filter((item) => canSeeMenuItem(item, menuCtx));
+        const items = section.items.filter((item) =>
+          canSeeMenuItem(item, menuCtx),
+        );
         if (items.length === 0) return null;
         return (
           <div key={idx}>
@@ -61,7 +66,7 @@ export function ArchiFlowSidebarNav({
                         "text-sidebar-foreground/80",
                         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                         active &&
-                          "bg-sidebar-active text-sidebar-active-foreground"
+                          "bg-sidebar-active text-sidebar-active-foreground",
                       )}
                     >
                       {active && (
@@ -74,7 +79,8 @@ export function ArchiFlowSidebarNav({
                         className={cn(
                           "h-4 w-4 shrink-0 text-sidebar-muted",
                           active && "text-sidebar-brand",
-                          !active && "group-hover:text-sidebar-accent-foreground"
+                          !active &&
+                            "group-hover:text-sidebar-accent-foreground",
                         )}
                         weight={active ? "fill" : "regular"}
                       />

@@ -4,18 +4,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useCrudSelection<T>(
   items: T[],
-  getItemId: (item: T) => string | number
+  getItemId: (item: T) => string | number,
 ) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const itemIds = useMemo(
     () => items.map((item) => String(getItemId(item))),
-    [items, getItemId]
+    [items, getItemId],
   );
 
   useEffect(() => {
     setSelected((prev) => {
-      const next = new Set(Array.from(prev).filter((id) => itemIds.includes(id)));
+      const next = new Set(
+        Array.from(prev).filter((id) => itemIds.includes(id)),
+      );
       if (next.size === prev.size) return prev;
       return next;
     });
@@ -44,10 +46,11 @@ export function useCrudSelection<T>(
 
   const selectedItems = useMemo(
     () => items.filter((item) => selected.has(String(getItemId(item)))),
-    [items, selected, getItemId]
+    [items, selected, getItemId],
   );
 
-  const allSelected = itemIds.length > 0 && itemIds.every((id) => selected.has(id));
+  const allSelected =
+    itemIds.length > 0 && itemIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0 && !allSelected;
 
   return {

@@ -23,7 +23,11 @@ type CreateUserDialogProps = {
   onCreated: () => void;
 };
 
-export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogProps) {
+export function CreateUserDialog({
+  open,
+  onClose,
+  onCreated,
+}: CreateUserDialogProps) {
   const [form, setForm] = useState({
     email: "",
     first_name: "",
@@ -71,22 +75,27 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
       setSuccess(
         res.email_sent
           ? `Compte cree. E-mail en cours d'envoi a ${res.user.email}.`
-          : `Compte cree. E-mail non envoye (SMTP inactif) — voir logs serveur.`
+          : `Compte cree. E-mail non envoye (SMTP inactif) — voir logs serveur.`,
       );
       onCreated();
       setTimeout(() => handleClose(), 2200);
     } catch (err: unknown) {
       const ax = err as {
-        response?: { status?: number; data?: { error?: string; message?: string } };
+        response?: {
+          status?: number;
+          data?: { error?: string; message?: string };
+        };
       };
       const msg = ax.response?.data?.error || ax.response?.data?.message || "";
       if (msg.includes("deja utilise") || msg.includes("already registered")) {
-        setError("Cet e-mail existe deja. Utilisez un autre e-mail ou supprimez l'utilisateur existant.");
+        setError(
+          "Cet e-mail existe deja. Utilisez un autre e-mail ou supprimez l'utilisateur existant.",
+        );
       } else if (ax.response?.status != null) {
         setError(msg || "Echec de la creation");
       } else {
         setError(
-          "Impossible de joindre l'API (verifiez que le backend tourne sur le port 5010)."
+          "Impossible de joindre l'API (verifiez que le backend tourne sur le port 5010).",
         );
       }
     } finally {
@@ -98,7 +107,7 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -114,20 +123,21 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
           >
             <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-700">
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent-soft-foreground">
                   Nouveau compte
                 </p>
-                <h2 className="mt-2 text-xl font-semibold tracking-tight text-zinc-900">
+                <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">
                   Creer un utilisateur
                 </h2>
-                <p className="mt-1 text-sm text-zinc-600">
-                  Provisioning ArchiFlow et ArchiFlow + (collaboration). Mot de passe temporaire par e-mail.
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Provisioning ArchiFlow et ArchiFlow + (collaboration). Mot de
+                  passe temporaire par e-mail.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-xl border border-slate-200 p-2 text-zinc-500 transition-colors hover:bg-zinc-50"
+                className="rounded-xl border border-border p-2 text-muted-foreground transition-colors hover:bg-muted"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -136,7 +146,7 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <ErrorBanner message={error} />}
               {success && (
-                <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                <p className="rounded-xl border border-emerald-200 bg-accent-soft px-4 py-3 text-sm text-accent-soft-foreground">
                   {success}
                 </p>
               )}
@@ -147,7 +157,9 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
                   <Input
                     id="cu-first"
                     value={form.first_name}
-                    onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, first_name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -156,7 +168,9 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
                   <Input
                     id="cu-last"
                     value={form.last_name}
-                    onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, last_name: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -178,7 +192,7 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
                 <Label htmlFor="cu-role">Role</Label>
                 <select
                   id="cu-role"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus-visible:ring-primary/25"
                   value={form.role}
                   onChange={(e) => setRole(e.target.value)}
                 >
@@ -188,16 +202,25 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   {ROLES.find((r) => r.value === form.role)?.hint}
                 </p>
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleClose}
+                >
                   Annuler
                 </Button>
-                <Button type="submit" className="flex-1 gap-2" disabled={loading || done}>
+                <Button
+                  type="submit"
+                  className="flex-1 gap-2"
+                  disabled={loading || done}
+                >
                   <UserPlus className="h-4 w-4" weight="bold" />
                   {loading ? "Creation..." : "Creer"}
                 </Button>

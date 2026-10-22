@@ -11,7 +11,11 @@ type FolderPickerProps = {
   label?: string;
 };
 
-export function FolderPicker({ value, onChange, label = "Dossier de destination" }: FolderPickerProps) {
+export function FolderPicker({
+  value,
+  onChange,
+  label = "Dossier de destination",
+}: FolderPickerProps) {
   const [options, setOptions] = useState<FolderFlatOption[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +31,7 @@ export function FolderPicker({ value, onChange, label = "Dossier de destination"
       <Label htmlFor="folder-picker">{label}</Label>
       <select
         id="folder-picker"
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+        className="h-10 w-full rounded-xl border border-border bg-card px-3 text-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus-visible:ring-primary/25"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={loading}
@@ -39,7 +43,7 @@ export function FolderPicker({ value, onChange, label = "Dossier de destination"
           </option>
         ))}
       </select>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Le fichier sera enregistre dans le dossier selectionne.
       </p>
     </div>

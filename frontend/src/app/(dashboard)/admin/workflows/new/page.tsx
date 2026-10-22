@@ -173,22 +173,33 @@ export default function AdminWorkflowNewPage() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-zinc-900">Etapes</p>
-              <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addStep}>
+              <p className="text-sm font-medium text-foreground">Etapes</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={addStep}
+              >
                 <Plus className="h-4 w-4" /> Etape
               </Button>
             </div>
             {steps.map((st, si) => (
               <div
                 key={`${st.step_order}-${si}`}
-                className="space-y-3 rounded-xl border border-slate-200 bg-zinc-50 p-4"
+                className="space-y-3 rounded-xl border border-border bg-muted p-4"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Etape ordre {st.step_order}
                   </p>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeStep(si)}>
-                    <Trash className="h-4 w-4 text-red-600" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeStep(si)}
+                  >
+                    <Trash className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -203,9 +214,11 @@ export default function AdminWorkflowNewPage() {
                   <div className="flex flex-col gap-1.5">
                     <Label>Type approbation</Label>
                     <select
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                      className="h-10 rounded-xl border border-border bg-card px-3 text-sm"
                       value={st.approval_type}
-                      onChange={(e) => updateStep(si, { approval_type: e.target.value })}
+                      onChange={(e) =>
+                        updateStep(si, { approval_type: e.target.value })
+                      }
                     >
                       {APPROVAL_TYPES.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -219,21 +232,28 @@ export default function AdminWorkflowNewPage() {
                   <Label>Description etape</Label>
                   <Input
                     value={st.description}
-                    onChange={(e) => updateStep(si, { description: e.target.value })}
+                    onChange={(e) =>
+                      updateStep(si, { description: e.target.value })
+                    }
                   />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Approbateurs</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addApprover(si)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addApprover(si)}
+                    >
                       + ligne
                     </Button>
                   </div>
                   {st.approvers.map((ap, aj) => (
                     <div key={aj} className="flex flex-wrap gap-2">
                       <select
-                        className="min-w-[10rem] flex-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm"
+                        className="min-w-[10rem] flex-1 rounded-xl border border-border bg-card px-2 py-2 text-sm"
                         value={ap.role_name}
                         onChange={(e) => {
                           const copy = [...st.approvers];
@@ -257,7 +277,12 @@ export default function AdminWorkflowNewPage() {
                           updateStep(si, { approvers: copy });
                         }}
                       />
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeApprover(si, aj)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeApprover(si, aj)}
+                      >
                         ×
                       </Button>
                     </div>

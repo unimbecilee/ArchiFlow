@@ -28,12 +28,15 @@ export function MfaSettings() {
   const [recovery, setRecovery] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ["mfa-status"] });
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <p className="text-sm font-medium">Authentification à deux facteurs (TOTP)</p>
+        <p className="text-sm font-medium">
+          Authentification à deux facteurs (TOTP)
+        </p>
         {isLoading ? null : enabled ? (
           <Badge>Activée</Badge>
         ) : (
@@ -41,7 +44,8 @@ export function MfaSettings() {
         )}
       </div>
       <p className="text-sm text-muted-foreground">
-        Utilisez une application d’authentification (FreeOTP, Aegis, Microsoft Authenticator).
+        Utilisez une application d’authentification (FreeOTP, Aegis, Microsoft
+        Authenticator).
       </p>
 
       {!enabled && !secret && (
@@ -69,7 +73,9 @@ export function MfaSettings() {
         <div className="space-y-3">
           <p className="text-sm">
             Scannez le QR ou saisissez la clé :{" "}
-            <code className="rounded bg-muted px-1 font-mono text-xs">{secret}</code>
+            <code className="rounded bg-muted px-1 font-mono text-xs">
+              {secret}
+            </code>
           </p>
           {qr && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -171,7 +177,9 @@ export function MfaSettings() {
 
       {recovery.length > 0 && (
         <div className="rounded-2xl border border-border bg-muted/40 p-4">
-          <p className="text-sm font-medium">Codes de récupération — à conserver hors ligne</p>
+          <p className="text-sm font-medium">
+            Codes de récupération — à conserver hors ligne
+          </p>
           <ul className="mt-2 grid gap-1 font-mono text-xs sm:grid-cols-2">
             {recovery.map((c) => (
               <li key={c}>{c}</li>

@@ -1,7 +1,10 @@
 import type { SelectHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({
+  className,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       className={cn(
@@ -9,7 +12,7 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
         "hover:border-border-strong",
         "focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
         "disabled:bg-muted disabled:opacity-60",
-        className
+        className,
       )}
       {...props}
     />

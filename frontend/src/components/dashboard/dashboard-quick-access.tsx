@@ -80,7 +80,7 @@ export function DashboardQuickAccess() {
         icon: <Star className="h-4 w-4" />,
       },
     ],
-    []
+    [],
   );
 
   const filtered = useMemo(() => {
@@ -90,7 +90,7 @@ export function DashboardQuickAccess() {
       (a) =>
         a.label.toLowerCase().includes(q) ||
         a.description.toLowerCase().includes(q) ||
-        a.keywords?.some((k) => k.includes(q))
+        a.keywords?.some((k) => k.includes(q)),
     );
   }, [actions, query]);
 
@@ -98,10 +98,15 @@ export function DashboardQuickAccess() {
     <section className="space-y-3" aria-labelledby="quick-access-heading">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p id="quick-access-heading" className="text-sm font-semibold">
+          <p
+            id="quick-access-heading"
+            className="text-sm font-semibold text-foreground"
+          >
             Accès rapide
           </p>
-          <p className="text-sm text-muted-foreground">Import, recherche, coffre et workflows.</p>
+          <p className="text-sm text-muted-foreground">
+            Import, recherche, coffre et workflows.
+          </p>
         </div>
         <div className="relative w-full md:max-w-xs">
           <MagnifyingGlass
@@ -118,18 +123,25 @@ export function DashboardQuickAccess() {
         </div>
       </div>
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-400">
+        <p className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
           Aucun raccourci pour « {query} ».
         </p>
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {filtered.map((action) => (
             <li key={action.id}>
-              <Link href={action.href} className="flex gap-3 rounded-xl border border-zinc-200 bg-white p-4">
+              <Link
+                href={action.href}
+                className="surface-card surface-card-interactive flex gap-3 p-4 active:scale-[0.99]"
+              >
                 <span className="icon-well">{action.icon}</span>
                 <span>
-                  <span className="block text-sm font-medium">{action.label}</span>
-                  <span className="block text-xs text-muted-foreground">{action.description}</span>
+                  <span className="block text-sm font-medium text-foreground">
+                    {action.label}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {action.description}
+                  </span>
                 </span>
               </Link>
             </li>

@@ -10,7 +10,7 @@ export type WorkflowRealtimePayload = {
 };
 
 export function useWorkflowRealtime(
-  onUpdate: (payload: WorkflowRealtimePayload) => void
+  onUpdate: (payload: WorkflowRealtimePayload) => void,
 ) {
   useEffect(() => {
     if (getRealtimeMode() !== "ws") {

@@ -5,7 +5,9 @@ import type { NotificationStreamPayload } from "@/hooks/use-notification-stream"
 import { getRealtimeMode } from "@/lib/realtime-config";
 import { subscribeRealtime } from "@/lib/realtime-socket";
 
-export function useNotificationWebSocket(onUpdate: (payload: NotificationStreamPayload) => void) {
+export function useNotificationWebSocket(
+  onUpdate: (payload: NotificationStreamPayload) => void,
+) {
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 

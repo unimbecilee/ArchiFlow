@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   DownloadSimple,
@@ -28,9 +28,12 @@ import { PagePanel } from "@/components/layout/page-panel";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import type { Document } from "@/types/documents";
-import type { DocumentComment, DocumentVersion, Tag as DocTag } from "@/types/collaboration";
+import type {
+  DocumentComment,
+  DocumentVersion,
+  Tag as DocTag,
+} from "@/types/collaboration";
 import type { ValidationContext } from "@/types/workflows";
-import { getAccessToken } from "@/lib/session-tokens";
 import { WorkflowStatusBanner } from "@/components/workflows/workflow-status-banner";
 import { DocumentPreviewPane } from "@/components/documents/document-preview-pane";
 import {
@@ -41,6 +44,7 @@ import {
 import { DocumentTextEditor } from "@/components/documents/document-text-editor";
 import { DocumentOfficeEditor } from "@/components/documents/document-office-editor";
 import { isOfficeDocument } from "@/lib/office-document";
+import { isPlainTextPreferable } from "@/lib/preview-kind";
 import { toast } from "sonner";
 import {
   addComment,
@@ -55,7 +59,7 @@ import {
   uploadVersion,
 } from "@/services/collaboration.service";
 import {
-  downloadUrl,
+  downloadDocumentFile,
   getDocumentHold,
   lockDocument,
   placeDocumentHold,
@@ -71,11 +75,21 @@ import {
 import {
   getValidationContext,
   restartValidation,
+  startValidation,
 } from "@/services/workflows.service";
+
+const DOC_TABS = new Set([
+  "apercu",
+  "versions",
+  "workflow",
+  "partage",
+  "activite",
+]);
 
 export default function DocumentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const docId = Number(params.id);
   const versionsRef = useRef<HTMLDivElement>(null);
 
@@ -95,8 +109,11 @@ export default function DocumentDetailPage() {
   const [versionFile, setVersionFile] = useState<File | null>(null);
   const [versionComment, setVersionComment] = useState("");
   const [favorited, setFavorited] = useState(false);
-  const [validationCtx, setValidationCtx] = useState<ValidationContext | null>(null);
+  const [validationCtx, setValidationCtx] = useState<ValidationContext | null>(
+    null,
+  );
   const [restarting, setRestarting] = useState(false);
+  const [startingValidation, setStartingValidation] = useState(false);
   const [versionSelection, setVersionSelection] = useState<VersionSelection>({
     kind: "current",
     versionNumber: 1,
@@ -104,7 +121,10 @@ export default function DocumentDetailPage() {
   const [classification, setClassification] = useState("INTERNE");
   const [department, setDepartment] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
-  const [tab, setTab] = useState("apercu");
+  const initialTab = searchParams.get("tab") || "";
+  const [tab, setTab] = useState(
+    DOC_TABS.has(initialTab) ? initialTab : "apercu",
+  );
   const [onHold, setOnHold] = useState(false);
   const [holdId, setHoldId] = useState<number | null>(null);
   const [holdReason, setHoldReason] = useState("");
@@ -128,7 +148,8 @@ export default function DocumentDetailPage() {
       setValidationCtx(vctx);
       setClassification(d.classification || "INTERNE");
       setDepartment(d.department || "");
-      const curVer = d.current_version_number ?? vctx?.current_version_number ?? 1;
+      const curVer =
+        d.current_version_number ?? vctx?.current_version_number ?? 1;
       setVersionSelection({ kind: "current", versionNumber: curVer });
       setFavorited(await getFavoriteStatus(docId));
       const hold = await getDocumentHold(docId).catch(() => ({
@@ -148,19 +169,23 @@ export default function DocumentDetailPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const t = searchParams.get("tab") || "";
+    if (DOC_TABS.has(t)) {
+      setTab(t);
+      if (t === "partage") setShowShare(true);
+    }
+  }, [searchParams]);
+
   const handleDownload = async () => {
     if (!doc) return;
-    const token = getAccessToken();
-    const res = await fetch(downloadUrl(doc.id), {
-      credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    const blob = await res.blob();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = doc.file_name || doc.titre;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    try {
+      await downloadDocumentFile(doc.id, doc.file_name || doc.titre);
+    } catch (e: unknown) {
+      toast.error(
+        e instanceof Error ? e.message : "Telechargement impossible",
+      );
+    }
   };
 
   const handleSaveClassification = async () => {
@@ -202,7 +227,7 @@ export default function DocumentDetailPage() {
       const err = e as { response?: { data?: { error?: string } } };
       setShareError(
         err.response?.data?.error ??
-          "Partage impossible. Vérifiez que le destinataire a un compte ArchiFlow."
+          "Partage impossible. Vérifiez que le destinataire a un compte ArchiFlow.",
       );
     }
   };
@@ -234,6 +259,22 @@ export default function DocumentDetailPage() {
     }
   };
 
+  const handleStartValidation = async () => {
+    setStartingValidation(true);
+    try {
+      await startValidation(docId);
+      toast.success("Document soumis à validation");
+      setTab("workflow");
+      await load();
+    } catch (e: unknown) {
+      toast.error(
+        e instanceof Error ? e.message : "Soumission à validation impossible",
+      );
+    } finally {
+      setStartingValidation(false);
+    }
+  };
+
   const scrollToVersions = () => {
     versionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -243,18 +284,23 @@ export default function DocumentDetailPage() {
   const rejectedAtVersion =
     doc?.rejected_at_version ?? validationCtx?.rejected_at_version ?? null;
   const showCurrentPreview = versionSelection.kind === "current";
+  const preferPlainText =
+    !!doc && isPlainTextPreferable(doc.mime_type, doc.file_name);
   const showOfficeEditor =
-    doc?.office_editable &&
+    !!doc?.office_editable &&
     isOfficeDocument(doc.mime_type, doc.file_name) &&
+    !preferPlainText &&
     versionSelection.kind === "current";
   const showTextEditor =
-    doc?.editable &&
+    !!doc?.editable &&
     versionSelection.kind === "current" &&
-    !isOfficeDocument(doc.mime_type, doc.file_name);
+    (preferPlainText || !isOfficeDocument(doc.mime_type, doc.file_name));
   const showArchivePreview = versionSelection.kind === "archive";
   const showPreviewPanel =
-    (showCurrentPreview && !showOfficeEditor && !showTextEditor) || showArchivePreview;
-  const hasMainWorkspace = showOfficeEditor || showTextEditor || showPreviewPanel;
+    (showCurrentPreview && !showOfficeEditor && !showTextEditor) ||
+    showArchivePreview;
+  const hasMainWorkspace =
+    showOfficeEditor || showTextEditor || showPreviewPanel;
 
   if (loading) {
     return (
@@ -316,7 +362,11 @@ export default function DocumentDetailPage() {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1.5 lg:justify-end">
-            <IconTooltipButton label="Télécharger" onClick={handleDownload} className="h-9 w-9 rounded-lg">
+            <IconTooltipButton
+              label="Télécharger"
+              onClick={handleDownload}
+              className="h-9 w-9 rounded-lg"
+            >
               <DownloadSimple className="h-4 w-4" />
             </IconTooltipButton>
             <IconTooltipButton
@@ -411,7 +461,11 @@ export default function DocumentDetailPage() {
               subtitle="Texte, markdown, JSON — sauvegarde = nouvelle version"
               delay={0.08}
             >
-              <DocumentTextEditor doc={doc} validationCtx={validationCtx} onSaved={load} />
+              <DocumentTextEditor
+                doc={doc}
+                validationCtx={validationCtx}
+                onSaved={load}
+              />
             </PagePanel>
           )}
 
@@ -419,7 +473,9 @@ export default function DocumentDetailPage() {
             <div className="overflow-hidden rounded-lg border border-border bg-card shadow-e1">
               <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3 sm:px-5">
                 <div>
-                  <p className="text-[13px] font-semibold tracking-tight text-foreground">Aperçu</p>
+                  <p className="text-[13px] font-semibold tracking-tight text-foreground">
+                    Aperçu
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {versionSelection.kind === "current"
                       ? `Version courante · v${currentVersionNumber}`
@@ -431,19 +487,19 @@ export default function DocumentDetailPage() {
                 </span>
               </div>
               <div className="p-2 sm:p-3">
-              {versionSelection.kind === "current" ? (
-                <DocumentPreviewPane
-                  doc={doc}
-                  expanded
-                  maxHeightClass="min-h-[min(72dvh,720px)] max-h-[min(78dvh,780px)]"
-                />
-              ) : (
-                <VersionPreviewPane
-                  docId={docId}
-                  docMime={doc.mime_type}
-                  selection={versionSelection}
-                />
-              )}
+                {versionSelection.kind === "current" ? (
+                  <DocumentPreviewPane
+                    doc={doc}
+                    expanded
+                    maxHeightClass="min-h-[min(72dvh,720px)] max-h-[min(78dvh,780px)]"
+                  />
+                ) : (
+                  <VersionPreviewPane
+                    docId={docId}
+                    docMime={doc.mime_type}
+                    selection={versionSelection}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -459,13 +515,21 @@ export default function DocumentDetailPage() {
                   <FileArchive className="h-10 w-10" weight="duotone" />
                 </span>
                 <div className="max-w-md space-y-1">
-                  <p className="text-sm font-medium text-foreground">{doc.mime_type || "Type inconnu"}</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {doc.mime_type || "Type inconnu"}
+                  </p>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Utilisez le panneau de droite pour commenter, étiqueter et gérer les versions. Téléchargez le
-                    fichier pour l'ouvrir localement.
+                    Utilisez le panneau de droite pour commenter, étiqueter et
+                    gérer les versions. Téléchargez le fichier pour l'ouvrir
+                    localement.
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="gap-1.5"
+                >
                   <DownloadSimple className="h-4 w-4" />
                   Télécharger
                 </Button>
@@ -476,7 +540,11 @@ export default function DocumentDetailPage() {
 
         <aside className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-[68px] lg:max-h-[calc(100dvh-4.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           {(tab === "partage" || showShare) && (
-            <PagePanel compact title="Partage" subtitle="Compte ArchiFlow requis">
+            <PagePanel
+              compact
+              title="Partage"
+              subtitle="Compte ArchiFlow requis"
+            >
               <div className="space-y-3">
                 {shareError && <ErrorBanner message={shareError} />}
                 <div className="flex flex-col gap-2">
@@ -506,7 +574,11 @@ export default function DocumentDetailPage() {
 
           {tab === "activite" && (
             <>
-              <PagePanel compact title="Commentaires" subtitle={`${comments.length} message(s)`}>
+              <PagePanel
+                compact
+                title="Commentaires"
+                subtitle={`${comments.length} message(s)`}
+              >
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Input
@@ -515,13 +587,19 @@ export default function DocumentDetailPage() {
                       onChange={(e) => setCommentText(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
                     />
-                    <Button size="sm" onClick={handleAddComment} aria-label="Envoyer">
+                    <Button
+                      size="sm"
+                      onClick={handleAddComment}
+                      aria-label="Envoyer"
+                    >
                       <PaperPlaneTilt className="h-4 w-4" weight="bold" />
                     </Button>
                   </div>
                   <ul className="max-h-48 space-y-2 overflow-y-auto lg:max-h-56">
                     {comments.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Aucun commentaire.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun commentaire.
+                      </p>
                     ) : (
                       comments.map((c) => (
                         <li
@@ -541,7 +619,9 @@ export default function DocumentDetailPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 shrink-0 p-0"
-                              onClick={() => deleteComment(docId, c.id).then(load)}
+                              onClick={() =>
+                                deleteComment(docId, c.id).then(load)
+                              }
                             >
                               <Trash className="h-3 w-3" />
                             </Button>
@@ -553,23 +633,34 @@ export default function DocumentDetailPage() {
                 </div>
               </PagePanel>
 
-              <PagePanel compact title="Étiquettes" subtitle="Classification libre" delay={0.14}>
+              <PagePanel
+                compact
+                title="Étiquettes"
+                subtitle="Classification libre"
+                delay={0.14}
+              >
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-1.5">
                     {tags.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Aucune étiquette.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aucune étiquette.
+                      </p>
                     ) : (
                       tags.map((t) => (
                         <span
                           key={t.id}
                           className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-primary-foreground"
-                          style={{ backgroundColor: t.color || "var(--primary)" }}
+                          style={{
+                            backgroundColor: t.color || "var(--primary)",
+                          }}
                         >
                           {t.name}
                           <button
                             type="button"
                             className="opacity-80 hover:opacity-100"
-                            onClick={() => removeDocumentTag(docId, t.id).then(load)}
+                            onClick={() =>
+                              removeDocumentTag(docId, t.id).then(load)
+                            }
                             aria-label={`Retirer ${t.name}`}
                           >
                             x
@@ -591,7 +682,7 @@ export default function DocumentDetailPage() {
                   </div>
                 </div>
               </PagePanel>
-              </>
+            </>
           )}
 
           {doc.can_classify && (
@@ -634,8 +725,12 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {(
-            <PagePanel compact title="Conservation" subtitle="Legal hold — bloque suppression et purge">
+          {
+            <PagePanel
+              compact
+              title="Conservation"
+              subtitle="Legal hold — bloque suppression et purge"
+            >
               {onHold ? (
                 <div className="space-y-2">
                   <Badge tone="warning">En conservation</Badge>
@@ -680,7 +775,7 @@ export default function DocumentDetailPage() {
                 </div>
               )}
             </PagePanel>
-          )}
+          }
 
           {tab === "versions" && (
             <PagePanel
@@ -705,7 +800,9 @@ export default function DocumentDetailPage() {
                       id="versionFile"
                       type="file"
                       className="text-xs"
-                      onChange={(e) => setVersionFile(e.target.files?.[0] ?? null)}
+                      onChange={(e) =>
+                        setVersionFile(e.target.files?.[0] ?? null)
+                      }
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -726,7 +823,9 @@ export default function DocumentDetailPage() {
                     Déposer la version
                   </Button>
                   {versions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Pas encore d'historique.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Pas encore d'historique.
+                    </p>
                   ) : (
                     <ul className="max-h-40 divide-y divide-border overflow-y-auto text-xs">
                       {versions.map((v) => (
@@ -734,7 +833,11 @@ export default function DocumentDetailPage() {
                           <span className="font-medium text-foreground">
                             v{v.version_number} — {v.file_name}
                           </span>
-                          {v.comment && <span className="text-muted-foreground">{v.comment}</span>}
+                          {v.comment && (
+                            <span className="text-muted-foreground">
+                              {v.comment}
+                            </span>
+                          )}
                           <span className="font-mono text-muted-foreground">
                             {new Date(v.created_at).toLocaleDateString("fr-FR")}
                           </span>
@@ -747,13 +850,43 @@ export default function DocumentDetailPage() {
             </PagePanel>
           )}
 
-          {tab === "workflow" && !validationCtx && (
-            <PagePanel compact title="Workflow" subtitle="Aucun circuit actif">
-              <p className="text-sm text-muted-foreground">
-                Ce document n'est pas dans un workflow d'approbation.
-              </p>
-            </PagePanel>
-          )}
+          {tab === "workflow" &&
+            (doc.status === "BROUILLON" || !doc.status) && (
+              <PagePanel
+                compact
+                title="Workflow"
+                subtitle="Soumettre ce document au circuit de validation"
+              >
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Le document passera en validation et les approbateurs
+                    seront notifiés.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={() => void handleStartValidation()}
+                    disabled={startingValidation}
+                  >
+                    <PaperPlaneTilt className="h-4 w-4" />
+                    {startingValidation
+                      ? "Envoi…"
+                      : "Soumettre à validation"}
+                  </Button>
+                </div>
+              </PagePanel>
+            )}
+          {tab === "workflow" &&
+            !validationCtx &&
+            doc.status &&
+            doc.status !== "BROUILLON" &&
+            doc.status !== "REJETE" && (
+              <PagePanel compact title="Workflow" subtitle="Aucun circuit actif">
+                <p className="text-sm text-muted-foreground">
+                  Ce document n&apos;est pas dans un workflow d&apos;approbation.
+                </p>
+              </PagePanel>
+            )}
         </aside>
       </div>
     </PageFrame>

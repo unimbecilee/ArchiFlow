@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, CaretRight, MagnifyingGlass, UploadSimple } from "@phosphor-icons/react";
+import {
+  Bell,
+  CaretRight,
+  MagnifyingGlass,
+  UploadSimple,
+} from "@phosphor-icons/react";
 import { ArchiFlowSidebar } from "./archiflow-sidebar";
 import { AppDecor } from "@/components/backgrounds";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -51,7 +56,10 @@ function ShellInner({ children }: ArchiFlowShellProps) {
       </a>
       <ArchiFlowSidebar />
       <NavCommandPalette open={navOpen} onOpenChange={setNavOpen} />
-      <MobileNavMenuPanel open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
+      <MobileNavMenuPanel
+        open={mobileMenuOpen}
+        onOpenChange={setMobileMenuOpen}
+      />
 
       <div className="relative flex min-h-[100dvh] min-w-0 flex-1 flex-col lg:pl-64">
         <div className="relative flex min-h-[100dvh] min-w-0 flex-1 flex-col">
@@ -64,16 +72,24 @@ function ShellInner({ children }: ArchiFlowShellProps) {
                 aria-label="Fil d'ariane"
               >
                 {pageMeta.crumbs.map((c, i) => (
-                  <span key={`${c.href ?? c.label}-${i}`} className="flex min-w-0 items-center gap-1.5">
+                  <span
+                    key={`${c.href ?? c.label}-${i}`}
+                    className="flex min-w-0 items-center gap-1.5"
+                  >
                     {c.href && i < pageMeta.crumbs.length - 1 ? (
-                      <Link href={c.href} className="truncate text-muted-foreground transition-colors hover:text-foreground">
+                      <Link
+                        href={c.href}
+                        className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                      >
                         {c.label}
                       </Link>
                     ) : (
                       <span
                         className={cn(
                           "truncate",
-                          i === pageMeta.crumbs.length - 1 ? "font-medium text-foreground" : "text-muted-foreground"
+                          i === pageMeta.crumbs.length - 1
+                            ? "font-medium text-foreground"
+                            : "text-muted-foreground",
                         )}
                       >
                         {c.label}
@@ -92,7 +108,10 @@ function ShellInner({ children }: ArchiFlowShellProps) {
               onClick={() => setNavOpen(true)}
               className="mx-auto flex h-9 min-w-0 w-full max-w-[560px] items-center gap-2.5 rounded-md border border-border bg-card/70 px-3.5 text-sm text-muted-foreground shadow-e1 transition-all duration-150 hover:border-border-strong hover:bg-card"
             >
-              <MagnifyingGlass className="h-4 w-4 shrink-0 text-subtle-foreground" weight="bold" />
+              <MagnifyingGlass
+                className="h-4 w-4 shrink-0 text-subtle-foreground"
+                weight="bold"
+              />
               <span className="min-w-0 flex-1 truncate text-left text-[13px]">
                 Rechercher un document ou une page...
               </span>
@@ -106,16 +125,26 @@ function ShellInner({ children }: ArchiFlowShellProps) {
               <Link
                 href="/notifications"
                 className="relative flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors duration-150 hover:border-border hover:bg-accent hover:text-foreground"
-                aria-label={unread > 0 ? `${unread} notification${unread > 1 ? "s" : ""}` : "Notifications"}
+                aria-label={
+                  unread > 0
+                    ? `${unread} notification${unread > 1 ? "s" : ""}`
+                    : "Notifications"
+                }
               >
-                <Bell className="h-[18px] w-[18px]" weight={unread > 0 ? "fill" : "regular"} />
+                <Bell
+                  className="h-[18px] w-[18px]"
+                  weight={unread > 0 ? "fill" : "regular"}
+                />
                 {unread > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold leading-none text-primary-foreground shadow-e1 ring-2 ring-background">
                     {unread > 9 ? "9+" : unread}
                   </span>
                 )}
               </Link>
-              <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" aria-hidden />
+              <div
+                className="mx-0.5 hidden h-6 w-px bg-border sm:block"
+                aria-hidden
+              />
               <Link
                 href="/parametres/compte"
                 className="ml-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground ring-2 ring-background transition-colors hover:bg-primary-hover sm:h-9 sm:w-9"
@@ -126,7 +155,10 @@ function ShellInner({ children }: ArchiFlowShellProps) {
             </div>
           </header>
 
-          <main id="main" className="relative z-10 mx-auto w-full max-w-[1400px] min-w-0 flex-1 px-4 py-6 pb-20 sm:px-6 lg:px-8">
+          <main
+            id="main"
+            className="relative z-10 mx-auto w-full max-w-[1400px] min-w-0 flex-1 px-4 py-6 pb-20 sm:px-6 lg:px-8"
+          >
             {children}
           </main>
         </div>

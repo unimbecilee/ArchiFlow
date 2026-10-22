@@ -18,10 +18,16 @@ export function DocumentInspector({ doc }: { doc: Document | null }) {
     <div className="space-y-3 text-sm">
       <div>
         <p className="font-medium">{doc.titre}</p>
-        <p className="text-xs text-muted-foreground">{doc.file_name || doc.mime_type}</p>
+        <p className="text-xs text-muted-foreground">
+          {doc.file_name || doc.mime_type}
+        </p>
       </div>
       {doc.classification && <Badge>{doc.classification}</Badge>}
-      {doc.on_hold && <Badge className="border-amber-300 bg-amber-50 text-amber-900">Conservation</Badge>}
+      {doc.on_hold && (
+        <Badge className="border-warning/40 bg-warning-soft text-warning-soft-foreground">
+          Conservation
+        </Badge>
+      )}
       <dl className="space-y-2 text-xs">
         <div>
           <dt className="text-muted-foreground">Taille</dt>
@@ -40,7 +46,10 @@ export function DocumentInspector({ doc }: { doc: Document | null }) {
           </div>
         )}
       </dl>
-      <Link href={`/documents/${doc.id}`} className="inline-block text-sm text-primary">
+      <Link
+        href={`/documents/${doc.id}`}
+        className="inline-block text-sm text-primary"
+      >
         Ouvrir la fiche
       </Link>
     </div>

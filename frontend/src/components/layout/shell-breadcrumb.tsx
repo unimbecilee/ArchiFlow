@@ -13,25 +13,33 @@ export function ShellBreadcrumb({ crumbs }: ShellBreadcrumbProps) {
 
   return (
     <nav
-      className="mt-2 flex flex-wrap items-center gap-1 text-xs text-zinc-500"
+      className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
       aria-label="Fil d'Ariane"
     >
       {crumbs.map((crumb, index) => {
         const isLast = index === crumbs.length - 1;
         return (
-          <span key={`${crumb.label}-${index}`} className="inline-flex items-center gap-1">
+          <span
+            key={`${crumb.label}-${index}`}
+            className="inline-flex items-center gap-1"
+          >
             {index > 0 && (
-              <CaretRight className="h-3 w-3 shrink-0 text-zinc-400" weight="bold" />
+              <CaretRight
+                className="h-3 w-3 shrink-0 text-muted-foreground"
+                weight="bold"
+              />
             )}
             {crumb.href && !isLast ? (
               <Link
                 href={crumb.href}
-                className="rounded-md px-1 py-0.5 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                className="rounded-md px-1 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
               >
                 {crumb.label}
               </Link>
             ) : (
-              <span className={isLast ? "font-medium text-zinc-700" : ""}>{crumb.label}</span>
+              <span className={isLast ? "font-medium text-foreground" : ""}>
+                {crumb.label}
+              </span>
             )}
           </span>
         );

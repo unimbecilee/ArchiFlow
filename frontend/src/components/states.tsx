@@ -80,14 +80,16 @@ export function EmptyState({
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={cn(
         "flex flex-col items-center justify-center rounded-lg border border-border bg-muted/40 px-6 py-12 text-center",
-        className
+        className,
       )}
     >
       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground ring-1 ring-primary/30">
         <Icon className="h-6 w-6" weight="duotone" />
       </div>
       <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+        {description}
+      </p>
       {action ? <div className="mt-4">{action}</div> : null}
       {actionLabel && onAction && (
         <Button variant="default" size="sm" onClick={onAction} className="mt-4">
@@ -121,7 +123,13 @@ export function EmptySearch({ query }: { query: string }) {
   );
 }
 
-export function EmptyInbox({ title, description }: { title: string; description: string }) {
+export function EmptyInbox({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <EmptyState
       icon={MagnifyingGlass}
@@ -155,7 +163,9 @@ export function ErrorState({
         <CloudSlash className="h-7 w-7" weight="duotone" />
       </div>
       <h3 className="mt-4 text-sm font-semibold text-foreground">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+        {description}
+      </p>
       <p className="tnum mt-3 rounded bg-muted px-2.5 py-1 font-mono text-[11px] text-muted-foreground ring-1 ring-border">
         Référence : {correlationId || "af-inconnu"}
       </p>

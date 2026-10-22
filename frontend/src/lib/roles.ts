@@ -1,9 +1,5 @@
 export type PlatformRole =
-  | "admin"
-  | "manager"
-  | "user"
-  | "validator"
-  | "archivist";
+  "admin" | "manager" | "user" | "validator" | "archivist";
 
 export type RoleCapabilities = {
   admin_panel: boolean;
@@ -47,17 +43,26 @@ export const SFTP_MODE_LABELS: Record<SftpMode, string> = {
 };
 
 /** Defauts canal SFTP alignes backend DefaultSftpForRole. */
-export function defaultSftpForRole(role: string): { enabled: boolean; mode: SftpMode } {
+export function defaultSftpForRole(role: string): {
+  enabled: boolean;
+  mode: SftpMode;
+} {
   if (role === "user" || role === "manager" || role === "archivist") {
     return { enabled: true, mode: "drop" };
   }
   return { enabled: false, mode: "none" };
 }
 
-export function canViewOrgWorkflows(role?: string, caps?: RoleCapabilities): boolean {
+export function canViewOrgWorkflows(
+  role?: string,
+  caps?: RoleCapabilities,
+): boolean {
   return caps?.view_org_workflows ?? (role === "admin" || role === "archivist");
 }
 
-export function canWriteDocuments(role?: string, caps?: RoleCapabilities): boolean {
+export function canWriteDocuments(
+  role?: string,
+  caps?: RoleCapabilities,
+): boolean {
   return caps?.write_documents ?? true;
 }

@@ -24,7 +24,7 @@ export function useDocumentOpenAction(): CrudRowAction<Document> {
       icon: <Eye className="h-4 w-4" />,
       onClick: (doc) => router.push(`/documents/${doc.id}`),
     }),
-    [router]
+    [router],
   );
 }
 
@@ -47,7 +47,7 @@ export function useFavoriteDocumentActions(onChanged: () => void): {
         },
       },
     ],
-    [open, onChanged]
+    [open, onChanged],
   );
 
   const bulkActions = useMemo<CrudBulkAction<Document>[]>(
@@ -62,7 +62,7 @@ export function useFavoriteDocumentActions(onChanged: () => void): {
         },
       },
     ],
-    [onChanged]
+    [onChanged],
   );
 
   return { rowActions, bulkActions };
@@ -78,7 +78,7 @@ export type MesDocumentsActionHandlers = {
 };
 
 export function buildMesDocumentsActions(
-  handlers: MesDocumentsActionHandlers
+  handlers: MesDocumentsActionHandlers,
 ): {
   rowActions: CrudRowAction<Document>[];
   bulkActions: CrudBulkAction<Document>[];
@@ -142,7 +142,8 @@ export function buildMesDocumentsActions(
 
 export function buildTrashDocumentActions(
   onRestore: (id: number) => Promise<void>,
-  onPurge?: (id: number) => Promise<void>
+  onPurge?: (id: number) => Promise<void>,
+  onBulkPurge?: (items: Document[]) => Promise<void>,
 ): {
   rowActions: CrudRowAction<Document>[];
   bulkActions: CrudBulkAction<Document>[];
@@ -176,6 +177,25 @@ export function buildTrashDocumentActions(
           await Promise.all(items.map((d) => onRestore(d.id)));
         },
       },
+      ...(onBulkPurge || onPurge
+        ? [
+            {
+              id: "purge-bulk",
+              label: "Purger définitivement",
+              icon: <Trash className="h-4 w-4" />,
+              destructive: true,
+              onClick: async (items: Document[]) => {
+                if (onBulkPurge) {
+                  await onBulkPurge(items);
+                  return;
+                }
+                if (onPurge) {
+                  await Promise.all(items.map((d) => onPurge(d.id)));
+                }
+              },
+            },
+          ]
+        : []),
     ],
   };
 }

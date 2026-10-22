@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -68,18 +69,68 @@ func (r *DocumentRepository) SoftDelete(id uint, ownerID uint, admin bool) error
 }
 
 func (r *DocumentRepository) HardDelete(id uint, ownerID uint, admin bool) error {
-	q := r.db.Where("id = ? AND is_deleted = ?", id, true)
-	if !admin {
-		q = q.Where("owner_id = ?", ownerID)
-	}
-	res := q.Delete(&models.Document{})
-	if res.Error != nil {
-		return res.Error
-	}
-	if res.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
-	return nil
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var d models.Document
+		q := tx.Where("id = ? AND is_deleted = ?", id, true)
+		if !admin {
+			q = q.Where("owner_id = ?", ownerID)
+		}
+		if err := q.First(&d).Error; err != nil {
+			return err
+		}
+
+		// FK dures (document_shares, workflow_instances) + orphelins sans contrainte.
+		if err := tx.Exec(
+			`DELETE FROM workflow_approvals WHERE instance_id IN (SELECT id FROM workflow_instances WHERE document_id = ?)`,
+			id,
+		).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.WorkflowInstance{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.DocumentShare{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.ExternalShare{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.DocumentComment{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.DocumentVersion{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.DocumentTagLink{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.DocumentFavorite{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.LegalHold{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("document_id = ?", id).Delete(&models.FileRequestUpload{}).Error; err != nil {
+			return err
+		}
+		// Références optionnelles : on détache plutôt que supprimer l'historique.
+		_ = tx.Exec(`UPDATE sftp_ingest_events SET document_id = NULL WHERE document_id = ?`, id).Error
+		_ = tx.Exec(`UPDATE upload_sessions SET document_id = NULL WHERE document_id = ?`, id).Error
+		_ = tx.Exec(`UPDATE pydio_document_sync SET archiflow_document_id = NULL WHERE archiflow_document_id = ?`, id).Error
+		_ = tx.Exec(
+			`UPDATE pydio_archive_requests SET document_id = '' WHERE document_id = ?`,
+			fmt.Sprintf("%d", id),
+		).Error
+
+		res := tx.Delete(&d)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
+	})
 }
 
 func (r *DocumentRepository) SoftDeleteByFolderIDs(folderIDs []uint, ownerID uint, admin bool) (int64, error) {

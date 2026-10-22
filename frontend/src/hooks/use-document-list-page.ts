@@ -6,7 +6,9 @@ type UseDocumentListPageOptions<T> = {
   loadFn: () => Promise<T[]>;
 };
 
-export function useDocumentListPage<T>({ loadFn }: UseDocumentListPageOptions<T>) {
+export function useDocumentListPage<T>({
+  loadFn,
+}: UseDocumentListPageOptions<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

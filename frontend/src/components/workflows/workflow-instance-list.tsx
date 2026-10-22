@@ -23,10 +23,10 @@ type Props = {
 
 function statusBadge(statut: string) {
   const colors: Record<string, string> = {
-    EN_COURS: "bg-amber-500/15 text-amber-700",
-    APPROUVE: "bg-emerald-500/15 text-emerald-700",
-    REJETE: "bg-red-500/15 text-red-700",
-    ANNULE: "bg-zinc-500/10 text-zinc-600",
+    EN_COURS: "bg-warning-soft text-warning-soft-foreground",
+    APPROUVE: "bg-primary/15 text-accent-soft-foreground",
+    REJETE: "bg-destructive-soft text-destructive-soft-foreground",
+    ANNULE: "bg-muted text-muted-foreground",
   };
   const labels: Record<string, string> = {
     EN_COURS: "En cours",
@@ -37,7 +37,7 @@ function statusBadge(statut: string) {
   return (
     <span
       className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-        colors[statut] || "bg-zinc-500/10 text-zinc-600"
+        colors[statut] || "bg-muted text-muted-foreground"
       }`}
     >
       {labels[statut] || statut}
@@ -121,7 +121,9 @@ export function WorkflowInstanceList({
         const daysWaiting = item.date_debut
           ? Math.max(
               0,
-              Math.floor((Date.now() - new Date(item.date_debut).getTime()) / 86_400_000)
+              Math.floor(
+                (Date.now() - new Date(item.date_debut).getTime()) / 86_400_000,
+              ),
             )
           : null;
 
@@ -133,37 +135,37 @@ export function WorkflowInstanceList({
               show: { opacity: 1, y: 0 },
             }}
             transition={{ type: "spring", stiffness: 100, damping: 20 }}
-            className="rounded-[1.75rem] border border-slate-200/70 bg-white p-5 shadow-[0_12px_32px_-20px_rgba(15,23,42,0.1)] md:p-6"
+            className="rounded-[1.75rem] border border-border bg-card p-5 shadow-[0_12px_32px_-20px_rgba(15,23,42,0.1)] md:p-6"
           >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div className="min-w-0 flex-1 space-y-1">
                 {mode === "completed" ? (
                   <Link
                     href={detailHref}
-                    className="group block font-medium text-zinc-900 hover:text-emerald-700"
+                    className="group block font-medium text-foreground hover:text-accent-soft-foreground"
                   >
                     {item.document_titre || `Document #${item.document_id}`}
                     <ArrowRight className="ml-1 inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
                   </Link>
                 ) : (
-                  <p className="font-medium text-zinc-900">
+                  <p className="font-medium text-foreground">
                     {item.document_titre || `Document #${item.document_id}`}
                   </p>
                 )}
-                <p className="text-sm text-zinc-600">
+                <p className="text-sm text-muted-foreground">
                   {item.workflow_nom} · {item.etape_courante_nom || "—"}
                 </p>
                 {mode === "progress" && item.en_attente_label && (
-                  <p className="text-sm text-amber-800">
+                  <p className="text-sm text-warning-soft-foreground">
                     En attente : {item.en_attente_label}
                   </p>
                 )}
                 {mode === "progress" && daysWaiting !== null && (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Depuis {daysWaiting} jour{daysWaiting !== 1 ? "s" : ""}
                   </p>
                 )}
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted-foreground">
                   Instance #{item.id}
                   {item.date_debut &&
                     ` · Debut ${new Date(item.date_debut).toLocaleString("fr-FR")}`}
@@ -171,7 +173,7 @@ export function WorkflowInstanceList({
                     ` · Fin ${new Date(item.date_fin).toLocaleString("fr-FR")}`}
                 </p>
               </div>
-              {statusBadge(item.statut)}
+              {statusBadge(item.statut || item.status || "")}
             </div>
 
             {(mode === "completed" || mode === "progress") && (
@@ -183,7 +185,12 @@ export function WorkflowInstanceList({
                   </Link>
                 </Button>
                 {mode === "completed" && (
-                  <Button variant="outline" size="sm" asChild className="gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="gap-1.5"
+                  >
                     <Link href={detailHref}>
                       Historique
                       <ArrowRight className="h-3.5 w-3.5" />

@@ -28,7 +28,7 @@ function openDb(): Promise<IDBDatabase> {
 }
 
 export async function loadUploadSession(
-  fingerprint: string
+  fingerprint: string,
 ): Promise<StoredUploadSession | null> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
@@ -39,7 +39,9 @@ export async function loadUploadSession(
   });
 }
 
-export async function saveUploadSession(session: StoredUploadSession): Promise<void> {
+export async function saveUploadSession(
+  session: StoredUploadSession,
+): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, "readwrite");

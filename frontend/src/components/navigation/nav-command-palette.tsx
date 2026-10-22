@@ -61,7 +61,10 @@ export function useNavCommandPalette() {
 const SEARCH_MIN = 2;
 const DOC_LIMIT = 8;
 
-export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps) {
+export function NavCommandPalette({
+  open,
+  onOpenChange,
+}: NavCommandPaletteProps) {
   const router = useRouter();
   const { user } = useAuthStore();
   const [query, setQuery] = useState("");
@@ -115,7 +118,10 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
   }, [query, open]);
 
   const rows: PaletteRow[] = useMemo(() => {
-    const out: PaletteRow[] = navEntries.map((entry) => ({ kind: "nav", entry }));
+    const out: PaletteRow[] = navEntries.map((entry) => ({
+      kind: "nav",
+      entry,
+    }));
     const q = query.trim();
     if (q.length < SEARCH_MIN) return out;
 
@@ -135,7 +141,7 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
 
   const selectableRows = useMemo(
     () => rows.filter((r) => r.kind === "nav" || r.kind === "doc"),
-    [rows]
+    [rows],
   );
 
   useEffect(() => {
@@ -152,13 +158,15 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
         router.push(`/documents/${row.doc.id}`);
       }
     },
-    [onOpenChange, router]
+    [onOpenChange, router],
   );
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, Math.max(0, selectableRows.length - 1)));
+      setActiveIndex((i) =>
+        Math.min(i + 1, Math.max(0, selectableRows.length - 1)),
+      );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
@@ -172,51 +180,73 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <DialogHeader className="border-b border-zinc-100 bg-white px-5 pb-3 pt-5 text-left dark:border-zinc-800 dark:bg-zinc-900">
+      <DialogContent className="gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-xl">
+        <DialogHeader className="border-b border-border bg-card px-5 pb-3 pt-5 text-left">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:ring-emerald-800">
+            <span className="icon-well h-8 w-8">
               <MagnifyingGlass className="h-4 w-4" weight="duotone" />
             </span>
-            <DialogTitle className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Rechercher</DialogTitle>
+            <DialogTitle className="text-[15px] font-semibold text-foreground">
+              Rechercher
+            </DialogTitle>
           </div>
           <DialogDescription className="sr-only">
             Navigation et documents ArchiFlow
           </DialogDescription>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Pages, documents et actions — 2+ caractères pour les documents</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pages, documents et actions — 2+ caractères pour les documents
+          </p>
         </DialogHeader>
-        <div className="border-b border-zinc-100 bg-zinc-50/50 px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+        <div className="border-b border-border bg-muted/40 px-3 py-3">
           <div className="relative">
-            <MagnifyingGlass className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" weight="bold" />
+            <MagnifyingGlass
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              weight="bold"
+            />
             <Input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Pages, documents (2+ caractères)… tapez / ou Ctrl K"
-              className="h-10 rounded-xl border-zinc-200 bg-white pl-10 shadow-sm placeholder:text-zinc-400 focus-visible:border-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+              className="h-10 rounded-xl border-border bg-card pl-10 shadow-e1"
             />
           </div>
         </div>
-        <ul className="max-h-[min(56vh,380px)] overflow-y-auto bg-white px-2 py-2 dark:bg-zinc-900" role="listbox">
+        <ul
+          className="max-h-[min(56vh,380px)] overflow-y-auto bg-card px-2 py-2"
+          role="listbox"
+        >
           {rows.length === 0 ? (
-            <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/70 px-4 py-8 text-center dark:border-zinc-800 dark:bg-zinc-800/40">
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Aucun résultat</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Essayez un autre mot-clé</p>
+            <li className="rounded-xl border border-dashed border-border bg-muted/50 px-4 py-8 text-center">
+              <p className="text-sm font-medium text-foreground">
+                Aucun résultat
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Essayez un autre mot-clé
+              </p>
             </li>
           ) : (
             rows.map((row, index) => {
               if (row.kind === "doc-loading") {
                 return (
-                  <li key="doc-loading" className="flex items-center gap-3 rounded-xl px-3 py-3">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                    <span className="text-sm text-zinc-500">Recherche de documents…</span>
+                  <li
+                    key="doc-loading"
+                    className="flex items-center gap-3 rounded-xl px-3 py-3"
+                  >
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Recherche de documents…
+                    </span>
                   </li>
                 );
               }
               if (row.kind === "doc-empty") {
                 return (
-                  <li key="doc-empty" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                  <li
+                    key="doc-empty"
+                    className="rounded-xl border border-warning/30 bg-warning-soft px-3 py-3 text-sm text-warning-soft-foreground"
+                  >
                     Aucun document pour cette requête
                   </li>
                 );
@@ -226,9 +256,13 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                 selectableCursor += 1;
                 const isActive = selectableCursor === activeIndex;
                 return (
-                  <li key={`nav-${row.entry.path}`} role="option" aria-selected={isActive}>
+                  <li
+                    key={`nav-${row.entry.path}`}
+                    role="option"
+                    aria-selected={isActive}
+                  >
                     {index === 0 && (
-                      <p className="px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                      <p className="px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Pages
                       </p>
                     )}
@@ -237,8 +271,8 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                       className={cn(
                         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
                         isActive
-                          ? "bg-emerald-50 text-zinc-900 shadow-sm ring-1 ring-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-100 dark:ring-emerald-800"
-                          : "hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                          ? "bg-accent-soft text-foreground shadow-e1 ring-1 ring-primary/25"
+                          : "text-foreground hover:bg-accent",
                       )}
                       onMouseEnter={() => setActiveIndex(selectableCursor)}
                       onClick={() => activate(row)}
@@ -246,14 +280,21 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                       <span
                         className={cn(
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1",
-                          isActive ? "bg-white text-emerald-700 ring-emerald-200 dark:bg-zinc-800 dark:text-emerald-300 dark:ring-emerald-700" : "bg-zinc-50 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700"
+                          isActive
+                            ? "bg-card text-primary ring-primary/30"
+                            : "bg-muted text-muted-foreground ring-border",
                         )}
                       >
-                        <MagnifyingGlass className="h-3.5 w-3.5" weight="duotone" />
+                        <MagnifyingGlass
+                          className="h-3.5 w-3.5"
+                          weight="duotone"
+                        />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium leading-tight">{row.entry.title}</span>
-                        <span className="block truncate text-xs leading-tight text-zinc-500 dark:text-zinc-400">
+                        <span className="block truncate text-sm font-medium leading-tight">
+                          {row.entry.title}
+                        </span>
+                        <span className="block truncate text-xs leading-tight text-muted-foreground">
                           {row.entry.section} · {row.entry.path}
                         </span>
                       </span>
@@ -264,13 +305,19 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
 
               if (row.kind === "doc") {
                 const showDocHeading =
-                  index === 0 || rows[index - 1]?.kind === "nav" || rows[index - 1]?.kind === "doc-loading";
+                  index === 0 ||
+                  rows[index - 1]?.kind === "nav" ||
+                  rows[index - 1]?.kind === "doc-loading";
                 selectableCursor += 1;
                 const isActive = selectableCursor === activeIndex;
                 return (
-                  <li key={`doc-${row.doc.id}`} role="option" aria-selected={isActive}>
+                  <li
+                    key={`doc-${row.doc.id}`}
+                    role="option"
+                    aria-selected={isActive}
+                  >
                     {showDocHeading && (
-                      <p className="px-2 pb-1.5 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                      <p className="px-2 pb-1.5 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Documents
                       </p>
                     )}
@@ -279,19 +326,23 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
                       className={cn(
                         "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-all",
                         isActive
-                          ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:ring-zinc-700"
-                          : "hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                          ? "bg-muted text-foreground shadow-e1 ring-1 ring-border"
+                          : "text-foreground hover:bg-accent",
                       )}
                       onMouseEnter={() => setActiveIndex(selectableCursor)}
                       onClick={() => activate(row)}
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-zinc-600 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-e1 ring-1 ring-border">
                         <FileText className="h-4 w-4" weight="duotone" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium leading-tight">{row.doc.titre}</span>
-                        <span className="block truncate text-xs leading-tight text-zinc-500 dark:text-zinc-400">
-                          {row.doc.file_name || row.doc.mime_type || "Document"} · /documents/{row.doc.id}
+                        <span className="block truncate text-sm font-medium leading-tight">
+                          {row.doc.titre}
+                        </span>
+                        <span className="block truncate text-xs leading-tight text-muted-foreground">
+                          {row.doc.file_name || row.doc.mime_type || "Document"}{" "}
+                          · /documents/
+                          {row.doc.id}
                         </span>
                       </span>
                     </button>
@@ -303,15 +354,15 @@ export function NavCommandPalette({ open, onOpenChange }: NavCommandPaletteProps
             })
           )}
         </ul>
-        <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/60 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/80">
-          <p className="text-[11px] leading-none text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center justify-between border-t border-border bg-muted/50 px-3 py-2.5">
+          <p className="text-[11px] leading-none text-muted-foreground">
             <span className="hidden sm:inline">Flèches</span>
             <span className="sm:hidden">↑↓</span> · Entrée · Esc
           </p>
-          <p className="hidden text-[11px] leading-none text-zinc-400 dark:text-zinc-500 sm:block">
+          <p className="hidden text-[11px] leading-none text-subtle-foreground sm:block">
             {SEARCH_MIN}+ caractères pour les documents
           </p>
-          <kbd className="rounded-md border border-zinc-200 bg-white px-1.5 py-1 text-[10px] font-medium leading-none text-zinc-500 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+          <kbd className="rounded-md border border-border bg-card px-1.5 py-1 text-[10px] font-medium leading-none text-muted-foreground shadow-e1">
             ⌘K
           </kbd>
         </div>

@@ -3,14 +3,14 @@ import type { Document } from "@/types/documents";
 
 export async function getFavorites(): Promise<Document[]> {
   const res = await api.get<{ success: boolean; documents: Document[] }>(
-    "/api/favorites"
+    "/api/favorites",
   );
   return res.data.documents ?? [];
 }
 
 export async function getFavoriteStatus(docId: number): Promise<boolean> {
   const res = await api.get<{ success: boolean; favorited: boolean }>(
-    `/api/documents/${docId}/favorite`
+    `/api/documents/${docId}/favorite`,
   );
   return res.data.favorited;
 }

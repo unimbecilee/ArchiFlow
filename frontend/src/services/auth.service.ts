@@ -7,8 +7,13 @@ export type UpdateProfilePayload = {
   avatar_url?: string;
 };
 
-export async function updateMyProfile(payload: UpdateProfilePayload): Promise<User> {
-  const { data } = await axios.put<{ success?: boolean; data: User }>("/api/auth/me", payload);
+export async function updateMyProfile(
+  payload: UpdateProfilePayload,
+): Promise<User> {
+  const { data } = await axios.put<{ success?: boolean; data: User }>(
+    "/api/auth/me",
+    payload,
+  );
   if (!data?.data) {
     throw new Error("Profil invalide");
   }

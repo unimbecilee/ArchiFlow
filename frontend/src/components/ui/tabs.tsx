@@ -12,7 +12,10 @@ type TabsProps = {
 export function Tabs({ value, onValueChange, tabs, className }: TabsProps) {
   return (
     <div
-      className={cn("inline-flex flex-wrap gap-1 rounded-2xl bg-muted/80 p-1", className)}
+      className={cn(
+        "inline-flex flex-wrap gap-1 rounded-2xl bg-muted/80 p-1",
+        className,
+      )}
       role="tablist"
     >
       {tabs.map((t) => {
@@ -28,7 +31,7 @@ export function Tabs({ value, onValueChange, tabs, className }: TabsProps) {
               "rounded-xl px-3 py-1.5 text-sm font-medium transition-all duration-200",
               active
                 ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
             onClick={() => onValueChange(t.id)}
           >

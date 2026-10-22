@@ -26,7 +26,10 @@ import {
   MAX_IMPORT_FILES,
   MAX_IMPORT_FILE_MB,
 } from "@/lib/upload-accept";
-import { filesFromDataTransfer, resolveFolderTargets } from "@/lib/folder-upload";
+import {
+  filesFromDataTransfer,
+  resolveFolderTargets,
+} from "@/lib/folder-upload";
 import { MAX_RESUMABLE_FILE_GB } from "@/lib/upload-limits";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { uploadDocuments } from "@/services/documents.service";
@@ -50,7 +53,9 @@ function formatBytes(size: number): string {
 
 function queueId(file: File): string {
   const rel = fileRelativePath(file);
-  return rel ? `${rel}-${file.size}-${file.lastModified}` : `${file.name}-${file.size}-${file.lastModified}`;
+  return rel
+    ? `${rel}-${file.size}-${file.lastModified}`
+    : `${file.name}-${file.size}-${file.lastModified}`;
 }
 
 function mergeFiles(existing: QueuedFile[], incoming: File[]): QueuedFile[] {
@@ -74,7 +79,8 @@ function mergeFiles(existing: QueuedFile[], incoming: File[]): QueuedFile[] {
 function ImporterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialFolder = searchParams.get("folder_id") ?? searchParams.get("folder") ?? "";
+  const initialFolder =
+    searchParams.get("folder_id") ?? searchParams.get("folder") ?? "";
 
   const [queue, setQueue] = useState<QueuedFile[]>([]);
   const [description, setDescription] = useState("");
@@ -99,7 +105,7 @@ function ImporterForm() {
 
   const totalSize = useMemo(
     () => queue.reduce((sum, q) => sum + q.file.size, 0),
-    [queue]
+    [queue],
   );
 
   const backHref =
@@ -128,7 +134,8 @@ function ImporterForm() {
       if (next.length) addFiles(next);
     };
     window.addEventListener("archiflow:pending-import", onPending);
-    return () => window.removeEventListener("archiflow:pending-import", onPending);
+    return () =>
+      window.removeEventListener("archiflow:pending-import", onPending);
   }, []);
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -166,7 +173,13 @@ function ImporterForm() {
     setLoading(true);
     setError(null);
     setLastResults([]);
-    setProgress({ done: 0, total: queue.length, name: "", bytesUploaded: 0, bytesTotal: 0 });
+    setProgress({
+      done: 0,
+      total: queue.length,
+      name: "",
+      bytesUploaded: 0,
+      bytesTotal: 0,
+    });
     uploadAbortRef.current = new AbortController();
     const signal = uploadAbortRef.current.signal;
 
@@ -174,7 +187,7 @@ function ImporterForm() {
       const baseFolderId = folderId ? Number(folderId) : null;
       const folderMap = await resolveFolderTargets(
         queue.map((q) => q.file),
-        baseFolderId
+        baseFolderId,
       );
 
       const results = await uploadDocuments(
@@ -197,7 +210,7 @@ function ImporterForm() {
             bytesUploaded: p.bytesUploaded ?? 0,
             bytesTotal: p.bytesTotal ?? 0,
           }),
-        signal
+        signal,
       );
 
       const summary = results.map((r) => ({
@@ -212,16 +225,16 @@ function ImporterForm() {
         router.push(
           folderId && folderId !== "0"
             ? `/mes-documents?folder=${folderId}`
-            : "/mes-documents"
+            : "/mes-documents",
         );
         return;
       }
       if (failed.length < summary.length) {
         setError(
-          `${summary.length - failed.length} importé(s), ${failed.length} échec(s). Voir liste.`
+          `${summary.length - failed.length} importé(s), ${failed.length} échec(s). Voir liste.`,
         );
         setQueue((prev) =>
-          prev.filter((q) => failed.some((f) => f.name === q.file.name))
+          prev.filter((q) => failed.some((f) => f.name === q.file.name)),
         );
       } else {
         setError("Aucun fichier importé. Vérifiez formats et taille.");
@@ -290,7 +303,8 @@ function ImporterForm() {
                   Glissez fichiers ou dossiers, ou parcourez
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Vidéo, audio, images, archives, Office — structure des dossiers préservée.
+                  Vidéo, audio, images, archives, Office — structure des
+                  dossiers préservée.
                 </p>
               </div>
               <input
@@ -300,7 +314,8 @@ function ImporterForm() {
                 multiple
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files?.length) addFiles(Array.from(e.target.files));
+                  if (e.target.files?.length)
+                    addFiles(Array.from(e.target.files));
                   e.target.value = "";
                 }}
               />
@@ -310,14 +325,22 @@ function ImporterForm() {
                 type="file"
                 multiple
                 className="hidden"
-                {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+                {...({
+                  webkitdirectory: "",
+                  directory: "",
+                } as React.InputHTMLAttributes<HTMLInputElement>)}
                 onChange={(e) => {
-                  if (e.target.files?.length) addFiles(Array.from(e.target.files));
+                  if (e.target.files?.length)
+                    addFiles(Array.from(e.target.files));
                   e.target.value = "";
                 }}
               />
               <div className="flex flex-wrap justify-center gap-2">
-                <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => inputRef.current?.click()}
+                >
                   Choisir fichiers
                 </Button>
                 <Button
@@ -353,7 +376,10 @@ function ImporterForm() {
                 </div>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-background">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${progressPct}%` }}
+                />
               </div>
               {progress.name && (
                 <p className="truncate text-xs text-muted-foreground">
@@ -381,7 +407,9 @@ function ImporterForm() {
                       <p className="truncate text-sm font-medium text-foreground">
                         {displayPath(item.file)}
                       </p>
-                      <p className="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatBytes(item.file.size)}
+                      </p>
                     </div>
                   </div>
                   <Input
@@ -410,7 +438,9 @@ function ImporterForm() {
           {queue.length > 0 && (
             <p className="text-xs text-muted-foreground">
               {queue.length} fichier(s) · {formatBytes(totalSize)} au total
-              {queue.length >= MAX_IMPORT_FILES ? ` · limite ${MAX_IMPORT_FILES} atteinte` : ""}
+              {queue.length >= MAX_IMPORT_FILES
+                ? ` · limite ${MAX_IMPORT_FILES} atteinte`
+                : ""}
             </p>
           )}
 
@@ -419,11 +449,21 @@ function ImporterForm() {
               {lastResults.map((r) => (
                 <li key={r.name} className="flex items-start gap-2">
                   {r.ok ? (
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-success" weight="fill" />
+                    <CheckCircle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-success"
+                      weight="fill"
+                    />
                   ) : (
-                    <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" weight="fill" />
+                    <WarningCircle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
+                      weight="fill"
+                    />
                   )}
-                  <span className={r.ok ? "text-foreground" : "text-destructive-foreground"}>
+                  <span
+                    className={
+                      r.ok ? "text-foreground" : "text-destructive-foreground"
+                    }
+                  >
                     {r.name}
                     {r.error ? ` — ${r.error}` : ""}
                   </span>

@@ -57,12 +57,19 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         >
           <DialogHeader>
             <DialogTitle>{pending?.title ?? "Confirmer l'action"}</DialogTitle>
-            <DialogDescription id="confirm-dialog-desc" className="whitespace-pre-line">
+            <DialogDescription
+              id="confirm-dialog-desc"
+              className="whitespace-pre-line"
+            >
               {pending?.description}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => finish(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => finish(false)}
+            >
               {pending?.cancelLabel ?? "Annuler"}
             </Button>
             <Button
@@ -91,6 +98,6 @@ export function useConfirm() {
       }
       return ctx(options);
     },
-    [ctx]
+    [ctx],
   );
 }

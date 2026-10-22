@@ -5,7 +5,12 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CrudToolbar } from "./crud-toolbar";
 import { RowActionsMenu } from "./row-actions-menu";
-import type { CrudBulkAction, CrudColumn, CrudRowAction, CrudViewMode } from "./crud-types";
+import type {
+  CrudBulkAction,
+  CrudColumn,
+  CrudRowAction,
+  CrudViewMode,
+} from "./crud-types";
 import { useCrudSelection } from "./use-crud-selection";
 import { useCrudViewMode } from "./use-crud-view-mode";
 
@@ -42,7 +47,10 @@ export function CrudDataView<T>({
   onRowClick,
   gridClassName,
 }: CrudDataViewProps<T>) {
-  const [internalViewMode, setInternalViewMode] = useCrudViewMode(storageKey, defaultViewMode);
+  const [internalViewMode, setInternalViewMode] = useCrudViewMode(
+    storageKey,
+    defaultViewMode,
+  );
   const viewMode = controlledViewMode ?? internalViewMode;
   const setViewMode = onViewModeChange ?? setInternalViewMode;
 
@@ -63,11 +71,11 @@ export function CrudDataView<T>({
       </CrudToolbar>
 
       {viewMode === "list" ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_24px_-16px_rgba(15,23,42,0.12)]">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_8px_24px_-16px_rgba(15,23,42,0.12)]">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                <tr className="border-b border-border bg-muted/60 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {showSelect && (
                     <th className="w-12 px-4 py-3">
                       <Checkbox
@@ -84,7 +92,7 @@ export function CrudDataView<T>({
                       className={cn(
                         "px-4 py-3 font-medium",
                         col.hideOnMobile && "hidden sm:table-cell",
-                        col.className
+                        col.className,
                       )}
                     >
                       {col.header}
@@ -97,7 +105,7 @@ export function CrudDataView<T>({
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {items.map((item, rowIndex) => {
                   const id = getItemId(item);
                   const selected = selection.isSelected(id);
@@ -113,14 +121,17 @@ export function CrudDataView<T>({
                         delay: Math.min(rowIndex, 14) * 0.04,
                       }}
                       className={cn(
-                        "text-zinc-700 transition-colors hover:bg-slate-50/80",
-                        selected && "bg-emerald-50/40",
-                        onRowClick && "cursor-pointer"
+                        "text-foreground transition-colors hover:bg-muted/60",
+                        selected && "bg-accent-soft/40",
+                        onRowClick && "cursor-pointer",
                       )}
                       onClick={() => onRowClick?.(item)}
                     >
                       {showSelect && (
-                        <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className="px-4 py-3.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Checkbox
                             checked={selected}
                             onCheckedChange={() => selection.toggle(id)}
@@ -134,7 +145,7 @@ export function CrudDataView<T>({
                           className={cn(
                             "px-4 py-3.5",
                             col.hideOnMobile && "hidden sm:table-cell",
-                            col.className
+                            col.className,
                           )}
                         >
                           {col.cell(item)}
@@ -159,11 +170,14 @@ export function CrudDataView<T>({
         <motion.ul
           className={cn(
             "grid gap-3 sm:grid-cols-2 xl:grid-cols-3",
-            gridClassName
+            gridClassName,
           )}
           initial="hidden"
           animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.04 } },
+          }}
         >
           {items.map((item) => {
             const id = getItemId(item);
@@ -171,11 +185,14 @@ export function CrudDataView<T>({
             return (
               <motion.li
                 key={String(id)}
-                variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+                variants={{
+                  hidden: { opacity: 0, y: 8 },
+                  show: { opacity: 1, y: 0 },
+                }}
                 className={cn(
                   "surface-card surface-card-interactive relative flex flex-col p-4",
-                  selected && "ring-2 ring-emerald-500/40",
-                  onRowClick && "cursor-pointer"
+                  selected && "ring-2 ring-primary/40",
+                  onRowClick && "cursor-pointer",
                 )}
                 onClick={() => onRowClick?.(item)}
               >

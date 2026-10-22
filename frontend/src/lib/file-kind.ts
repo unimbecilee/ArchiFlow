@@ -13,11 +13,20 @@ export function kindFromName(name?: string, mime?: string): FileKind {
   const source = `${name ?? ""} ${mime ?? ""}`.toLowerCase();
   if (source.includes("folder") || source.includes("dossier")) return "folder";
   if (source.includes("pdf") || source.endsWith(".pdf")) return "pdf";
-  if (/\.(xls|xlsx|ods|csv)\b/.test(source) || source.includes("spreadsheet") || source.includes("excel")) {
+  if (
+    /\.(xls|xlsx|ods|csv)\b/.test(source) ||
+    source.includes("spreadsheet") ||
+    source.includes("excel")
+  ) {
     return "sheet";
   }
-  if (/\.(png|jpe?g|gif|webp|svg)\b/.test(source) || source.includes("image/")) return "image";
-  if (/\.(zip|7z|tar|gz|rar)\b/.test(source) || source.includes("zip") || source.includes("archive")) {
+  if (/\.(png|jpe?g|gif|webp|svg)\b/.test(source) || source.includes("image/"))
+    return "image";
+  if (
+    /\.(zip|7z|tar|gz|rar)\b/.test(source) ||
+    source.includes("zip") ||
+    source.includes("archive")
+  ) {
     return "archive";
   }
   return "doc";

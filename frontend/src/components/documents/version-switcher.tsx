@@ -9,7 +9,8 @@ import {
   versionPreviewUrl,
 } from "@/services/collaboration.service";
 import api from "@/lib/api";
-import { getAccessToken } from "@/lib/session-tokens";
+import { fetchAuthenticated, readFetchError } from "@/lib/fetch-auth";
+import { resolvePreviewKind } from "@/lib/preview-kind";
 
 export type VersionSelection =
   | { kind: "current"; versionNumber: number }
@@ -32,11 +33,12 @@ export function VersionSwitcher({
   selection,
   onSelect,
 }: VersionSwitcherProps) {
-  const sorted = [...versions].sort((a, b) => b.version_number - a.version_number);
+  const sorted = [...versions].sort(
+    (a, b) => b.version_number - a.version_number,
+  );
   const isCurrentSelected = selection.kind === "current";
 
   const handleDownload = async () => {
-    const token = getAccessToken();
     let path: string;
     let name: string;
     if (selection.kind === "current") {
@@ -47,9 +49,8 @@ export function VersionSwitcher({
       name = selection.version.file_name;
     }
     const base = api.defaults.baseURL || "";
-    const res = await fetch(`${base}${path}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const res = await fetchAuthenticated(`${base}${path}`);
+    if (!res.ok) throw new Error(await readFetchError(res));
     const blob = await res.blob();
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -63,11 +64,13 @@ export function VersionSwitcher({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => onSelect({ kind: "current", versionNumber: currentVersionNumber })}
+          onClick={() =>
+            onSelect({ kind: "current", versionNumber: currentVersionNumber })
+          }
           className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
             isCurrentSelected
-              ? "bg-emerald-600 text-white"
-              : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+              ? "bg-primary text-white"
+              : "bg-muted text-foreground hover:bg-muted"
           }`}
         >
           v{currentVersionNumber} (courante)
@@ -86,13 +89,15 @@ export function VersionSwitcher({
               onClick={() => onSelect({ kind: "archive", version: v })}
               className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 selected
-                  ? "bg-emerald-600 text-white"
-                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                  ? "bg-primary text-white"
+                  : "bg-muted text-foreground hover:bg-muted"
               }`}
             >
               v{v.version_number}
               {isRejected && (
-                <span className={`ml-1.5 text-xs ${selected ? "opacity-90" : "text-red-600"}`}>
+                <span
+                  className={`ml-1.5 text-xs ${selected ? "opacity-90" : "text-destructive"}`}
+                >
                   rejetee
                 </span>
               )}
@@ -100,7 +105,12 @@ export function VersionSwitcher({
           );
         })}
       </div>
-      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownload}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5"
+        onClick={handleDownload}
+      >
         <DownloadSimple className="h-4 w-4" />
         Telecharger cette version
       </Button>
@@ -152,18 +162,20 @@ function ArchivedVersionPreview({
     setText(null);
     setFailed(false);
 
-    const token = getAccessToken();
     const base = api.defaults.baseURL || "";
-    fetch(`${base}${versionPreviewUrl(docId, versionId)}`, {
-      credentials: "include",
+    void fetchAuthenticated(`${base}${versionPreviewUrl(docId, versionId)}`, {
       signal: ac.signal,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(async (r) => {
-        if (!r.ok) throw new Error("preview failed");
+        if (!r.ok) throw new Error(await readFetchError(r));
         const blob = await r.blob();
         const type = blob.type || mime || "";
-        if (type.startsWith("text/") || type === "application/json") {
+        const kind = resolvePreviewKind(type, title);
+        if (
+          kind === "text" ||
+          type.startsWith("text/") ||
+          type === "application/json"
+        ) {
           const t = await blob.text();
           if (!ac.signal.aborted) setText(t);
           return;
@@ -183,39 +195,68 @@ function ArchivedVersionPreview({
       ac.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [docId, versionId, mime]);
+  }, [docId, versionId, mime, title]);
 
   if (failed) {
     return (
-      <p className="text-sm text-zinc-600">
+      <p className="text-sm text-muted-foreground">
         Apercu indisponible pour ce type. Utilisez telecharger.
       </p>
     );
   }
   if (text != null) {
     return (
-      <pre className="max-h-[40vh] overflow-auto rounded-lg border border-slate-200 bg-white p-3 text-xs text-zinc-800">
+      <pre className="max-h-[40vh] overflow-auto rounded-lg border border-border bg-card p-3 text-xs text-foreground">
         {text}
       </pre>
     );
   }
   if (!src) {
-    return <p className="text-sm text-zinc-500">Chargement apercu version...</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Chargement apercu version...
+      </p>
+    );
   }
-  if (mime?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(title)) {
+  if (
+    mime?.startsWith("image/") ||
+    /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(title)
+  ) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={title} className="mx-auto max-h-[40vh] max-w-full rounded-lg" />
+      <img
+        src={src}
+        alt={title}
+        className="mx-auto max-h-[40vh] max-w-full rounded-lg"
+      />
     );
   }
   if (mime === "application/pdf" || title.toLowerCase().endsWith(".pdf")) {
-    return <iframe src={src} title={title} className="h-[40vh] w-full rounded-lg border-0" />;
+    return (
+      <iframe
+        src={src}
+        title={title}
+        className="h-[40vh] w-full rounded-lg border-0"
+      />
+    );
   }
   if (mime?.startsWith("audio/")) {
     return <audio controls src={src} className="w-full" />;
   }
   if (mime?.startsWith("video/")) {
-    return <video controls src={src} className="mx-auto max-h-[40vh] max-w-full rounded-lg" />;
+    return (
+      <video
+        controls
+        src={src}
+        className="mx-auto max-h-[40vh] max-w-full rounded-lg"
+      />
+    );
   }
-  return <iframe src={src} title={title} className="h-[40vh] w-full rounded-lg border border-slate-200" />;
+  return (
+    <iframe
+      src={src}
+      title={title}
+      className="h-[40vh] w-full rounded-lg border border-border"
+    />
+  );
 }

@@ -55,7 +55,10 @@ export default function RecherchePage() {
       />
 
       <PagePanel title="Requête" subtitle="Minimum 2 caractères">
-        <form onSubmit={handleSearch} className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+        <form
+          onSubmit={handleSearch}
+          className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end"
+        >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="search">Mot-clé</Label>
             <Input
@@ -94,7 +97,11 @@ export default function RecherchePage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="facetCat">Type / catégorie</Label>
-            <Select id="facetCat" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <Select
+              id="facetCat"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
               <option value="">Tous</option>
               {Object.keys(facets?.category ?? {}).map((k) => (
                 <option key={k} value={k}>
@@ -115,11 +122,19 @@ export default function RecherchePage() {
         )}
       </PagePanel>
 
-      {isError && <ErrorBanner message={error instanceof Error ? error.message : "Erreur recherche"} />}
+      {isError && (
+        <ErrorBanner
+          message={error instanceof Error ? error.message : "Erreur recherche"}
+        />
+      )}
 
       <PagePanel
         title="Résultats"
-        subtitle={isFetched ? `${data?.total ?? docs.length} résultat(s)` : "En attente de recherche"}
+        subtitle={
+          isFetched
+            ? `${data?.total ?? docs.length} résultat(s)`
+            : "En attente de recherche"
+        }
       >
         {!submitted ? (
           <p className="text-sm text-muted-foreground">
@@ -137,7 +152,10 @@ export default function RecherchePage() {
           />
         )}
       </PagePanel>
-      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+      <DocumentQuickPreview
+        doc={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
     </PageFrame>
   );
 }

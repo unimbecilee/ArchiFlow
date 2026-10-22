@@ -19,8 +19,12 @@ function StreamRow() {
           key={item.label}
           className="flex min-w-[148px] flex-col gap-1 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-[var(--shadow-card)]"
         >
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{item.label}</span>
-          <span className="font-mono text-lg font-semibold tracking-tight">{item.value}</span>
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            {item.label}
+          </span>
+          <span className="font-mono text-lg font-semibold tracking-tight">
+            {item.value}
+          </span>
         </div>
       ))}
     </>

@@ -9,5 +9,9 @@ type PageFrameProps = {
 };
 
 export function PageFrame({ children, className }: PageFrameProps) {
-  return <FadeUp className={cn("mx-auto max-w-6xl space-y-6", className)}>{children}</FadeUp>;
+  return (
+    <FadeUp className={cn("mx-auto max-w-6xl space-y-6", className)}>
+      {children}
+    </FadeUp>
+  );
 }

@@ -1,7 +1,10 @@
 import type { TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({
+  className,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       className={cn(
@@ -11,7 +14,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
         "focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
         "disabled:bg-muted disabled:opacity-60",
         "aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20",
-        className
+        className,
       )}
       {...props}
     />

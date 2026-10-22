@@ -24,57 +24,57 @@ export function getNotificationMeta(type: string): NotificationMeta {
       return {
         label: "Approbation",
         Icon: Clock,
-        accent: "text-emerald-700",
-        iconBg: "bg-emerald-500/15 text-emerald-700",
+        accent: "text-accent-soft-foreground",
+        iconBg: "bg-accent-soft text-accent-soft-foreground",
       };
     case "WORKFLOW_APPROVED":
       return {
         label: "Approuve",
         Icon: CheckCircle,
-        accent: "text-emerald-700",
-        iconBg: "bg-emerald-500/15 text-emerald-700",
+        accent: "text-accent-soft-foreground",
+        iconBg: "bg-accent-soft text-accent-soft-foreground",
       };
     case "WORKFLOW_REJECTED":
       return {
         label: "Rejete",
         Icon: XCircle,
-        accent: "text-amber-800",
-        iconBg: "bg-amber-500/15 text-amber-800",
+        accent: "text-warning-soft-foreground",
+        iconBg: "bg-warning-soft text-warning-soft-foreground",
       };
     case "WORKFLOW_CANCELLED":
       return {
         label: "Annule",
         Icon: Prohibit,
-        accent: "text-zinc-600",
-        iconBg: "bg-zinc-200/80 text-zinc-700",
+        accent: "text-muted-foreground",
+        iconBg: "bg-muted text-foreground",
       };
     case "WORKFLOW_STEP":
       return {
         label: "Etape",
         Icon: GitBranch,
-        accent: "text-emerald-700",
-        iconBg: "bg-emerald-500/15 text-emerald-700",
+        accent: "text-accent-soft-foreground",
+        iconBg: "bg-accent-soft text-accent-soft-foreground",
       };
     case "SHARE":
       return {
         label: "Partage",
         Icon: ShareNetwork,
-        accent: "text-sky-700",
-        iconBg: "bg-sky-500/15 text-sky-700",
+        accent: "text-info-soft-foreground",
+        iconBg: "bg-info-soft text-info-soft-foreground",
       };
     case "COMMENT":
       return {
         label: "Commentaire",
         Icon: ChatCircle,
-        accent: "text-zinc-700",
-        iconBg: "bg-zinc-200/80 text-zinc-700",
+        accent: "text-foreground",
+        iconBg: "bg-muted text-foreground",
       };
     default:
       return {
         label: type,
         Icon: Bell,
-        accent: "text-zinc-700",
-        iconBg: "bg-zinc-200/80 text-zinc-700",
+        accent: "text-foreground",
+        iconBg: "bg-muted text-foreground",
       };
   }
 }
@@ -92,7 +92,11 @@ export type NotificationGroup = {
 
 export function groupNotifications(items: Notification[]): NotificationGroup[] {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfWeek.getDate() - 7);
 
@@ -108,8 +112,11 @@ export function groupNotifications(items: Notification[]): NotificationGroup[] {
   }
 
   const groups: NotificationGroup[] = [];
-  if (today.length) groups.push({ key: "today", title: "Aujourd'hui", items: today });
-  if (week.length) groups.push({ key: "week", title: "Cette semaine", items: week });
-  if (older.length) groups.push({ key: "older", title: "Plus ancien", items: older });
+  if (today.length)
+    groups.push({ key: "today", title: "Aujourd'hui", items: today });
+  if (week.length)
+    groups.push({ key: "week", title: "Cette semaine", items: week });
+  if (older.length)
+    groups.push({ key: "older", title: "Plus ancien", items: older });
   return groups;
 }

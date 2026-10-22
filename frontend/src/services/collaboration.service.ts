@@ -10,28 +10,28 @@ import type { Document } from "@/types/documents";
 
 export async function getSharedWithMe(): Promise<SharedDocument[]> {
   const res = await api.get<{ success: boolean; documents: SharedDocument[] }>(
-    "/api/documents/shared-with-me"
+    "/api/documents/shared-with-me",
   );
   return res.data.documents ?? [];
 }
 
 export async function shareDocument(
   docId: number,
-  payload: { email: string; message?: string; permissions?: string[] }
+  payload: { email: string; message?: string; permissions?: string[] },
 ): Promise<void> {
   await api.post(`/api/documents/${docId}/share`, payload);
 }
 
 export async function getDocument(id: number): Promise<Document> {
   const res = await api.get<{ success: boolean; data: Document }>(
-    `/api/documents/${id}`
+    `/api/documents/${id}`,
   );
   return res.data.data;
 }
 
 export async function listComments(docId: number): Promise<DocumentComment[]> {
   const res = await api.get<{ success: boolean; comments: DocumentComment[] }>(
-    `/api/documents/${docId}/comments`
+    `/api/documents/${docId}/comments`,
   );
   return res.data.comments ?? [];
 }
@@ -39,25 +39,25 @@ export async function listComments(docId: number): Promise<DocumentComment[]> {
 export async function addComment(
   docId: number,
   content: string,
-  parentId?: number
+  parentId?: number,
 ): Promise<DocumentComment> {
   const res = await api.post<{ success: boolean; comment: DocumentComment }>(
     `/api/documents/${docId}/comments`,
-    { content, parent_id: parentId }
+    { content, parent_id: parentId },
   );
   return res.data.comment;
 }
 
 export async function deleteComment(
   docId: number,
-  commentId: number
+  commentId: number,
 ): Promise<void> {
   await api.delete(`/api/documents/${docId}/comments/${commentId}`);
 }
 
 export async function listVersions(docId: number): Promise<DocumentVersion[]> {
   const res = await api.get<{ success: boolean; versions: DocumentVersion[] }>(
-    `/api/documents/${docId}/versions`
+    `/api/documents/${docId}/versions`,
   );
   return res.data.versions ?? [];
 }
@@ -79,22 +79,23 @@ export type DocumentEditableContent = {
 };
 
 export async function getDocumentEditableContent(
-  docId: number
+  docId: number,
 ): Promise<DocumentEditableContent> {
-  const res = await api.get<{ success: boolean; data: DocumentEditableContent }>(
-    `/api/documents/${docId}/content`
-  );
+  const res = await api.get<{
+    success: boolean;
+    data: DocumentEditableContent;
+  }>(`/api/documents/${docId}/content`);
   return res.data.data;
 }
 
 export async function saveDocumentEdit(
   docId: number,
   content: string,
-  commentaire?: string
+  commentaire?: string,
 ): Promise<DocumentVersion> {
   const res = await api.post<{ success: boolean; version: DocumentVersion }>(
     `/api/documents/${docId}/versions/edit`,
-    { content, commentaire }
+    { content, commentaire },
   );
   return res.data.version;
 }
@@ -102,21 +103,21 @@ export async function saveDocumentEdit(
 export async function uploadVersion(
   docId: number,
   file: File,
-  comment?: string
+  comment?: string,
 ): Promise<DocumentVersion> {
   const form = new FormData();
   form.append("file", file);
   if (comment) form.append("comment", comment);
   const res = await api.post<{ success: boolean; version: DocumentVersion }>(
     `/api/documents/${docId}/versions`,
-    form
+    form,
   );
   return res.data.version;
 }
 
 export async function getDocumentTags(docId: number): Promise<Tag[]> {
   const res = await api.get<{ success: boolean; data: Tag[] }>(
-    `/api/documents/${docId}/tags`
+    `/api/documents/${docId}/tags`,
   );
   return res.data.data ?? [];
 }
@@ -124,18 +125,18 @@ export async function getDocumentTags(docId: number): Promise<Tag[]> {
 export async function addDocumentTag(
   docId: number,
   name: string,
-  color?: string
+  color?: string,
 ): Promise<Tag[]> {
   const res = await api.post<{ success: boolean; data: Tag[] }>(
     `/api/documents/${docId}/tags`,
-    { name, color: color || "#3b82f6" }
+    { name, color: color || "#3b82f6" },
   );
   return res.data.data ?? [];
 }
 
 export async function removeDocumentTag(
   docId: number,
-  tagId: number
+  tagId: number,
 ): Promise<void> {
   await api.delete(`/api/documents/${docId}/tags/${tagId}`);
 }

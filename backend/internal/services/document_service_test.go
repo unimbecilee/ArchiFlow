@@ -1,6 +1,43 @@
 package services
 
-import "testing"
+import (
+	"testing"
+
+	"archiflow/backend/internal/models"
+)
+
+func TestResolveObjectLocation(t *testing.T) {
+	doc := &models.Document{
+		MinioBucket:     "",
+		MinioObjectName: "",
+		MinioURL:        "archiflow-documents/abc-123.pdf",
+	}
+	bucket, key := resolveObjectLocation(doc, "archiflow-documents")
+	if bucket != "archiflow-documents" || key != "abc-123.pdf" {
+		t.Fatalf("got %q/%q", bucket, key)
+	}
+
+	doc2 := &models.Document{
+		MinioBucket:     "archiflow-documents",
+		MinioObjectName: "direct-key.docx",
+	}
+	bucket, key = resolveObjectLocation(doc2, "archiflow-documents")
+	if bucket != "archiflow-documents" || key != "direct-key.docx" {
+		t.Fatalf("got %q/%q", bucket, key)
+	}
+}
+
+func TestIsPreviewable(t *testing.T) {
+	if !IsPreviewable("application/octet-stream", "report.pdf") {
+		t.Fatal("pdf by extension")
+	}
+	if !IsPreviewable("text/csv", "data.csv") {
+		t.Fatal("csv")
+	}
+	if IsPreviewable("application/zip", "a.zip") {
+		t.Fatal("zip should not be inline previewable")
+	}
+}
 
 func TestUploadMimeAllowed(t *testing.T) {
 	tests := []struct {

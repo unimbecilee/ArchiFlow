@@ -25,7 +25,12 @@ export interface DocumentComment {
   author_id: number;
   parent_id?: number | null;
   created_at: string;
-  author?: { id: number; email?: string; first_name?: string; last_name?: string };
+  author?: {
+    id: number;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  };
 }
 
 export interface DocumentVersion {

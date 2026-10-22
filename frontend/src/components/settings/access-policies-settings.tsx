@@ -95,7 +95,9 @@ export function AccessPoliciesSettings() {
         await createAccessPolicy(form);
       }
       resetForm();
-      toast.success(editId != null ? "Politique mise a jour" : "Politique creee");
+      toast.success(
+        editId != null ? "Politique mise a jour" : "Politique creee",
+      );
       await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Enregistrement impossible");
@@ -108,7 +110,8 @@ export function AccessPoliciesSettings() {
     if (
       !(await confirm({
         title: "Supprimer la politique",
-        description: "Cette regle ABAC sera retiree immediatement pour toute l'organisation.",
+        description:
+          "Cette regle ABAC sera retiree immediatement pour toute l'organisation.",
         confirmLabel: "Supprimer",
         destructive: true,
       }))
@@ -134,31 +137,40 @@ export function AccessPoliciesSettings() {
       {error && <ErrorBanner message={error} />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start">
-        <PagePanel title="Politiques enregistrees" subtitle={`${rows.length} regle(s) · deny prioritaire`}>
+        <PagePanel
+          title="Politiques enregistrees"
+          subtitle={`${rows.length} regle(s) · deny prioritaire`}
+        >
           {rows.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              Aucune politique. Les deny s&apos;appliquent apres RBAC, partage et MAC.
+            <p className="text-sm text-muted-foreground">
+              Aucune politique. Les deny s&apos;appliquent apres RBAC, partage
+              et MAC.
             </p>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-border">
               {rows.map((p) => (
                 <li key={p.id}>
                   <button
                     type="button"
                     onClick={() => startEdit(p)}
                     className={`flex w-full flex-col gap-2 py-4 text-left transition-colors sm:flex-row sm:items-start sm:justify-between ${
-                      editId === p.id ? "bg-emerald-50/60 -mx-2 rounded-xl px-2" : "hover:bg-zinc-50/80"
+                      editId === p.id
+                        ? "bg-accent-soft/60 -mx-2 rounded-xl px-2"
+                        : "hover:bg-muted/60"
                     }`}
                   >
                     <div className="min-w-0 space-y-1">
-                      <p className="font-medium text-zinc-900">
+                      <p className="font-medium text-foreground">
                         {p.name}{" "}
-                        <span className="font-mono text-xs text-zinc-500">
-                          p{p.priority} · {p.effect} · {p.active ? "active" : "inactive"}
+                        <span className="font-mono text-xs text-muted-foreground">
+                          p{p.priority} · {p.effect} ·{" "}
+                          {p.active ? "active" : "inactive"}
                         </span>
                       </p>
                       {p.condition && (
-                        <p className="line-clamp-2 font-mono text-xs text-zinc-600">{p.condition}</p>
+                        <p className="line-clamp-2 font-mono text-xs text-muted-foreground">
+                          {p.condition}
+                        </p>
                       )}
                     </div>
                     <Button
@@ -179,7 +191,12 @@ export function AccessPoliciesSettings() {
             </ul>
           )}
           {!editId && (
-            <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={resetForm}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 gap-1.5"
+              onClick={resetForm}
+            >
               <Plus className="h-4 w-4" />
               Nouvelle regle
             </Button>
@@ -187,7 +204,9 @@ export function AccessPoliciesSettings() {
         </PagePanel>
 
         <PagePanel
-          title={editId != null ? "Modifier la politique" : "Nouvelle politique"}
+          title={
+            editId != null ? "Modifier la politique" : "Nouvelle politique"
+          }
           subtitle="Les regles deny bloquent meme un partage explicite si la condition correspond."
           className="lg:sticky lg:top-28"
         >
@@ -204,9 +223,14 @@ export function AccessPoliciesSettings() {
               <Label htmlFor="polEffect">Effet</Label>
               <select
                 id="polEffect"
-                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                className="h-10 rounded-xl border border-border bg-card px-3 text-sm"
                 value={form.effect}
-                onChange={(e) => setForm({ ...form, effect: e.target.value as "allow" | "deny" })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    effect: e.target.value as "allow" | "deny",
+                  })
+                }
               >
                 <option value="deny">deny</option>
                 <option value="allow">allow</option>
@@ -218,15 +242,19 @@ export function AccessPoliciesSettings() {
                 id="polPriority"
                 type="number"
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, priority: Number(e.target.value) })
+                }
               />
             </div>
             <div className="flex items-end gap-2 md:col-span-2">
-              <label className="flex items-center gap-2 text-sm text-zinc-700">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={form.active}
-                  onChange={(e) => setForm({ ...form, active: e.target.checked })}
+                  onChange={(e) =>
+                    setForm({ ...form, active: e.target.checked })
+                  }
                 />
                 Active
               </label>
@@ -258,15 +286,21 @@ export function AccessPoliciesSettings() {
               </div>
               <textarea
                 id="polCond"
-                className="min-h-[120px] rounded-xl border border-slate-200 bg-white p-3 font-mono text-xs"
+                className="min-h-[120px] rounded-xl border border-border bg-card p-3 font-mono text-xs"
                 value={form.condition}
-                onChange={(e) => setForm({ ...form, condition: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, condition: e.target.value })
+                }
                 placeholder='{"attr":"doc.department","op":"neq","value":"$user.department"}'
               />
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={handleSave} disabled={saving || !form.name.trim()} className="gap-1.5">
+            <Button
+              onClick={handleSave}
+              disabled={saving || !form.name.trim()}
+              className="gap-1.5"
+            >
               <FloppyDisk className="h-4 w-4" />
               {editId != null ? "Mettre a jour" : "Creer"}
             </Button>

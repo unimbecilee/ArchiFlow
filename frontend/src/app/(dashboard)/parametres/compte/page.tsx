@@ -12,7 +12,11 @@ import { useAuthStore } from "@/store/auth-store";
 import { updateMyProfile } from "@/services/auth.service";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { userInitials } from "@/lib/user-display";
-import { readUserPrefs, writeUserPrefs, type UserPrefs } from "@/lib/user-prefs";
+import {
+  readUserPrefs,
+  writeUserPrefs,
+  type UserPrefs,
+} from "@/lib/user-prefs";
 import { toast } from "sonner";
 
 export default function ParametresComptePage() {
@@ -42,7 +46,11 @@ export default function ParametresComptePage() {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
       });
-      setUser({ ...user!, ...updated, capabilities: updated.capabilities ?? user?.capabilities });
+      setUser({
+        ...user!,
+        ...updated,
+        capabilities: updated.capabilities ?? user?.capabilities,
+      });
       writeUserPrefs(prefs);
       toast.success("Profil enregistré");
     } catch (e: unknown) {
@@ -96,12 +104,15 @@ export default function ParametresComptePage() {
         </div>
       </PagePanel>
 
-      <PagePanel title="Affichage" subtitle="Préférences d'interface sur cet appareil">
+      <PagePanel
+        title="Affichage"
+        subtitle="Préférences d'interface sur cet appareil"
+      >
         <div className="space-y-3">
           <label
             className="group flex cursor-pointer items-start justify-between gap-4 rounded-lg
-                       border border-border bg-card p-4 shadow-e1 transition-colors duration-200
-                       hover:border-border-strong hover:bg-accent/40"
+ border border-border bg-card p-4 shadow-e1 transition-colors duration-200
+ hover:border-border-strong hover:bg-accent/40"
           >
             <span>
               <span className="block text-sm font-medium text-foreground">
@@ -120,14 +131,17 @@ export default function ParametresComptePage() {
               }
             />
           </label>
-          <p id="showImportFab-desc" className="ml-10 text-[13px] text-muted-foreground hidden">
+          <p
+            id="showImportFab-desc"
+            className="ml-10 text-[13px] text-muted-foreground hidden"
+          >
             Afficher le raccourci flottant sur petit écran
           </p>
 
           <label
             className="group flex cursor-pointer items-start justify-between gap-4 rounded-lg
-                       border border-border bg-card p-4 shadow-e1 transition-colors duration-200
-                       hover:border-border-strong hover:bg-accent/40"
+ border border-border bg-card p-4 shadow-e1 transition-colors duration-200
+ hover:border-border-strong hover:bg-accent/40"
           >
             <span>
               <span className="block text-sm font-medium text-foreground">
@@ -146,7 +160,10 @@ export default function ParametresComptePage() {
               }
             />
           </label>
-          <p id="confirmBeforeDelete-desc" className="ml-10 text-[13px] text-muted-foreground hidden">
+          <p
+            id="confirmBeforeDelete-desc"
+            className="ml-10 text-[13px] text-muted-foreground hidden"
+          >
             Demander une confirmation pour les actions destructives
           </p>
         </div>

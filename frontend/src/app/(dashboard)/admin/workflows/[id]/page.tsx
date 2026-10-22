@@ -55,7 +55,8 @@ function defaultStep(order: number): FormStep {
 }
 
 function stepsFromWorkflow(wf: WorkflowFullDefinition): FormStep[] {
-  const steps = wf.steps?.slice().sort((a, b) => a.step_order - b.step_order) ?? [];
+  const steps =
+    wf.steps?.slice().sort((a, b) => a.step_order - b.step_order) ?? [];
   if (!steps.length) return [defaultStep(1)];
   return steps.map((s) => ({
     name: s.name,
@@ -187,7 +188,13 @@ export default function AdminWorkflowEditPage() {
       await load();
     } catch (ex) {
       const axiosErr = ex as AxiosError<{ error?: string }>;
-      setErr(String(axiosErr.response?.data?.error ?? axiosErr.message ?? "Enregistrement echoue"));
+      setErr(
+        String(
+          axiosErr.response?.data?.error ??
+            axiosErr.message ??
+            "Enregistrement echoue",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -261,13 +268,14 @@ export default function AdminWorkflowEditPage() {
       />
 
       {protectedWf && (
-        <p className="-mt-6 mb-6 rounded-xl bg-amber-500/15 px-4 py-3 text-sm text-amber-900">
+        <p className="-mt-6 mb-6 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground">
           Nom, desactivation et etapes sont proteges pour ce workflow critique.
         </p>
       )}
       {!protectedWf && instanceCount > 0 && (
-        <p className="-mt-6 mb-6 rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700">
-          {instanceCount} instance(s) existe(nt) — metadonnees modifiables, etapes verrouillees.
+        <p className="-mt-6 mb-6 rounded-xl bg-muted px-4 py-3 text-sm text-foreground">
+          {instanceCount} instance(s) existe(nt) — metadonnees modifiables,
+          etapes verrouillees.
         </p>
       )}
 
@@ -297,26 +305,38 @@ export default function AdminWorkflowEditPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm text-zinc-800">
+                <label className="flex items-center gap-2 text-sm text-foreground">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                    className="h-4 w-4 rounded border-border text-primary"
                     checked={isActive}
                     disabled={protectedWf}
                     onChange={(e) => setIsActive(e.target.checked)}
                   />
-                  Actif (nouveaux departs autorises si coche et etapes coherentes)
+                  Actif (nouveaux departs autorises si coche et etapes
+                  coherentes)
                 </label>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-zinc-900">
-                  Etapes {stepsLocked && <span className="font-normal text-zinc-500">(lecture seule)</span>}
+                <p className="text-sm font-medium text-foreground">
+                  Etapes{" "}
+                  {stepsLocked && (
+                    <span className="font-normal text-muted-foreground">
+                      (lecture seule)
+                    </span>
+                  )}
                 </p>
                 {!stepsLocked && (
-                  <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addStep}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={addStep}
+                  >
                     <Plus className="h-4 w-4" /> Etape
                   </Button>
                 )}
@@ -324,17 +344,22 @@ export default function AdminWorkflowEditPage() {
               {steps.map((st, si) => (
                 <div
                   key={`${st.step_order}-${si}`}
-                  className={`space-y-3 rounded-xl border border-slate-200 p-4 ${
-                    stepsLocked ? "bg-zinc-100/80" : "bg-zinc-50"
+                  className={`space-y-3 rounded-xl border border-border p-4 ${
+                    stepsLocked ? "bg-muted" : "bg-muted"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Etape ordre {st.step_order}
                     </p>
                     {!stepsLocked && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeStep(si)}>
-                        <Trash className="h-4 w-4 text-red-600" />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeStep(si)}
+                      >
+                        <Trash className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
                   </div>
@@ -344,17 +369,21 @@ export default function AdminWorkflowEditPage() {
                       <Input
                         value={st.name}
                         disabled={stepsLocked}
-                        onChange={(e) => updateStep(si, { name: e.target.value })}
+                        onChange={(e) =>
+                          updateStep(si, { name: e.target.value })
+                        }
                         required
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label>Type approbation</Label>
                       <select
-                        className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm disabled:opacity-70"
+                        className="h-10 rounded-xl border border-border bg-card px-3 text-sm disabled:opacity-70"
                         value={st.approval_type}
                         disabled={stepsLocked}
-                        onChange={(e) => updateStep(si, { approval_type: e.target.value })}
+                        onChange={(e) =>
+                          updateStep(si, { approval_type: e.target.value })
+                        }
                       >
                         {APPROVAL_TYPES.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -369,7 +398,9 @@ export default function AdminWorkflowEditPage() {
                     <Input
                       value={st.description}
                       disabled={stepsLocked}
-                      onChange={(e) => updateStep(si, { description: e.target.value })}
+                      onChange={(e) =>
+                        updateStep(si, { description: e.target.value })
+                      }
                     />
                   </div>
 
@@ -377,7 +408,12 @@ export default function AdminWorkflowEditPage() {
                     <div className="flex items-center justify-between">
                       <Label>Approbateurs</Label>
                       {!stepsLocked && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => addApprover(si)}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addApprover(si)}
+                        >
                           + ligne
                         </Button>
                       )}
@@ -385,12 +421,15 @@ export default function AdminWorkflowEditPage() {
                     {st.approvers.map((ap, aj) => (
                       <div key={aj} className="flex flex-wrap gap-2">
                         <select
-                          className="min-w-[10rem] flex-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm disabled:opacity-70"
+                          className="min-w-[10rem] flex-1 rounded-xl border border-border bg-card px-2 py-2 text-sm disabled:opacity-70"
                           value={ap.role_name}
                           disabled={stepsLocked}
                           onChange={(e) => {
                             const copy = [...st.approvers];
-                            copy[aj] = { ...copy[aj], role_name: e.target.value };
+                            copy[aj] = {
+                              ...copy[aj],
+                              role_name: e.target.value,
+                            };
                             updateStep(si, { approvers: copy });
                           }}
                         >
@@ -412,7 +451,12 @@ export default function AdminWorkflowEditPage() {
                           }}
                         />
                         {!stepsLocked && (
-                          <Button type="button" variant="ghost" size="sm" onClick={() => removeApprover(si, aj)}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeApprover(si, aj)}
+                          >
                             ×
                           </Button>
                         )}
@@ -428,7 +472,12 @@ export default function AdminWorkflowEditPage() {
                 <FloppyDisk className="h-4 w-4" /> Enregistrer
               </Button>
               {!protectedWf && instanceCount === 0 && (
-                <Button type="button" variant="outline" className="text-red-700" onClick={onDelete}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-destructive-soft-foreground"
+                  onClick={onDelete}
+                >
                   Supprimer
                 </Button>
               )}

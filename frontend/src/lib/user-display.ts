@@ -1,7 +1,7 @@
 export function userDisplayName(
   email?: string,
   firstName?: string,
-  lastName?: string
+  lastName?: string,
 ) {
   const name = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");
   if (name) return name;
@@ -9,7 +9,11 @@ export function userDisplayName(
   return email.split("@")[0] ?? email;
 }
 
-export function userInitials(email?: string, firstName?: string, lastName?: string) {
+export function userInitials(
+  email?: string,
+  firstName?: string,
+  lastName?: string,
+) {
   if (firstName?.trim() && lastName?.trim()) {
     return `${firstName.trim()[0] ?? ""}${lastName.trim()[0] ?? ""}`.toUpperCase();
   }

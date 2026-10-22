@@ -23,7 +23,10 @@ type MobileNavMenuPanelProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export function MobileNavMenuPanel({ open, onOpenChange }: MobileNavMenuPanelProps) {
+export function MobileNavMenuPanel({
+  open,
+  onOpenChange,
+}: MobileNavMenuPanelProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -55,10 +58,15 @@ export function MobileNavMenuPanel({ open, onOpenChange }: MobileNavMenuPanelPro
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sidebar-brand text-sidebar-active-foreground shadow-e1">
                 <Archive className="h-5 w-5" weight="bold" />
               </div>
-              <span className="text-sm font-semibold text-sidebar-foreground">ArchiFlow</span>
+              <span className="text-sm font-semibold text-sidebar-foreground">
+                ArchiFlow
+              </span>
             </div>
             <div className="flex-1 overflow-y-auto px-3 pb-4">
-              <ArchiFlowSidebarNav indicatorId="mobile" onNavigate={() => onOpenChange(false)} />
+              <ArchiFlowSidebarNav
+                indicatorId="mobile"
+                onNavigate={() => onOpenChange(false)}
+              />
             </div>
             <div className="border-t border-sidebar-border p-3">
               <SidebarProfileCard onNavigate={() => onOpenChange(false)} />

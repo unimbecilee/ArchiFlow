@@ -20,7 +20,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PagePanel } from "@/components/layout/page-panel";
 import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
-import { CrudDataView, type CrudBulkAction, type CrudRowAction } from "@/components/crud";
+import {
+  CrudDataView,
+  type CrudBulkAction,
+  type CrudRowAction,
+} from "@/components/crud";
 import { useAuthStore } from "@/store/auth-store";
 import type { User } from "@/types/auth";
 import { deleteUser, listUsers, patchUser } from "@/services/admin.service";
@@ -30,16 +34,16 @@ import { toast } from "sonner";
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
-    admin: "bg-zinc-900 text-white",
-    manager: "bg-amber-500/15 text-amber-800",
-    validator: "bg-emerald-500/15 text-emerald-800",
-    archivist: "bg-sky-500/15 text-sky-800",
-    user: "bg-zinc-100 text-zinc-700",
+    admin: "bg-card text-white",
+    manager: "bg-warning-soft text-warning-soft-foreground",
+    validator: "bg-primary/15 text-accent-soft-foreground",
+    archivist: "bg-info-soft text-info-soft-foreground",
+    user: "bg-muted text-foreground",
   };
   return (
     <span
       className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-        colors[role] || "bg-zinc-100 text-zinc-700"
+        colors[role] || "bg-muted text-foreground"
       }`}
     >
       {ROLE_LABELS[role as PlatformRole] ?? role}
@@ -54,7 +58,11 @@ export default function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const { data: users = [], isLoading: loading, refetch } = useQuery({
+  const {
+    data: users = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-users"],
     queryFn: listUsers,
     enabled: user?.role === "admin",
@@ -75,7 +83,7 @@ export default function AdminUsersPage() {
       (u) =>
         u.email.toLowerCase().includes(q) ||
         u.first_name.toLowerCase().includes(q) ||
-        u.last_name.toLowerCase().includes(q)
+        u.last_name.toLowerCase().includes(q),
     );
   }, [users, query]);
 
@@ -134,7 +142,7 @@ export default function AdminUsersPage() {
         },
       },
     ],
-    [load, router, user?.id, confirm, queryClient]
+    [load, router, user?.id, confirm, queryClient],
   );
 
   const bulkActions: CrudBulkAction<User>[] = useMemo(
@@ -143,7 +151,8 @@ export default function AdminUsersPage() {
         id: "deactivate",
         label: "Desactiver",
         icon: <Prohibit className="h-4 w-4" />,
-        disabled: (items) => items.every((u) => !u.is_active || u.id === user?.id),
+        disabled: (items) =>
+          items.every((u) => !u.is_active || u.id === user?.id),
         onClick: async (items) => {
           const targets = items.filter((u) => u.is_active && u.id !== user?.id);
           if (targets.length === 0) return;
@@ -157,7 +166,9 @@ export default function AdminUsersPage() {
           ) {
             return;
           }
-          await Promise.all(targets.map((u) => patchUser(u.id, { is_active: false })));
+          await Promise.all(
+            targets.map((u) => patchUser(u.id, { is_active: false })),
+          );
           toast.success(`${targets.length} compte(s) desactive(s)`);
           await load();
         },
@@ -192,7 +203,7 @@ export default function AdminUsersPage() {
         },
       },
     ],
-    [load, user?.id, confirm, queryClient]
+    [load, user?.id, confirm, queryClient],
   );
 
   if (user?.role !== "admin") {
@@ -208,11 +219,20 @@ export default function AdminUsersPage() {
         icon={<ShieldCheck className="h-6 w-6" weight="duotone" />}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={load}
+              className="gap-1.5"
+            >
               <ArrowsClockwise className="h-4 w-4" />
               Actualiser
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setDialogOpen(true)}
+            >
               <UserPlus className="h-4 w-4" weight="bold" />
               Creer
             </Button>
@@ -222,10 +242,12 @@ export default function AdminUsersPage() {
 
       <PagePanel
         title="Annuaire"
-        subtitle={loading ? "Chargement..." : `${filtered.length} utilisateur(s)`}
+        subtitle={
+          loading ? "Chargement..." : `${filtered.length} utilisateur(s)`
+        }
       >
         <div className="mb-4 relative max-w-md">
-          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Rechercher nom, prenom, e-mail..."
             className="pl-10"
@@ -237,7 +259,9 @@ export default function AdminUsersPage() {
         {loading ? (
           <ListSkeleton rows={5} />
         ) : filtered.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">Aucun utilisateur</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Aucun utilisateur
+          </p>
         ) : (
           <CrudDataView
             items={filtered}
@@ -251,11 +275,13 @@ export default function AdminUsersPage() {
                 header: "Utilisateur",
                 cell: (u) => (
                   <div>
-                    <p className="font-medium text-zinc-900">{u.email}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="font-medium text-foreground">{u.email}</p>
+                    <p className="text-xs text-muted-foreground">
                       {u.first_name} {u.last_name}
                       {u.must_change_password && (
-                        <span className="ml-2 text-amber-700">· MDP a changer</span>
+                        <span className="ml-2 text-warning-soft-foreground">
+                          · MDP a changer
+                        </span>
                       )}
                     </p>
                   </div>
@@ -272,7 +298,7 @@ export default function AdminUsersPage() {
                 hideOnMobile: true,
                 cell: (u) => (
                   <span
-                    className={`text-xs font-medium ${u.pydio_linked ? "text-emerald-700" : "text-zinc-400"}`}
+                    className={`text-xs font-medium ${u.pydio_linked ? "text-accent-soft-foreground" : "text-muted-foreground"}`}
                   >
                     {u.pydio_linked ? "Lie" : "—"}
                   </span>
@@ -283,7 +309,13 @@ export default function AdminUsersPage() {
                 header: "Actif",
                 hideOnMobile: true,
                 cell: (u) => (
-                  <span className={u.is_active ? "text-emerald-700" : "text-zinc-400"}>
+                  <span
+                    className={
+                      u.is_active
+                        ? "text-accent-soft-foreground"
+                        : "text-muted-foreground"
+                    }
+                  >
                     {u.is_active ? "Oui" : "Non"}
                   </span>
                 ),
@@ -291,13 +323,21 @@ export default function AdminUsersPage() {
             ]}
             renderGridCard={(u) => (
               <div className="space-y-2">
-                <p className="truncate font-medium text-zinc-900">{u.email}</p>
-                <p className="text-xs text-zinc-500">
+                <p className="truncate font-medium text-foreground">
+                  {u.email}
+                </p>
+                <p className="text-xs text-muted-foreground">
                   {u.first_name} {u.last_name}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <RoleBadge role={u.role} />
-                  <span className={u.is_active ? "text-xs text-emerald-700" : "text-xs text-zinc-400"}>
+                  <span
+                    className={
+                      u.is_active
+                        ? "text-xs text-accent-soft-foreground"
+                        : "text-xs text-muted-foreground"
+                    }
+                  >
                     {u.is_active ? "Actif" : "Inactif"}
                   </span>
                 </div>

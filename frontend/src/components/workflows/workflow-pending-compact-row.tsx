@@ -30,8 +30,8 @@ export function WorkflowPendingCompactRow({ item, onRefresh }: Props) {
       title: kind === "approve" ? "Approuver" : "Rejeter",
       description:
         kind === "approve"
-          ? `Confirmer l'approbation de « ${item.document_titre || `Document #${item.document_id}` } » ?`
-          : `Confirmer le rejet de « ${item.document_titre || `Document #${item.document_id}` } » ?`,
+          ? `Confirmer l'approbation de « ${item.document_titre || `Document #${item.document_id}`} » ?`
+          : `Confirmer le rejet de « ${item.document_titre || `Document #${item.document_id}`} » ?`,
       confirmLabel: kind === "approve" ? "Approuver" : "Rejeter",
       destructive: kind === "reject",
     });
@@ -50,22 +50,29 @@ export function WorkflowPendingCompactRow({ item, onRefresh }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="truncate font-medium text-zinc-900">
+        <p className="truncate font-medium text-foreground">
           {item.document_titre || `Document #${item.document_id}`}
         </p>
-        <p className="truncate text-xs text-zinc-500">
+        <p className="truncate text-xs text-muted-foreground">
           {item.workflow_nom} · {item.etape_courante_nom || "—"} · #{item.id}
         </p>
-        <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-zinc-600">
-          <Checkbox checked={verified} onCheckedChange={(v) => setVerified(!!v)} />
+        <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+          <Checkbox
+            checked={verified}
+            onCheckedChange={(v) => setVerified(!!v)}
+          />
           J&apos;ai verifie le document
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" asChild className="gap-1">
-          <Link href={`/documents/${item.document_id}`} target="_blank" rel="noopener noreferrer">
+          <Link
+            href={`/documents/${item.document_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <ArrowSquareOut className="h-4 w-4" />
             Voir
           </Link>
@@ -83,7 +90,7 @@ export function WorkflowPendingCompactRow({ item, onRefresh }: Props) {
           size="sm"
           variant="outline"
           disabled={!verified || acting}
-          className="gap-1 border-red-200 text-red-700 hover:bg-red-50"
+          className="gap-1 border-destructive/30 text-destructive-soft-foreground hover:bg-destructive-soft"
           onClick={() => void run("reject")}
         >
           <XCircle className="h-4 w-4" weight="bold" />

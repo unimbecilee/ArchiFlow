@@ -19,57 +19,63 @@ export type CreateUserResult = {
 };
 
 export async function listUsers(): Promise<User[]> {
-  const res = await api.get<{ success: boolean; data: User[] }>("/api/admin/users");
+  const res = await api.get<{ success: boolean; data: User[] }>(
+    "/api/admin/users",
+  );
   return res.data.data ?? [];
 }
 
 export async function getUser(id: number): Promise<AdminUserDetail> {
   const res = await api.get<{ success: boolean; data: AdminUserDetail }>(
-    `/api/admin/users/${id}`
+    `/api/admin/users/${id}`,
   );
   return res.data.data;
 }
 
-export async function createUser(payload: CreateUserPayload): Promise<CreateUserResult> {
+export async function createUser(
+  payload: CreateUserPayload,
+): Promise<CreateUserResult> {
   const res = await api.post<{ success: boolean; data: CreateUserResult }>(
     "/api/admin/users",
-    payload
+    payload,
   );
   return res.data.data;
 }
 
 export async function updateUser(
   id: number,
-  payload: AdminUpdateUserPayload
+  payload: AdminUpdateUserPayload,
 ): Promise<AdminUserDetail> {
   const res = await api.put<{ success: boolean; data: AdminUserDetail }>(
     `/api/admin/users/${id}`,
-    payload
+    payload,
   );
   return res.data.data;
 }
 
 export async function patchUser(
   id: number,
-  patch: { role?: string; is_active?: boolean }
+  patch: { role?: string; is_active?: boolean },
 ): Promise<User> {
   const res = await api.patch<{ success: boolean; data: User }>(
     `/api/admin/users/${id}`,
-    patch
+    patch,
   );
   return res.data.data;
 }
 
-export async function resendCredentials(id: number): Promise<AdminUserActionResult> {
+export async function resendCredentials(
+  id: number,
+): Promise<AdminUserActionResult> {
   const res = await api.post<{ success: boolean; data: AdminUserActionResult }>(
-    `/api/admin/users/${id}/resend-credentials`
+    `/api/admin/users/${id}/resend-credentials`,
   );
   return res.data.data;
 }
 
 export async function syncPydio(id: number): Promise<AdminUserActionResult> {
   const res = await api.post<{ success: boolean; data: AdminUserActionResult }>(
-    `/api/admin/users/${id}/sync-pydio`
+    `/api/admin/users/${id}/sync-pydio`,
   );
   return res.data.data;
 }

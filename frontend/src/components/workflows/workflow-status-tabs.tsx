@@ -3,11 +3,7 @@
 import { cn } from "@/lib/utils";
 
 export type WorkflowStatusTab =
-  | "all"
-  | "APPROUVE"
-  | "REJETE"
-  | "ANNULE"
-  | "my-decisions";
+  "all" | "APPROUVE" | "REJETE" | "ANNULE" | "my-decisions";
 
 const TABS: { id: WorkflowStatusTab; label: string }[] = [
   { id: "all", label: "Tous" },
@@ -23,7 +19,11 @@ type WorkflowStatusTabsProps = {
   counts?: Partial<Record<WorkflowStatusTab, number>>;
 };
 
-export function WorkflowStatusTabs({ value, onChange, counts }: WorkflowStatusTabsProps) {
+export function WorkflowStatusTabs({
+  value,
+  onChange,
+  counts,
+}: WorkflowStatusTabsProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {TABS.map((tab) => (
@@ -35,7 +35,7 @@ export function WorkflowStatusTabs({ value, onChange, counts }: WorkflowStatusTa
             "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
             value === tab.id
               ? "bg-primary text-primary-foreground shadow-sm"
-              : "border border-border bg-card text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-foreground"
+              : "border border-border bg-card text-muted-foreground hover:border-primary/30 hover:bg-accent hover:text-foreground",
           )}
         >
           {tab.label}

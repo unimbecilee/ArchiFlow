@@ -63,7 +63,7 @@ func (s *SearchService) EnsureIndex(ctx context.Context) error {
 		return nil
 	}
 	idx := s.client.Index(s.indexUID)
-	_, err := idx.UpdateFilterableAttributes(&[]string{"owner_id", "classification", "category", "folder_id", "mime_type"})
+	_, err := idx.UpdateFilterableAttributes(&[]string{"id", "owner_id", "classification", "category", "folder_id", "mime_type"})
 	if err != nil {
 		return err
 	}
@@ -112,22 +112,75 @@ func (s *SearchService) SearchWithFacets(ctx context.Context, ownerID uint, isAd
 	}
 	if s.Enabled() {
 		docs, total, facets, err := s.searchMeili(ctx, ownerID, isAdmin, query, filters, limit, offset)
-		if err == nil {
+		// Index Meili souvent partiel : 0 hit → fallback Postgres (ILIKE / FTS).
+		if err == nil && total > 0 && len(docs) > 0 {
 			return docs, total, facets, nil
 		}
-		log.Printf("meilisearch fallback to postgres: %v", err)
+		if err != nil {
+			log.Printf("meilisearch fallback to postgres: %v", err)
+		}
 	}
-	docs, err := s.documentRepo.SearchFullText(ownerID, isAdmin, query, limit)
+	return s.searchPostgres(ownerID, isAdmin, query, filters, limit, offset)
+}
+
+func (s *SearchService) searchPostgres(ownerID uint, isAdmin bool, query string, filters map[string]string, limit, offset int) ([]models.Document, int64, map[string]map[string]int64, error) {
+	docs, err := s.documentRepo.SearchFullText(ownerID, isAdmin, query, 200)
 	if err != nil || len(docs) == 0 {
-		docs, err = s.documentRepo.Search(ownerID, isAdmin, query, limit)
+		docs, err = s.documentRepo.Search(ownerID, isAdmin, query, 200)
 	}
-	return docs, int64(len(docs)), nil, err
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	docs = filterDocumentsByMeta(docs, filters)
+	total := int64(len(docs))
+	if offset > 0 {
+		if offset >= len(docs) {
+			docs = nil
+		} else {
+			docs = docs[offset:]
+		}
+	}
+	if limit > 0 && len(docs) > limit {
+		docs = docs[:limit]
+	}
+	return docs, total, nil, nil
+}
+
+func filterDocumentsByMeta(docs []models.Document, filters map[string]string) []models.Document {
+	if len(filters) == 0 || len(docs) == 0 {
+		return docs
+	}
+	classWant := strings.TrimSpace(filters["classification"])
+	catWant := strings.TrimSpace(filters["category"])
+	if classWant == "" && catWant == "" {
+		return docs
+	}
+	out := make([]models.Document, 0, len(docs))
+	for _, d := range docs {
+		if classWant != "" && !strings.EqualFold(d.Classification, classWant) {
+			continue
+		}
+		if catWant != "" && !strings.EqualFold(d.Category, catWant) {
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
 }
 
 func (s *SearchService) searchMeili(ctx context.Context, ownerID uint, isAdmin bool, query string, filters map[string]string, limit int, offset int) ([]models.Document, int64, map[string]map[string]int64, error) {
 	var parts []string
 	if !isAdmin {
-		parts = append(parts, fmt.Sprintf("owner_id = %d", ownerID))
+		sharedIDs, _ := s.documentRepo.ListSharedDocumentIDs(ownerID)
+		if len(sharedIDs) == 0 {
+			parts = append(parts, fmt.Sprintf("owner_id = %d", ownerID))
+		} else {
+			ids := make([]string, 0, len(sharedIDs))
+			for _, id := range sharedIDs {
+				ids = append(ids, strconv.FormatUint(uint64(id), 10))
+			}
+			parts = append(parts, fmt.Sprintf("(owner_id = %d OR id IN [%s])", ownerID, strings.Join(ids, ", ")))
+		}
 	}
 	if v := strings.TrimSpace(filters["classification"]); v != "" {
 		parts = append(parts, fmt.Sprintf("classification = %q", v))
@@ -150,16 +203,11 @@ func (s *SearchService) searchMeili(ctx context.Context, ownerID uint, isAdmin b
 	}
 	ids := make([]uint, 0, len(res.Hits))
 	for _, hit := range res.Hits {
-		m, ok := hit.(map[string]any)
+		id, ok := hitID(hit)
 		if !ok {
 			continue
 		}
-		switch v := m["id"].(type) {
-		case float64:
-			ids = append(ids, uint(v))
-		case int64:
-			ids = append(ids, uint(v))
-		}
+		ids = append(ids, id)
 	}
 	docs := make([]models.Document, 0, len(ids))
 	for _, id := range ids {
@@ -171,6 +219,48 @@ func (s *SearchService) searchMeili(ctx context.Context, ownerID uint, isAdmin b
 	}
 	facets := parseFacetDistribution(res.FacetDistribution)
 	return docs, res.EstimatedTotalHits, facets, nil
+}
+
+func hitID(hit any) (uint, bool) {
+	switch m := hit.(type) {
+	case map[string]any:
+		return coerceUint(m["id"])
+	default:
+		b, err := json.Marshal(hit)
+		if err != nil {
+			return 0, false
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(b, &decoded); err != nil {
+			return 0, false
+		}
+		return coerceUint(decoded["id"])
+	}
+}
+
+func coerceUint(v any) (uint, bool) {
+	switch n := v.(type) {
+	case float64:
+		return uint(n), true
+	case int64:
+		return uint(n), true
+	case int:
+		return uint(n), true
+	case json.Number:
+		i, err := n.Int64()
+		if err != nil {
+			return 0, false
+		}
+		return uint(i), true
+	case string:
+		i, err := strconv.ParseUint(n, 10, 64)
+		if err != nil {
+			return 0, false
+		}
+		return uint(i), true
+	default:
+		return 0, false
+	}
 }
 
 func parseFacetDistribution(raw any) map[string]map[string]int64 {

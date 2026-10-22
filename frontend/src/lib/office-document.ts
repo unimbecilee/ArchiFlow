@@ -12,7 +12,10 @@ const OFFICE_EXT = new Set([
   ".odp",
 ]);
 
-export function isOfficeDocument(mimeType?: string, fileName?: string): boolean {
+export function isOfficeDocument(
+  mimeType?: string,
+  fileName?: string,
+): boolean {
   const ext = (fileName || "").toLowerCase().match(/\.[^.]+$/)?.[0] || "";
   if (OFFICE_EXT.has(ext)) return true;
   const m = (mimeType || "").toLowerCase();
@@ -38,14 +41,23 @@ export function canEditOfficeDocument(doc: {
   // 5A : se fier au droit reel, pas au role seul
   if (typeof doc.can_write === "boolean") {
     if (!doc.can_write) {
-      return { ok: false, reason: "Vous n'avez pas le droit de modifier ce document." };
+      return {
+        ok: false,
+        reason: "Vous n'avez pas le droit de modifier ce document.",
+      };
     }
   } else if (doc.capabilities?.write_documents === false) {
-    return { ok: false, reason: "Vous n'avez pas le droit de modifier ce document." };
+    return {
+      ok: false,
+      reason: "Vous n'avez pas le droit de modifier ce document.",
+    };
   }
 
   if (!doc.office_editable) {
-    return { ok: false, reason: "Ce type de fichier ne supporte pas l'edition bureautique." };
+    return {
+      ok: false,
+      reason: "Ce type de fichier ne supporte pas l'edition bureautique.",
+    };
   }
   if (doc.status === "EN_VALIDATION") {
     return {
@@ -54,7 +66,10 @@ export function canEditOfficeDocument(doc: {
     };
   }
   if (doc.is_locked) {
-    return { ok: false, reason: "Document verrouille. Deverrouillez-le pour editer." };
+    return {
+      ok: false,
+      reason: "Document verrouille. Deverrouillez-le pour editer.",
+    };
   }
   return { ok: true };
 }

@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShareNetwork, ArrowsClockwise, FileText, Eye } from "@phosphor-icons/react";
+import {
+  ShareNetwork,
+  ArrowsClockwise,
+  FileText,
+  Eye,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PageFrame } from "@/components/layout/page-frame";
@@ -51,7 +56,7 @@ export default function DocumentsPartagesPage() {
         onClick: (doc) => router.push(`/documents/${doc.id}`),
       },
     ],
-    [router]
+    [router],
   );
 
   return (
@@ -62,13 +67,18 @@ export default function DocumentsPartagesPage() {
         icon={<ShareNetwork className="h-5 w-5" weight="duotone" />}
         badge={
           unreadShares > 0 ? (
-            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-sky-100">
+            <span className="rounded-full bg-info-soft px-2 py-0.5 text-xs font-medium text-info-soft-foreground ring-1 ring-info/20">
               {unreadShares === 1 ? "1 non lu" : `${unreadShares} non lus`}
             </span>
           ) : undefined
         }
         actions={
-          <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            className="gap-1.5"
+          >
             <ArrowsClockwise className="h-4 w-4" />
             Actualiser
           </Button>
@@ -109,8 +119,10 @@ export default function DocumentsPartagesPage() {
                       <FileText className="h-4 w-4" weight="duotone" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-zinc-900">{doc.titre}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="truncate font-medium text-foreground">
+                        {doc.titre}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         {doc.taille_formatee || doc.taille} ·{" "}
                         {doc.permissions?.join(", ") || "lecture"}
                       </p>
@@ -123,7 +135,7 @@ export default function DocumentsPartagesPage() {
                 header: "Partage",
                 hideOnMobile: true,
                 cell: (doc) => (
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(doc.date_partage).toLocaleDateString("fr-FR")}
                   </span>
                 ),
@@ -134,11 +146,11 @@ export default function DocumentsPartagesPage() {
                 <span className="icon-well">
                   <FileText className="h-5 w-5" weight="duotone" />
                 </span>
-                <p className="font-medium text-zinc-900">{doc.titre}</p>
-                <p className="text-xs text-zinc-500">
+                <p className="font-medium text-foreground">{doc.titre}</p>
+                <p className="text-xs text-muted-foreground">
                   {doc.permissions?.join(", ") || "lecture"}
                 </p>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted-foreground">
                   {new Date(doc.date_partage).toLocaleDateString("fr-FR")}
                 </p>
               </div>
@@ -146,7 +158,10 @@ export default function DocumentsPartagesPage() {
           />
         )}
       </PagePanel>
-      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+      <DocumentQuickPreview
+        doc={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
     </PageFrame>
   );
 }

@@ -8,23 +8,51 @@ export type PreviewKind =
   | "office"
   | "unknown";
 
-const OFFICE_EXT = /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf|csv)$/i;
+const OFFICE_EXT = /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf)$/i;
 
-export function resolvePreviewKind(mime?: string, fileName?: string): PreviewKind {
+/** CSV / texte editable : apercu navigateur plutot que Collabora. */
+export function isPlainTextPreferable(mime?: string, fileName?: string): boolean {
+  const m = (mime || "").toLowerCase().trim();
+  const name = (fileName || "").toLowerCase();
+  if (m === "text/csv" || m === "application/csv" || name.endsWith(".csv")) {
+    return true;
+  }
+  if (m.startsWith("text/") || m === "application/json" || m === "application/xml") {
+    return true;
+  }
+  return /\.(txt|md|markdown|json|xml|log|yml|yaml|html?|css|js|ts|tsx|jsx)$/i.test(
+    name,
+  );
+}
+
+export function resolvePreviewKind(
+  mime?: string,
+  fileName?: string,
+): PreviewKind {
   const m = (mime || "").toLowerCase().trim();
   const name = (fileName || "").toLowerCase();
 
-  if (m.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg|avif|ico)$/i.test(name)) {
+  if (
+    m.startsWith("image/") ||
+    /\.(png|jpe?g|gif|webp|bmp|svg|avif|ico|tiff?)$/i.test(name)
+  ) {
     return "image";
   }
   if (m === "application/pdf" || name.endsWith(".pdf")) {
     return "pdf";
   }
+  // Texte / CSV avant office (csv etait classe office a tort).
   if (
     m.startsWith("text/") ||
     m === "application/json" ||
     m === "application/xml" ||
-    /\.(txt|md|markdown|json|xml|csv|log|yml|yaml|html?|css|js|ts|tsx|jsx)$/i.test(name)
+    m === "application/javascript" ||
+    m === "application/x-yaml" ||
+    m === "application/yaml" ||
+    m === "application/csv" ||
+    /\.(txt|md|markdown|json|xml|csv|log|yml|yaml|html?|css|js|ts|tsx|jsx)$/i.test(
+      name,
+    )
   ) {
     return "text";
   }
@@ -43,14 +71,19 @@ export function resolvePreviewKind(mime?: string, fileName?: string): PreviewKin
     m === "application/vnd.ms-excel" ||
     m === "application/vnd.ms-powerpoint" ||
     m === "application/rtf" ||
-    m === "text/csv"
+    m === "application/vnd.oasis.opendocument.text" ||
+    m === "application/vnd.oasis.opendocument.spreadsheet" ||
+    m === "application/vnd.oasis.opendocument.presentation"
   ) {
     return "office";
   }
   return "unknown";
 }
 
-export function isBrowserPreviewable(mime?: string, fileName?: string): boolean {
+export function isBrowserPreviewable(
+  mime?: string,
+  fileName?: string,
+): boolean {
   const kind = resolvePreviewKind(mime, fileName);
   return kind !== "unknown" && kind !== "office";
 }

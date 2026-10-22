@@ -17,7 +17,12 @@ import { getFavorites } from "@/services/favorites.service";
 
 export default function FavorisPage() {
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-  const { items: docs, loading, load, error } = useDocumentListPage({
+  const {
+    items: docs,
+    loading,
+    load,
+    error,
+  } = useDocumentListPage({
     loadFn: getFavorites,
   });
   const { rowActions, bulkActions } = useFavoriteDocumentActions(load);
@@ -29,7 +34,12 @@ export default function FavorisPage() {
         description="Documents que vous avez marqués pour y revenir vite."
         icon={<Star className="h-5 w-5" weight="duotone" />}
         actions={
-          <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            className="gap-1.5"
+          >
             <ArrowsClockwise className="h-4 w-4" />
             Actualiser
           </Button>
@@ -58,7 +68,10 @@ export default function FavorisPage() {
           />
         )}
       </PagePanel>
-      <DocumentQuickPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+      <DocumentQuickPreview
+        doc={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
     </PageFrame>
   );
 }

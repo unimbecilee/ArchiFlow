@@ -39,7 +39,11 @@ export default function EnCoursPage() {
         description="Suivez l'avancement de vos demandes de validation actives."
         icon={<ListBullets className="h-6 w-6" weight="duotone" />}
       />
-      {loading ? <ListSkeleton rows={3} /> : <WorkflowInstanceList items={items} mode="progress" onRefresh={load} />}
+      {loading ? (
+        <ListSkeleton rows={3} />
+      ) : (
+        <WorkflowInstanceList items={items} mode="progress" onRefresh={load} />
+      )}
     </PageFrame>
   );
 }

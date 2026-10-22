@@ -12,15 +12,22 @@ type SidebarProfileCardProps = {
   className?: string;
 };
 
-export function SidebarProfileCard({ onNavigate, className }: SidebarProfileCardProps) {
+export function SidebarProfileCard({
+  onNavigate,
+  className,
+}: SidebarProfileCardProps) {
   const { user, logout } = useAuthStore();
   const roleKey = user?.role as PlatformRole | undefined;
   const roleLabel =
-    roleKey && ROLE_LABELS[roleKey] ? ROLE_LABELS[roleKey] : user?.role ?? "Utilisateur";
+    roleKey && ROLE_LABELS[roleKey]
+      ? ROLE_LABELS[roleKey]
+      : (user?.role ?? "Utilisateur");
   const name = userDisplayName(user?.email, user?.first_name, user?.last_name);
 
   return (
-    <div className={cn("flex items-center gap-1 rounded-lg px-1 py-1", className)}>
+    <div
+      className={cn("flex items-center gap-1 rounded-lg px-1 py-1", className)}
+    >
       <Link
         href="/parametres/compte"
         onClick={onNavigate}
@@ -31,10 +38,15 @@ export function SidebarProfileCard({ onNavigate, className }: SidebarProfileCard
           {userInitials(user?.email, user?.first_name, user?.last_name)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium text-sidebar-foreground">{name}</p>
+          <p className="truncate text-[13px] font-medium text-sidebar-foreground">
+            {name}
+          </p>
           <p className="text-[11px] text-sidebar-muted">{roleLabel}</p>
         </div>
-        <GearSix className="h-4 w-4 shrink-0 text-sidebar-muted" weight="regular" />
+        <GearSix
+          className="h-4 w-4 shrink-0 text-sidebar-muted"
+          weight="regular"
+        />
       </Link>
       <button
         type="button"

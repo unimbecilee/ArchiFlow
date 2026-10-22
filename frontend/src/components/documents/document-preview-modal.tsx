@@ -12,7 +12,15 @@ import type { Document } from "@/types/documents";
 type Props = {
   open: boolean;
   onClose: () => void;
-  doc: Pick<Document, "id" | "titre" | "mime_type" | "file_name" | "previewable" | "taille_formatee">;
+  doc: Pick<
+    Document,
+    | "id"
+    | "titre"
+    | "mime_type"
+    | "file_name"
+    | "previewable"
+    | "taille_formatee"
+  >;
 };
 
 export function DocumentPreviewModal({ open, onClose, doc }: Props) {
@@ -48,14 +56,14 @@ export function DocumentPreviewModal({ open, onClose, doc }: Props) {
           role="dialog"
           aria-modal="true"
           aria-label={`Apercu — ${doc.titre}`}
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-zinc-950/60 p-2 backdrop-blur-sm sm:p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/60 p-2 backdrop-blur-sm sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
           <motion.div
-            className={`flex w-[min(98vw,1440px)] max-w-none flex-col overflow-hidden rounded-[1.25rem] border border-slate-200/80 bg-white shadow-[0_24px_64px_-24px_rgba(15,23,42,0.35)] sm:rounded-[1.75rem] ${
+            className={`flex w-[min(98vw,1440px)] max-w-none flex-col overflow-hidden rounded-[1.25rem] border border-border bg-card shadow-[0_24px_64px_-24px_rgba(15,23,42,0.35)] sm:rounded-[1.75rem] ${
               isPdf ? "h-[min(94dvh,920px)]" : "max-h-[min(92dvh,900px)]"
             }`}
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -64,15 +72,15 @@ export function DocumentPreviewModal({ open, onClose, doc }: Props) {
             transition={{ type: "spring", stiffness: 120, damping: 22 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3 sm:px-6">
+            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6">
               <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   Apercu document
                 </p>
-                <h2 className="truncate text-base font-semibold tracking-tight text-zinc-900 sm:text-lg">
+                <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-lg">
                   {doc.titre}
                 </h2>
-                <p className="truncate text-xs text-zinc-500">
+                <p className="truncate text-xs text-muted-foreground">
                   {doc.mime_type}
                   {doc.taille_formatee ? ` · ${doc.taille_formatee}` : ""}
                 </p>
@@ -83,7 +91,12 @@ export function DocumentPreviewModal({ open, onClose, doc }: Props) {
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => void downloadDocumentFile(doc.id, doc.file_name || doc.titre)}
+                  onClick={() =>
+                    void downloadDocumentFile(
+                      doc.id,
+                      doc.file_name || doc.titre,
+                    )
+                  }
                 >
                   <DownloadSimple className="h-4 w-4" />
                   <span className="hidden sm:inline">Telecharger</span>
@@ -91,7 +104,7 @@ export function DocumentPreviewModal({ open, onClose, doc }: Props) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl border border-slate-200 p-2 text-zinc-500 transition-colors hover:bg-zinc-50 active:scale-[0.98]"
+                  className="rounded-xl border border-border p-2 text-muted-foreground transition-colors hover:bg-muted active:scale-[0.98]"
                   aria-label="Fermer"
                 >
                   <X className="h-4 w-4" />
@@ -100,15 +113,21 @@ export function DocumentPreviewModal({ open, onClose, doc }: Props) {
             </header>
             <div
               className={`min-h-0 flex-1 overflow-hidden ${
-                isPdf ? "bg-zinc-900 p-1.5 sm:p-2" : "overflow-auto bg-zinc-50/50 p-4 sm:p-6"
+                isPdf
+                  ? "bg-card p-1.5 sm:p-2"
+                  : "overflow-auto bg-muted/40 p-4 sm:p-6"
               }`}
             >
-              <DocumentPreviewPane doc={doc} expanded className="h-full w-full" />
+              <DocumentPreviewPane
+                doc={doc}
+                expanded
+                className="h-full w-full"
+              />
             </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }

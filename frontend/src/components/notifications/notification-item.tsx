@@ -11,7 +11,11 @@ type NotificationItemProps = {
   index?: number;
 };
 
-export function NotificationItem({ notification, onClick, index = 0 }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  onClick,
+  index = 0,
+}: NotificationItemProps) {
   const meta = getNotificationMeta(notification.type);
   const Icon = meta.Icon;
 
@@ -24,8 +28,8 @@ export function NotificationItem({ notification, onClick, index = 0 }: Notificat
       <button
         type="button"
         onClick={() => onClick(notification)}
-        className={`group flex w-full items-start gap-3 rounded-2xl px-3 py-4 text-left transition-colors hover:bg-zinc-50 ${
-          !notification.is_read ? "bg-emerald-500/5 ring-1 ring-emerald-500/10" : ""
+        className={`group flex w-full items-start gap-3 rounded-2xl px-3 py-4 text-left transition-colors hover:bg-muted ${
+          !notification.is_read ? "bg-primary/5 ring-1 ring-primary/15" : ""
         }`}
       >
         <span className={`mt-0.5 rounded-xl p-2.5 ${meta.iconBg}`}>
@@ -34,24 +38,26 @@ export function NotificationItem({ notification, onClick, index = 0 }: Notificat
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <p
-              className={`text-sm text-zinc-900 ${
+              className={`text-sm text-foreground ${
                 !notification.is_read ? "font-semibold" : "font-medium"
               }`}
             >
               {notification.title}
             </p>
             {!notification.is_read && (
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
             )}
           </div>
-          <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{notification.message}</p>
-          <p className="mt-2 text-xs text-zinc-400">
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+            {notification.message}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
             {new Date(notification.created_at).toLocaleString("fr-FR")} ·{" "}
             <span className={`font-medium ${meta.accent}`}>{meta.label}</span>
           </p>
         </div>
         {notification.link && (
-          <CaretRight className="mt-2 h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-emerald-600" />
+          <CaretRight className="mt-2 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
         )}
       </button>
     </motion.li>

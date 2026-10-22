@@ -1,7 +1,10 @@
 export function formatBytes(bytes: number): string {
   if (!bytes) return "—";
   const units = ["o", "Ko", "Mo", "Go"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const i = Math.min(
+    units.length - 1,
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+  );
   const value = bytes / 1024 ** i;
   return `${value.toLocaleString("fr-FR", {
     maximumFractionDigits: i === 0 ? 0 : 1,

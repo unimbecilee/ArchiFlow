@@ -35,7 +35,9 @@ type NotificationContextValue = {
   openNotification: (n: Notification) => Promise<void>;
 };
 
-const NotificationContext = createContext<NotificationContextValue | null>(null);
+const NotificationContext = createContext<NotificationContextValue | null>(
+  null,
+);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -76,7 +78,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const href = normalizeNotificationLink(n.link);
       if (href) router.push(href);
     },
-    [router]
+    [router],
   );
 
   const showToast = useCallback(
@@ -101,12 +103,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           : undefined,
       });
     },
-    [openNotification]
+    [openNotification],
   );
 
   const handleStream = useCallback(
-    (payload: { unread: number; unread_shares?: number; items?: Notification[] }) => {
-      setUnread(payload.unread);
+    (payload: {
+      unread: number;
+      unread_shares?: number;
+      items?: Notification[];
+    }) => {
+      if (typeof payload.unread === "number") {
+        setUnread(payload.unread);
+      }
       if (typeof payload.unread_shares === "number") {
         setUnreadShares(payload.unread_shares);
       }
@@ -116,7 +124,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (!n.is_read) showToast(n);
       }
     },
-    [showToast]
+    [showToast],
   );
 
   useNotificationRealtime(handleStream);
@@ -125,18 +133,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ unread, unreadShares, refresh, openNotification }),
-    [unread, unreadShares, refresh, openNotification]
+    [unread, unreadShares, refresh, openNotification],
   );
 
   return (
-    <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
   );
 }
 
 export function useNotifications() {
   const ctx = useContext(NotificationContext);
   if (!ctx) {
-    throw new Error("useNotifications must be used within NotificationProvider");
+    throw new Error(
+      "useNotifications must be used within NotificationProvider",
+    );
   }
   return ctx;
 }

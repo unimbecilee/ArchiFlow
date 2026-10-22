@@ -38,12 +38,18 @@ export function useWorkflowApprovalToasts(enabled: boolean) {
   }, [enabled, router]);
 }
 
-export function userCanApproveWorkflows(user: {
-  role?: string;
-  capabilities?: { approve_workflows?: boolean };
-} | null): boolean {
+export function userCanApproveWorkflows(
+  user: {
+    role?: string;
+    capabilities?: { approve_workflows?: boolean };
+  } | null,
+): boolean {
   if (!user) return false;
   if (user.capabilities?.approve_workflows === true) return true;
   if (user.capabilities?.approve_workflows === false) return false;
-  return user.role === "admin" || user.role === "manager" || user.role === "validator";
+  return (
+    user.role === "admin" ||
+    user.role === "manager" ||
+    user.role === "validator"
+  );
 }

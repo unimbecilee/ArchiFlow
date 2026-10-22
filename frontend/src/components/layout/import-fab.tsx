@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileArrowUp, Pause, Play, UploadSimple, X } from "@phosphor-icons/react";
+import {
+  FileArrowUp,
+  Pause,
+  Play,
+  UploadSimple,
+  X,
+} from "@phosphor-icons/react";
 import { buildMenuAccessContext } from "@/lib/menu-access";
 import { pushPendingImportFiles } from "@/lib/pending-import";
 import { readUserPrefs } from "@/lib/user-prefs";
@@ -17,7 +23,10 @@ function subscribePrefs(onStoreChange: () => void) {
   window.addEventListener("archiflow-prefs", onStoreChange as EventListener);
   return () => {
     window.removeEventListener("storage", onStorage);
-    window.removeEventListener("archiflow-prefs", onStoreChange as EventListener);
+    window.removeEventListener(
+      "archiflow-prefs",
+      onStoreChange as EventListener,
+    );
   };
 }
 
@@ -28,7 +37,7 @@ export function ImportFab() {
   const showFab = useSyncExternalStore(
     subscribePrefs,
     () => readUserPrefs().showImportFab,
-    () => true
+    () => true,
   );
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,7 +45,8 @@ export function ImportFab() {
   useEffect(() => {
     const openPanel = () => setOpen(true);
     window.addEventListener("archiflow:open-uploader", openPanel);
-    return () => window.removeEventListener("archiflow:open-uploader", openPanel);
+    return () =>
+      window.removeEventListener("archiflow:open-uploader", openPanel);
   }, []);
 
   if (!canWrite || !showFab) return null;
@@ -57,15 +67,15 @@ export function ImportFab() {
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15 dark:border-zinc-800 dark:bg-zinc-900"
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            className="w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-border bg-card shadow-e3"
           >
-            <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Importer</p>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <p className="text-sm font-semibold text-foreground">Importer</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground active:scale-[0.98]"
                 aria-label="Fermer"
               >
                 <X className="h-4 w-4" />
@@ -77,22 +87,23 @@ export function ImportFab() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                if (e.dataTransfer.files.length) sendFiles(e.dataTransfer.files);
+                if (e.dataTransfer.files.length)
+                  sendFiles(e.dataTransfer.files);
               }}
-              className="mx-4 mb-4 mt-3 flex w-[calc(100%-2rem)] flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-5 text-center hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/60"
+              className="mx-4 mb-4 mt-3 flex w-[calc(100%-2rem)] flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-primary/35 bg-accent-soft/60 px-4 py-5 text-center transition-colors hover:border-primary/55 hover:bg-accent-soft active:scale-[0.99]"
             >
-              <FileArrowUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+              <FileArrowUp className="h-6 w-6 text-primary" />
+              <span className="text-sm font-medium text-accent-soft-foreground">
                 Glissez vos fichiers ou cliquez pour parcourir
               </span>
-              <span className="text-[11px] text-emerald-700/70 dark:text-emerald-400/80">
+              <span className="text-[11px] text-muted-foreground">
                 Reprise automatique en cas de coupure réseau
               </span>
             </button>
-            <p className="flex items-center justify-center gap-2 px-4 pb-4 text-[11px] text-zinc-400">
+            <p className="flex items-center justify-center gap-2 px-4 pb-4 text-[11px] text-muted-foreground">
               <Play className="h-3 w-3" />
               <Pause className="h-3 w-3" />
-              Pause et reprise disponibles sur la page d’import
+              Pause et reprise disponibles sur la page d&apos;import
             </p>
           </motion.div>
         )}
@@ -103,7 +114,7 @@ export function ImportFab() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-600/30 hover:bg-emerald-500"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e3 hover:bg-primary-hover"
         aria-label={open ? "Fermer l’import" : "Importer des documents"}
         aria-expanded={open}
       >

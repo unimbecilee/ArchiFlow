@@ -25,9 +25,20 @@ export function FadeUp({
   );
 }
 
-export function Stagger({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Stagger({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <motion.div className={cn(className)} variants={stagger} initial="hidden" animate="show">
+    <motion.div
+      className={cn(className)}
+      variants={stagger}
+      initial="hidden"
+      animate="show"
+    >
       {children}
     </motion.div>
   );

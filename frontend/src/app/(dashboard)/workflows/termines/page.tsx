@@ -39,7 +39,7 @@ export default function TerminesPage() {
           await getCompleted({
             status: tab === "all" ? undefined : tab,
             all: canViewAll && viewAll,
-          })
+          }),
         );
       }
     } catch (err) {
@@ -67,12 +67,12 @@ export default function TerminesPage() {
         <div className="space-y-4">
           <WorkflowStatusTabs value={tab} onChange={setTab} />
           {canViewAll && tab !== "my-decisions" && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-600">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
                 checked={viewAll}
                 onChange={(e) => setViewAll(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500/30"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
               />
               <Label className="cursor-pointer font-normal">
                 Voir toute l&apos;organisation

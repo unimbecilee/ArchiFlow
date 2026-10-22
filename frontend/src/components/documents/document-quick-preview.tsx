@@ -14,7 +14,10 @@ type DocumentQuickPreviewProps = {
   onClose: () => void;
 };
 
-export function DocumentQuickPreview({ doc, onClose }: DocumentQuickPreviewProps) {
+export function DocumentQuickPreview({
+  doc,
+  onClose,
+}: DocumentQuickPreviewProps) {
   useEffect(() => {
     if (!doc) return;
     const onKey = (e: KeyboardEvent) => {
@@ -31,7 +34,7 @@ export function DocumentQuickPreview({ doc, onClose }: DocumentQuickPreviewProps
           <motion.button
             type="button"
             aria-label="Fermer l'apercu"
-            className="fixed inset-0 z-[60] bg-zinc-950/40 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[60] bg-overlay backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -46,28 +49,41 @@ export function DocumentQuickPreview({ doc, onClose }: DocumentQuickPreviewProps
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
           >
-            <header className="flex items-start justify-between gap-3 border-b border-slate-200/70 bg-white px-5 py-4">
+            <header className="flex items-start justify-between gap-3 border-b border-border bg-card px-5 py-4">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Apercu rapide
                 </p>
-                <h2 id="quick-preview-title" className="mt-1 truncate text-lg font-semibold text-zinc-900">
+                <h2
+                  id="quick-preview-title"
+                  className="mt-1 truncate text-lg font-semibold text-foreground"
+                >
                   {doc.titre}
                 </h2>
-                <p className="mt-0.5 truncate text-xs text-zinc-500">
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
                   {doc.file_name || doc.titre} · {doc.mime_type}
                 </p>
               </div>
-              <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                aria-label="Fermer"
+              >
                 <X className="h-5 w-5" />
               </Button>
             </header>
 
             <div className="min-h-0 flex-1 overflow-auto p-5">
-              <DocumentPreviewPane doc={doc} expanded className="min-h-[280px]" />
+              <DocumentPreviewPane
+                doc={doc}
+                expanded
+                className="min-h-[280px]"
+              />
             </div>
 
-            <footer className="flex flex-wrap gap-2 border-t border-slate-200/70 bg-white px-5 py-4">
+            <footer className="flex flex-wrap gap-2 border-t border-border bg-card px-5 py-4">
               <Button variant="outline" size="sm" className="gap-1.5" asChild>
                 <Link href={`/documents/${doc.id}`}>
                   <ArrowSquareOut className="h-4 w-4" />
@@ -79,12 +95,19 @@ export function DocumentQuickPreview({ doc, onClose }: DocumentQuickPreviewProps
                 size="sm"
                 className="gap-1.5"
                 type="button"
-                onClick={() => void downloadDocumentFile(doc.id, doc.file_name || doc.titre)}
+                onClick={() =>
+                  void downloadDocumentFile(doc.id, doc.file_name || doc.titre)
+                }
               >
                 <DownloadSimple className="h-4 w-4" />
                 Telecharger
               </Button>
-              <Button type="button" size="sm" className="ml-auto" onClick={onClose}>
+              <Button
+                type="button"
+                size="sm"
+                className="ml-auto"
+                onClick={onClose}
+              >
                 Fermer
               </Button>
             </footer>

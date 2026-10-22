@@ -16,6 +16,8 @@ import (
 	"archiflow/backend/internal/jobqueue"
 	"archiflow/backend/internal/models"
 	"archiflow/backend/internal/repository"
+
+	"gorm.io/gorm"
 )
 
 type DocumentService struct {
@@ -195,20 +197,84 @@ func (s *DocumentService) UpdateOCRText(id uint, text string) error {
 	return s.repo.UpdateOCRText(id, text)
 }
 
+// ErrStorageMissing : métadonnées présentes mais objet absent de MinIO.
+var ErrStorageMissing = errors.New("fichier introuvable dans le stockage")
+
 func (s *DocumentService) OpenContentByID(ctx context.Context, id uint) (io.ReadCloser, string, string, error) {
 	doc, err := s.repo.FindByID(id)
 	if err != nil {
 		return nil, "", "", err
 	}
-	obj, err := config.GetObjectStream(ctx, doc.MinioBucket, doc.MinioObjectName)
+	bucket, key := resolveObjectLocation(doc, s.documentsBucket)
+	if bucket == "" || key == "" {
+		return nil, "", "", ErrStorageMissing
+	}
+	// Stat avant GetObject : GetObject est lazy et masque NoSuchKey jusqu'au Read,
+	// ce qui produit un HTTP 200 puis une erreur mid-stream côté client.
+	if _, _, err := config.StatObject(ctx, bucket, key); err != nil {
+		if isMinioNotFound(err) {
+			return nil, "", "", ErrStorageMissing
+		}
+		return nil, "", "", fmt.Errorf("stockage: %w", err)
+	}
+	obj, err := config.GetObjectStream(ctx, bucket, key)
 	if err != nil {
+		if isMinioNotFound(err) {
+			return nil, "", "", ErrStorageMissing
+		}
 		return nil, "", "", err
 	}
 	filename := doc.FileName
 	if filename == "" {
 		filename = doc.Title
 	}
-	return obj, doc.MimeType, filename, nil
+	mime := doc.MimeType
+	if mime == "" {
+		mime = "application/octet-stream"
+	}
+	return obj, mime, filename, nil
+}
+
+func resolveObjectLocation(doc *models.Document, defaultBucket string) (bucket, key string) {
+	bucket = strings.TrimSpace(doc.MinioBucket)
+	key = strings.TrimSpace(doc.MinioObjectName)
+	if bucket == "" {
+		bucket = strings.TrimSpace(defaultBucket)
+	}
+	if key != "" {
+		return bucket, key
+	}
+	raw := strings.TrimSpace(doc.MinioURL)
+	if raw == "" {
+		return bucket, ""
+	}
+	raw = strings.TrimPrefix(raw, "/")
+	// Formats usuels: "bucket/key" (retour UploadObject) ou URL path.
+	if i := strings.Index(raw, "://"); i >= 0 {
+		raw = raw[i+3:]
+		if slash := strings.Index(raw, "/"); slash >= 0 {
+			raw = raw[slash+1:]
+		}
+	}
+	parts := strings.SplitN(raw, "/", 2)
+	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+		if bucket == "" || bucket == parts[0] {
+			return parts[0], parts[1]
+		}
+		return bucket, raw
+	}
+	return bucket, raw
+}
+
+func isMinioNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "nosuchkey") ||
+		strings.Contains(msg, "nosuchbucket") ||
+		strings.Contains(msg, "the specified key does not exist") ||
+		strings.Contains(msg, "not found")
 }
 
 func (s *DocumentService) Restore(id, ownerID uint, isAdmin bool) error {
@@ -287,7 +353,10 @@ func (s *DocumentService) Purge(id, ownerID uint, isAdmin bool) error {
 		}
 	}
 	if err := s.repo.HardDelete(id, ownerID, isAdmin); err != nil {
-		return err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("document introuvable dans la corbeille (déjà purgé ou non autorisé)")
+		}
+		return fmt.Errorf("purge impossible : %w", err)
 	}
 	jobqueue.EnqueueSearchDelete(context.Background(), id)
 	return nil
@@ -446,13 +515,43 @@ func FormatFileSize(size int64) string {
 
 func IsPreviewableMime(mime string) bool {
 	m := strings.ToLower(strings.TrimSpace(mime))
-	return strings.HasPrefix(m, "image/") ||
-		m == "application/pdf" ||
+	if strings.HasPrefix(m, "image/") ||
 		strings.HasPrefix(m, "text/") ||
-		m == "application/json" ||
-		m == "application/xml" ||
 		strings.HasPrefix(m, "audio/") ||
-		strings.HasPrefix(m, "video/")
+		strings.HasPrefix(m, "video/") {
+		return true
+	}
+	switch m {
+	case "application/pdf",
+		"application/json",
+		"application/xml",
+		"application/javascript",
+		"text/csv",
+		"application/csv",
+		"application/x-yaml",
+		"application/yaml":
+		return true
+	default:
+		return false
+	}
+}
+
+// IsPreviewable combine MIME + extension (ex. octet-stream + .pdf).
+func IsPreviewable(mime, fileName string) bool {
+	if IsPreviewableMime(mime) {
+		return true
+	}
+	ext := ExtFromFilename(fileName)
+	switch ext {
+	case ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".avif", ".ico",
+		".txt", ".md", ".markdown", ".json", ".xml", ".csv", ".log", ".yml", ".yaml",
+		".html", ".htm", ".css", ".js", ".ts", ".tsx", ".jsx",
+		".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac",
+		".mp4", ".webm", ".mov", ".mkv":
+		return true
+	default:
+		return false
+	}
 }
 
 func ExtFromFilename(name string) string {

@@ -17,7 +17,11 @@ type RowActionsMenuProps<T> = {
   align?: "start" | "end";
 };
 
-export function RowActionsMenu<T>({ item, actions, align = "end" }: RowActionsMenuProps<T>) {
+export function RowActionsMenu<T>({
+  item,
+  actions,
+  align = "end",
+}: RowActionsMenuProps<T>) {
   const visible = actions.filter((a) => !a.hidden?.(item));
   if (visible.length === 0) return null;
 
@@ -30,7 +34,7 @@ export function RowActionsMenu<T>({ item, actions, align = "end" }: RowActionsMe
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0 text-zinc-500 hover:text-zinc-800"
+          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
           aria-label="Actions"
           onClick={(e) => e.stopPropagation()}
         >
@@ -49,7 +53,9 @@ export function RowActionsMenu<T>({ item, actions, align = "end" }: RowActionsMe
             {action.label}
           </DropdownMenuItem>
         ))}
-        {regular.length > 0 && destructive.length > 0 && <DropdownMenuSeparator />}
+        {regular.length > 0 && destructive.length > 0 && (
+          <DropdownMenuSeparator />
+        )}
         {destructive.map((action) => (
           <DropdownMenuItem
             key={action.id}

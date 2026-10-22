@@ -1,25 +1,29 @@
-import axios, { AxiosError, AxiosInstance } from 'axios';
-import { ApiError } from '@/types/auth';
-import { refreshAccessToken, clearAuthSession } from '@/lib/auth-session';
-import { getApiBaseUrl } from '@/lib/api-base';
-import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/session-tokens';
+import axios, { AxiosError, AxiosInstance } from "axios";
+import { ApiError } from "@/types/auth";
+import { refreshAccessToken, clearAuthSession } from "@/lib/auth-session";
+import { getApiBaseUrl } from "@/lib/api-base";
+import {
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+} from "@/lib/session-tokens";
 
-let lastCorrelationId = '';
+let lastCorrelationId = "";
 
 function headerValue(source: unknown, name: string): string {
-  if (!source) return '';
+  if (!source) return "";
   const headers = (source as { headers?: Record<string, unknown> }).headers;
   const raw = headers?.[name];
-  return typeof raw === 'string' ? raw : '';
+  return typeof raw === "string" ? raw : "";
 }
 
 function rememberCorrelationId(...sources: Array<unknown>): void {
   for (const source of sources) {
     const id =
-      headerValue(source, 'x-correlation-id') ||
-      headerValue(source, 'X-Correlation-Id') ||
-      headerValue(source, 'x-request-id') ||
-      headerValue(source, 'X-Request-ID');
+      headerValue(source, "x-correlation-id") ||
+      headerValue(source, "X-Correlation-Id") ||
+      headerValue(source, "x-request-id") ||
+      headerValue(source, "X-Request-ID");
     if (id) {
       lastCorrelationId = id;
       return;
@@ -51,20 +55,20 @@ class ApiClient {
           config.headers.Authorization = `Bearer ${token}`;
         }
         const isFormData =
-          typeof FormData !== 'undefined' && config.data instanceof FormData;
+          typeof FormData !== "undefined" && config.data instanceof FormData;
         if (isFormData) {
           if (config.headers) {
-            delete config.headers['Content-Type'];
+            delete config.headers["Content-Type"];
           }
-        } else if (config.data !== undefined && config.method !== 'get') {
+        } else if (config.data !== undefined && config.method !== "get") {
           config.headers = config.headers ?? {};
-          if (!config.headers['Content-Type']) {
-            config.headers['Content-Type'] = 'application/json';
+          if (!config.headers["Content-Type"]) {
+            config.headers["Content-Type"] = "application/json";
           }
         }
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => Promise.reject(error),
     );
 
     this.client.interceptors.response.use(
@@ -75,10 +79,14 @@ class ApiClient {
       async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config;
         rememberCorrelationId(error.response, originalRequest);
-        (error as AxiosError<ApiError> & { correlationId?: string }).correlationId = lastCorrelationId;
+        (
+          error as AxiosError<ApiError> & { correlationId?: string }
+        ).correlationId = lastCorrelationId;
 
         if (error.response?.status === 401 && originalRequest) {
-          const req = originalRequest as typeof originalRequest & { _retry?: boolean };
+          const req = originalRequest as typeof originalRequest & {
+            _retry?: boolean;
+          };
           if (req._retry) {
             return Promise.reject(error);
           }
@@ -91,13 +99,16 @@ class ApiClient {
           }
 
           await clearAuthSession();
-          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-            window.location.href = '/login';
+          if (
+            typeof window !== "undefined" &&
+            !window.location.pathname.startsWith("/login")
+          ) {
+            window.location.href = "/login";
           }
         }
 
         return Promise.reject(error);
-      }
+      },
     );
   }
 

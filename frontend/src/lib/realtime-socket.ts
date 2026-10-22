@@ -1,7 +1,10 @@
 "use client";
 
 import { refreshAccessToken } from "@/lib/auth-session";
-import { getNotificationWebSocketUrl, getRealtimeMode } from "@/lib/realtime-config";
+import {
+  getNotificationWebSocketUrl,
+  getRealtimeMode,
+} from "@/lib/realtime-config";
 import { fetchWsTicket } from "@/services/ws-ticket.service";
 import { getAccessToken } from "@/lib/session-tokens";
 

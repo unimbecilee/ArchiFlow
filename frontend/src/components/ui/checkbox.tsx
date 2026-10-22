@@ -33,12 +33,12 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           "h-4 w-4 shrink-0 rounded border border-input bg-input-bg text-primary",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          className
+          className,
         )}
         {...props}
       />
     );
-  }
+  },
 );
 Checkbox.displayName = "Checkbox";
 

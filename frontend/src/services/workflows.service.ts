@@ -8,93 +8,96 @@ import type {
 
 export async function listWorkflows(): Promise<WorkflowDefinition[]> {
   const res = await api.get<{ success: boolean; data: WorkflowDefinition[] }>(
-    "/api/workflows"
+    "/api/workflows",
   );
   return res.data.data ?? [];
 }
 
 export async function startValidation(
   documentId: number,
-  commentaire?: string
+  commentaire?: string,
 ): Promise<WorkflowInstance> {
   const res = await api.post<{ success: boolean; data: WorkflowInstance }>(
     "/api/workflows/validation/start",
-    { document_id: documentId, commentaire }
+    { document_id: documentId, commentaire },
   );
   return res.data.data;
 }
 
 export async function restartValidation(
   documentId: number,
-  commentaire?: string
+  commentaire?: string,
 ): Promise<WorkflowInstance> {
   const res = await api.post<{ success: boolean; data: WorkflowInstance }>(
     "/api/workflows/validation/restart",
-    { document_id: documentId, commentaire }
+    { document_id: documentId, commentaire },
   );
   return res.data.data;
 }
 
 export async function getValidationContext(
-  documentId: number
+  documentId: number,
 ): Promise<ValidationContext> {
   const res = await api.get<{ success: boolean; data: ValidationContext }>(
-    `/api/documents/${documentId}/validation-context`
+    `/api/documents/${documentId}/validation-context`,
   );
   return res.data.data;
 }
 
 export async function getPendingApprovals(): Promise<WorkflowInstance[]> {
   const res = await api.get<{ success: boolean; data: WorkflowInstance[] }>(
-    "/api/workflows/instances/pending"
+    "/api/workflows/instances/pending",
   );
   return res.data.data ?? [];
 }
 
 export async function getInProgress(): Promise<WorkflowInstance[]> {
   const res = await api.get<{ success: boolean; data: WorkflowInstance[] }>(
-    "/api/workflows/instances/in-progress"
+    "/api/workflows/instances/in-progress",
   );
   return res.data.data ?? [];
 }
 
-export async function getCompleted(
-  options?: { status?: string; all?: boolean }
-): Promise<WorkflowInstance[]> {
+export async function getCompleted(options?: {
+  status?: string;
+  all?: boolean;
+}): Promise<WorkflowInstance[]> {
   const params = new URLSearchParams();
   if (options?.status) params.set("status", options.status);
   if (options?.all) params.set("all", "true");
   const qs = params.toString();
   const res = await api.get<{ success: boolean; data: WorkflowInstance[] }>(
-    `/api/workflows/instances/completed${qs ? `?${qs}` : ""}`
+    `/api/workflows/instances/completed${qs ? `?${qs}` : ""}`,
   );
   return res.data.data ?? [];
 }
 
 export async function getMyDecisions(): Promise<WorkflowInstance[]> {
   const res = await api.get<{ success: boolean; data: WorkflowInstance[] }>(
-    "/api/workflows/instances/my-decisions"
+    "/api/workflows/instances/my-decisions",
   );
   return res.data.data ?? [];
 }
 
-export async function getWorkflowInstance(id: number): Promise<WorkflowInstanceDetail> {
+export async function getWorkflowInstance(
+  id: number,
+): Promise<WorkflowInstanceDetail> {
   const res = await api.get<{ success: boolean; data: WorkflowInstanceDetail }>(
-    `/api/workflows/instances/${id}`
+    `/api/workflows/instances/${id}`,
   );
   return res.data.data;
 }
 
 export async function approveInstance(
   id: number,
-  commentaire?: string
+  commentaire?: string,
 ): Promise<void> {
   await api.post(`/api/workflows/instances/${id}/approve`, { commentaire });
 }
 
 export async function rejectInstance(
   id: number,
-  commentaire?: string
+  commentaire?: string,
 ): Promise<void> {
   await api.post(`/api/workflows/instances/${id}/reject`, { commentaire });
 }

@@ -29,37 +29,39 @@ export function WorkflowStatusBanner({
 
   return (
     <motion.div
-      className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4"
+      className="rounded-2xl border border-warning/30 bg-warning-soft/90 p-4"
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
-          <span className="rounded-xl bg-amber-500/15 p-2 text-amber-800">
+          <span className="rounded-xl bg-warning-soft p-2 text-warning-soft-foreground">
             <Warning className="h-5 w-5" weight="duotone" />
           </span>
           <div>
-            <p className="font-semibold text-amber-950">
-              {needsNewVersion ? "Validation rejetee" : "Correction prete a renvoyer"}
+            <p className="font-semibold text-warning-soft-foreground">
+              {needsNewVersion
+                ? "Validation rejetee"
+                : "Correction prete a renvoyer"}
             </p>
             {context.rejection_comment ? (
-              <p className="mt-1 text-sm text-amber-900/90">
+              <p className="mt-1 text-sm text-warning-soft-foreground/90">
                 Motif : {context.rejection_comment}
               </p>
             ) : (
-              <p className="mt-1 text-sm text-amber-900/80">
+              <p className="mt-1 text-sm text-warning-soft-foreground/80">
                 Le validateur a refuse cette version du document.
               </p>
             )}
             {context.rejected_by_email && (
-              <p className="mt-1 text-xs text-amber-800/70">
+              <p className="mt-1 text-xs text-warning-soft-foreground/70">
                 Par {context.rejected_by_email}
                 {context.rejection_date &&
                   ` · ${new Date(context.rejection_date).toLocaleString("fr-FR")}`}
               </p>
             )}
             {context.rejected_at_version != null && (
-              <p className="mt-2 text-xs font-medium text-amber-800">
+              <p className="mt-2 text-xs font-medium text-warning-soft-foreground">
                 Version refusee : v{context.rejected_at_version}
                 {context.current_version_number > 0 &&
                   ` · Version courante : v${context.current_version_number}`}
@@ -72,7 +74,7 @@ export function WorkflowStatusBanner({
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 border-amber-300 bg-white"
+              className="gap-1.5 border-warning/40 bg-card"
               onClick={onScrollToVersions}
             >
               <UploadSimple className="h-4 w-4" />

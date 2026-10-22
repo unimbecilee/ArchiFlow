@@ -29,7 +29,7 @@ export function CrudToolbar<T>({
       <div className="flex min-h-9 flex-1 flex-wrap items-center gap-2">
         {selectedCount > 0 ? (
           <>
-            <span className="text-sm font-medium text-zinc-800">
+            <span className="text-sm font-medium text-foreground">
               {selectedCount} selectionne(s)
             </span>
             {bulkActions.map((action) => (
@@ -39,7 +39,8 @@ export function CrudToolbar<T>({
                 variant={action.destructive ? "outline" : "secondary"}
                 className={cn(
                   "gap-1.5",
-                  action.destructive && "border-red-200 text-red-700 hover:bg-red-50"
+                  action.destructive &&
+                    "border-destructive/30 text-destructive-soft-foreground hover:bg-destructive-soft",
                 )}
                 disabled={action.disabled?.(selectedItems)}
                 onClick={() => void action.onClick(selectedItems)}
@@ -51,7 +52,7 @@ export function CrudToolbar<T>({
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1 text-zinc-500"
+              className="gap-1 text-muted-foreground"
               onClick={onClearSelection}
             >
               <X className="h-3.5 w-3.5" />
@@ -63,7 +64,7 @@ export function CrudToolbar<T>({
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-50/80 p-1">
+      <div className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/60 p-1">
         <Button
           type="button"
           variant={viewMode === "list" ? "secondary" : "ghost"}

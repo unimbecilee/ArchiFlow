@@ -16,7 +16,7 @@ const Switch = React.forwardRef<
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45",
       "focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       "disabled:cursor-not-allowed disabled:opacity-50",
-      className
+      className,
     )}
     {...props}
     ref={ref}
@@ -25,7 +25,7 @@ const Switch = React.forwardRef<
       className={cn(
         "pointer-events-none block size-5 rounded-full bg-background shadow-e1",
         "transition-transform duration-200 ease-flow translate-x-0.5",
-        "data-[state=checked]:translate-x-[22px]"
+        "data-[state=checked]:translate-x-[22px]",
       )}
     />
   </SwitchPrimitive.Root>

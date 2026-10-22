@@ -60,19 +60,29 @@ export default function NotificationsPage() {
         icon={<Bell className="h-6 w-6" weight="duotone" />}
         badge={
           unread > 0 ? (
-            <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+            <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-accent-soft-foreground">
               {unread} non lue(s)
             </span>
           ) : undefined
         }
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={load}
+              className="gap-1.5"
+            >
               <ArrowsClockwise className="h-4 w-4" />
               Actualiser
             </Button>
             {unread > 0 && (
-              <Button variant="outline" size="sm" onClick={handleReadAll} className="gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReadAll}
+                className="gap-1.5"
+              >
                 <Checks className="h-4 w-4" />
                 Tout marquer lu
               </Button>
@@ -97,10 +107,10 @@ export default function NotificationsPage() {
           <div className="space-y-8">
             {groups.map((group) => (
               <section key={group.key}>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   {group.title}
                 </h3>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-border">
                   {group.items.map((n, index) => (
                     <NotificationItem
                       key={n.id}

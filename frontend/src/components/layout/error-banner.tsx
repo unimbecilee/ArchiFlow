@@ -15,7 +15,7 @@ export function ErrorBanner({ message, requestId }: ErrorBannerProps) {
   return (
     <motion.div
       role="alert"
-      className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400"
+      className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive-soft-foreground"
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -23,8 +23,9 @@ export function ErrorBanner({ message, requestId }: ErrorBannerProps) {
       <div className="min-w-0">
         <span>{message}</span>
         {reference ? (
-          <span className="mt-1 block font-mono text-xs text-red-600/80 dark:text-red-400/80">
-            Référence : <span className="select-all">{reference}</span> — à communiquer au support
+          <span className="mt-1 block font-mono text-xs text-destructive-soft-foreground/80">
+            Référence : <span className="select-all">{reference}</span> — à
+            communiquer au support
           </span>
         ) : null}
       </div>
