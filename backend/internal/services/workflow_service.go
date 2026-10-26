@@ -255,6 +255,90 @@ func (s *WorkflowService) MyDecisions(approverID uint) ([]models.WorkflowInstanc
 	return s.repo.ListInstancesByApprover(approverID, 100)
 }
 
+func (s *WorkflowService) InitiatorEmail(userID uint) (string, error) {
+	if s.userRepo == nil || userID == 0 {
+		return "", errors.New("no user")
+	}
+	u, err := s.userRepo.GetByID(userID)
+	if err != nil || u == nil {
+		return "", err
+	}
+	return u.Email, nil
+}
+
+// InstanceStepsProgress construit le parcours des etapes avec statut derive des decisions.
+func (s *WorkflowService) InstanceStepsProgress(
+	inst *models.WorkflowInstance,
+	approvals []models.WorkflowApproval,
+) []map[string]any {
+	if inst == nil {
+		return nil
+	}
+	wf, err := s.repo.GetWorkflow(inst.WorkflowID)
+	if err != nil || wf == nil || len(wf.Steps) == 0 {
+		return nil
+	}
+
+	byStep := map[uint][]models.WorkflowApproval{}
+	for _, a := range approvals {
+		byStep[a.StepID] = append(byStep[a.StepID], a)
+	}
+
+	out := make([]map[string]any, 0, len(wf.Steps))
+	for _, step := range wf.Steps {
+		decisions := byStep[step.ID]
+		statut := "EN_ATTENTE"
+		var lastAt *time.Time
+		reject := false
+		approveCount := 0
+		for i := range decisions {
+			d := decisions[i]
+			if d.Decision == models.ApprovalDecisionReject {
+				reject = true
+			}
+			if d.Decision == models.ApprovalDecisionApprove {
+				approveCount++
+			}
+			t := d.DecidedAt
+			if lastAt == nil || t.After(*lastAt) {
+				lastAt = &t
+			}
+		}
+		isCurrent := inst.CurrentStepID != nil && *inst.CurrentStepID == step.ID &&
+			inst.Status == models.WorkflowInstanceInProgress
+
+		switch {
+		case reject:
+			statut = models.ApprovalDecisionReject
+		case isCurrent:
+			statut = "EN_COURS"
+		case approveCount > 0:
+			statut = models.ApprovalDecisionApprove
+		case inst.Status == models.WorkflowInstanceApproved && approveCount == 0 && !isCurrent:
+			// Cloturee sans decision sur cette etape (bug historique ou saut).
+			statut = "NON_PARCOURUE"
+		case inst.Status == models.WorkflowInstanceRejected && approveCount == 0 && !isCurrent:
+			statut = "NON_PARCOURUE"
+		case inst.Status == models.WorkflowInstanceCancelled:
+			statut = "ANNULE"
+		}
+
+		row := map[string]any{
+			"id":            step.ID,
+			"nom":           step.Name,
+			"ordre":         step.StepOrder,
+			"approval_type": step.ApprovalType,
+			"statut":        statut,
+			"decisions":     len(decisions),
+		}
+		if lastAt != nil {
+			row["date"] = *lastAt
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
 func (s *WorkflowService) GetInstanceDetail(id, userID uint, role string) (*models.WorkflowInstance, []models.WorkflowApproval, error) {
 	inst, err := s.repo.GetInstance(id)
 	if err != nil {
@@ -383,19 +467,37 @@ func canApproveWorkflowStep(repo *repository.WorkflowRepository, stepID, userID 
 	return canApproveFromStep(step, userID, role)
 }
 
+func stepCompleteRule(approvalType string, approved, totalApprovers int64) bool {
+	switch approvalType {
+	case models.StepApprovalMultiple, models.StepApprovalParallel:
+		if totalApprovers <= 0 {
+			return approved >= 1
+		}
+		return approved >= totalApprovers
+	default:
+		return approved >= 1
+	}
+}
+
 func (s *WorkflowService) isStepComplete(inst *models.WorkflowInstance, stepID uint) (bool, error) {
 	step, err := s.repo.GetStep(stepID)
 	if err != nil {
 		return false, err
 	}
-	switch step.ApprovalType {
-	case models.StepApprovalMultiple, models.StepApprovalParallel:
-		total, _ := s.repo.CountApprovers(stepID)
-		approved, _ := s.repo.CountApprovals(inst.ID, stepID, models.ApprovalDecisionApprove)
-		return approved >= total, nil
-	default:
-		return true, nil
+	approved, err := s.repo.CountApprovals(inst.ID, stepID, models.ApprovalDecisionApprove)
+	if err != nil {
+		return false, err
 	}
+	total := int64(0)
+	if step.ApprovalType == models.StepApprovalMultiple ||
+		step.ApprovalType == models.StepApprovalParallel {
+		total, err = s.repo.CountApprovers(stepID)
+		if err != nil {
+			return false, err
+		}
+	}
+	// SIMPLE : complète seulement après ≥1 approbation (évite cloture sans historique).
+	return stepCompleteRule(step.ApprovalType, approved, total), nil
 }
 
 func (s *WorkflowService) advance(inst *models.WorkflowInstance) error {

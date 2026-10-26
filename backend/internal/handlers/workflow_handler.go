@@ -247,6 +247,23 @@ func (h *WorkflowHandler) GetInstance(c echo.Context) error {
 	}
 	v := instanceView(inst)
 	v["approvals"] = apprOut
+	if initiator, uerr := h.workflowService.InitiatorEmail(inst.InitiatorID); uerr == nil && initiator != "" {
+		v["initiator_email"] = initiator
+	}
+	if steps := h.workflowService.InstanceStepsProgress(inst, approvals); len(steps) > 0 {
+		v["etapes"] = steps
+		// Sur instance terminee, current_step est null : exposer la derniere etape utile.
+		if v["etape_courante_nom"] == nil || v["etape_courante_nom"] == "" {
+			for i := len(steps) - 1; i >= 0; i-- {
+				if st, _ := steps[i]["statut"].(string); st == "APPROUVE" || st == "REJETE" || st == "EN_COURS" {
+					if name, ok := steps[i]["nom"].(string); ok && name != "" {
+						v["etape_courante_nom"] = name
+						break
+					}
+				}
+			}
+		}
+	}
 	return c.JSON(http.StatusOK, map[string]any{"success": true, "data": v})
 }
 

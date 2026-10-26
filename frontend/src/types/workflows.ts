@@ -25,8 +25,20 @@ export interface WorkflowApprovalRecord {
   approver_email?: string;
 }
 
+export interface WorkflowStepProgress {
+  id: number;
+  nom: string;
+  ordre: number;
+  approval_type?: string;
+  statut: string;
+  decisions?: number;
+  date?: string;
+}
+
 export interface WorkflowInstanceDetail extends WorkflowInstance {
   approvals?: WorkflowApprovalRecord[];
+  initiator_email?: string;
+  etapes?: WorkflowStepProgress[];
 }
 
 export interface WorkflowDefinition {

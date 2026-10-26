@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, FileText, GitBranch } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  FileText,
+  GitBranch,
+  XCircle,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { PageFrame } from "@/components/layout/page-frame";
 import { PageHeader } from "@/components/layout/page-header";
@@ -12,7 +19,11 @@ import { ListSkeleton } from "@/components/layout/list-skeleton";
 import { ErrorBanner } from "@/components/layout/error-banner";
 import { WorkflowApprovalTimeline } from "@/components/workflows/workflow-approval-timeline";
 import { getWorkflowInstance } from "@/services/workflows.service";
-import type { WorkflowInstanceDetail } from "@/types/workflows";
+import type {
+  WorkflowInstanceDetail,
+  WorkflowStepProgress,
+} from "@/types/workflows";
+import { cn } from "@/lib/utils";
 
 function statusLabel(statut: string) {
   const map: Record<string, string> = {
@@ -20,8 +31,72 @@ function statusLabel(statut: string) {
     APPROUVE: "Approuve",
     REJETE: "Rejete",
     ANNULE: "Annule",
+    EN_ATTENTE: "En attente",
+    NON_PARCOURUE: "Non parcourue",
   };
   return map[statut] || statut;
+}
+
+function stepIcon(statut: string) {
+  if (statut === "APPROUVE") {
+    return (
+      <CheckCircle className="h-4 w-4 text-primary" weight="fill" aria-hidden />
+    );
+  }
+  if (statut === "REJETE") {
+    return (
+      <XCircle className="h-4 w-4 text-destructive" weight="fill" aria-hidden />
+    );
+  }
+  if (statut === "EN_COURS") {
+    return (
+      <Clock
+        className="h-4 w-4 text-warning-soft-foreground"
+        weight="duotone"
+        aria-hidden
+      />
+    );
+  }
+  return (
+    <Clock className="h-4 w-4 text-muted-foreground" weight="regular" aria-hidden />
+  );
+}
+
+function StepsProgress({ steps }: { steps: WorkflowStepProgress[] }) {
+  if (steps.length === 0) return null;
+  return (
+    <ol className="space-y-2">
+      {steps.map((s) => (
+        <li
+          key={s.id}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border border-border px-3 py-2.5 text-sm",
+            s.statut === "EN_COURS" && "border-warning/40 bg-warning-soft/40",
+            s.statut === "APPROUVE" && "bg-muted/50",
+            s.statut === "REJETE" && "border-destructive/30 bg-destructive-soft/40",
+          )}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card ring-1 ring-border">
+            {stepIcon(s.statut)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-foreground">
+              {s.ordre}. {s.nom}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {statusLabel(s.statut)}
+              {typeof s.decisions === "number" && s.decisions > 0
+                ? ` · ${s.decisions} decision(s)`
+                : ""}
+              {s.date
+                ? ` · ${new Date(s.date).toLocaleString("fr-FR")}`
+                : ""}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export default function WorkflowInstanceDetailPage() {
@@ -72,6 +147,15 @@ export default function WorkflowInstanceDetailPage() {
     );
   }
 
+  const statut = instance.statut || instance.status || "";
+  const approvals = instance.approvals ?? [];
+  const steps = instance.etapes ?? [];
+  const finished =
+    statut === "APPROUVE" || statut === "REJETE" || statut === "ANNULE";
+  const etapeLabel = finished
+    ? instance.etape_courante_nom || "Circuit termine"
+    : instance.etape_courante_nom || "—";
+
   return (
     <PageFrame>
       <Link
@@ -85,7 +169,7 @@ export default function WorkflowInstanceDetailPage() {
       <PageHeader
         eyebrow="Workflow"
         title={instance.document_titre || `Document #${instance.document_id}`}
-        description={`${instance.workflow_nom || "Workflow"} · ${statusLabel(instance.statut)}`}
+        description={`${instance.workflow_nom || "Workflow"} · ${statusLabel(statut)}`}
         icon={<GitBranch className="h-6 w-6" weight="duotone" />}
         actions={
           <Button asChild className="gap-1.5">
@@ -104,15 +188,39 @@ export default function WorkflowInstanceDetailPage() {
               Statut
             </dt>
             <dd className="mt-1 font-medium text-foreground">
-              {statusLabel(instance.statut)}
+              {statusLabel(statut)}
             </dd>
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Etape
             </dt>
-            <dd className="mt-1 text-foreground">
-              {instance.etape_courante_nom || "—"}
+            <dd className="mt-1 text-foreground">{etapeLabel}</dd>
+          </div>
+          {instance.initiator_email && (
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Initiateur
+              </dt>
+              <dd className="mt-1 text-foreground">
+                {instance.initiator_email}
+              </dd>
+            </div>
+          )}
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Document
+            </dt>
+            <dd className="mt-1">
+              <Link
+                href={`/documents/${instance.document_id}`}
+                className="font-medium text-accent-soft-foreground hover:underline"
+              >
+                #{instance.document_id}
+                {instance.document_titre
+                  ? ` — ${instance.document_titre}`
+                  : ""}
+              </Link>
             </dd>
           </div>
           {instance.date_debut && (
@@ -146,11 +254,28 @@ export default function WorkflowInstanceDetailPage() {
         </dl>
       </PagePanel>
 
+      {steps.length > 0 && (
+        <PagePanel
+          title="Circuit"
+          subtitle={`${steps.length} etape(s) du workflow`}
+        >
+          <StepsProgress steps={steps} />
+        </PagePanel>
+      )}
+
       <PagePanel
         title="Historique des decisions"
-        subtitle={`${instance.approvals?.length ?? 0} decision(s) enregistree(s)`}
+        subtitle={`${approvals.length} decision(s) enregistree(s)`}
       >
-        <WorkflowApprovalTimeline approvals={instance.approvals ?? []} />
+        {approvals.length === 0 && finished ? (
+          <p className="text-sm text-muted-foreground">
+            Aucune decision enregistree pour cette instance (cloture sans
+            historique). Les prochaines validations consignent chaque
+            approbation / rejet.
+          </p>
+        ) : (
+          <WorkflowApprovalTimeline approvals={approvals} />
+        )}
       </PagePanel>
     </PageFrame>
   );
